@@ -179,9 +179,11 @@ final class AppState: ObservableObject {
                     limit: self.session.settings.repoDisplayLimit * 2,
                     for: self.currentUserNameOrEmpty())
             }
-            let hidden = Set(self.session.settings.hiddenRepositories)
-            let visible = repos.filter { !hidden.contains($0.fullName) }
-            let trimmed = Array(visible.prefix(self.session.settings.repoDisplayLimit))
+            let trimmed = AppState.selectVisible(
+                all: repos,
+                pinned: self.session.settings.pinnedRepositories,
+                hidden: Set(self.session.settings.hiddenRepositories),
+                limit: self.session.settings.repoDisplayLimit)
             await MainActor.run {
                 self.session.repositories = trimmed.map { repo in
                     if let idx = session.settings.pinnedRepositories.firstIndex(of: repo.fullName) {
@@ -242,6 +244,25 @@ final class AppState: ObservableObject {
 
     func persistSettings() {
         self.settingsStore.save(self.session.settings)
+    }
+
+    nonisolated static func selectVisible(
+        all repos: [Repository],
+        pinned: [String],
+        hidden: Set<String>,
+        limit: Int)
+        -> [Repository]
+    {
+        let filtered = repos.filter { !hidden.contains($0.fullName) }
+        let limited = Array(filtered.prefix(max(limit, 0)))
+        return limited.sorted { lhs, rhs in
+            switch (pinned.firstIndex(of: lhs.fullName), pinned.firstIndex(of: rhs.fullName)) {
+            case let (l?, r?): l < r
+            case (.some, .none): true
+            case (.none, .some): false
+            default: false
+            }
+        }
     }
 
     private func currentUserNameOrEmpty() -> String {
