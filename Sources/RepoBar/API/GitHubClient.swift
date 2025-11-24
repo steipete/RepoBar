@@ -18,6 +18,7 @@ actor GitHubClient {
     private var tokenProvider: (@Sendable () async throws -> OAuthTokens?)?
     private let graphQL = GraphQLClient()
     private let diag = DiagnosticsLogger.shared
+    private var installationTokenProvider: (@Sendable () async throws -> String)?
 
     // MARK: - Config
 
@@ -46,6 +47,10 @@ actor GitHubClient {
                 return tokens.accessToken
             }
         }
+    }
+
+    func setInstallationTokenProvider(_ provider: @Sendable @escaping () async throws -> String) {
+        self.installationTokenProvider = provider
     }
 
     func rateLimitReset() -> Date? { self.lastRateLimitReset }
@@ -440,6 +445,12 @@ actor GitHubClient {
     }
 
     private func validAccessToken() async throws -> String {
+        // Prefer installation token when available.
+        if let installProvider = installationTokenProvider {
+            if let cached = try tokenStore.load()?.accessToken { return cached }
+            let installToken = try await installProvider()
+            return installToken
+        }
         if let token = try tokenStore.load()?.accessToken { return token }
         if let provider = tokenProvider, let tokens = try await provider() { return tokens.accessToken }
         throw URLError(.userAuthenticationRequired)

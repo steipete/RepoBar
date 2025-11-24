@@ -102,6 +102,13 @@ final class AppState: ObservableObject {
             Task { await self?.refresh() }
         }
         Task { await DiagnosticsLogger.shared.setEnabled(self.session.settings.diagnosticsEnabled) }
+        Task {
+            await self.github.setInstallationTokenProvider { @Sendable [weak self] in
+                guard let self else { throw URLError(.userAuthenticationRequired) }
+                // For now assume first installation is the primary; use host remembered in settings.
+                return try await self.auth.installationToken(for: "1") // placeholder installation ID
+            }
+        }
     }
 
     /// Starts the OAuth flow using the default GitHub App credentials, invoked from the logged-out prompt.
