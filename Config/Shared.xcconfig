@@ -1,0 +1,6 @@
+// Shared signing/build settings for RepoBar
+PRODUCT_BUNDLE_IDENTIFIER = com.steipete.repobar
+CODE_SIGN_STYLE = Automatic
+SWIFT_VERSION = 6.0
+SWIFT_STRICT_CONCURRENCY = complete
+#include? "Local.xcconfig"

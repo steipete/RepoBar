@@ -3,6 +3,11 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="RepoBar"
 APP_PROCESS_PATTERN="${APP_NAME}.app/Contents/MacOS/${APP_NAME}"
+# Load signing defaults from Config/Local.xcconfig if present
+if [ -f "${ROOT_DIR}/Config/Local.xcconfig" ]; then
+  # shellcheck source=/dev/null
+  source "${ROOT_DIR}/Config/Local.xcconfig"
+fi
 
 log() { printf '%s\n' "$*"; }
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
@@ -26,7 +31,7 @@ log "==> swift test"
 swift test -q
 
 log "==> Codesigning debug build"
-DEFAULT_IDENTITY="Apple Development: Peter Steinberger"
+DEFAULT_IDENTITY="${CODE_SIGN_IDENTITY:-Apple Development: Peter Steinberger}"
 IDENTITY="${CODESIGN_IDENTITY:-$DEFAULT_IDENTITY}"
 if [ -d "${ROOT_DIR}/.build/debug/${APP_NAME}.app" ]; then
   "${ROOT_DIR}/Scripts/codesign_app.sh" "${ROOT_DIR}/.build/debug/${APP_NAME}.app" "$IDENTITY" || true
