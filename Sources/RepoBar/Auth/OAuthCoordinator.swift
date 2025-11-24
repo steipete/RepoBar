@@ -11,12 +11,11 @@ final class OAuthCoordinator {
 
     func login(clientID: String, clientSecret: String, pemPath: String, host: URL, loopbackPort: Int) async throws {
         let normalizedHost = try normalize(host: host)
-        var appJWT: String?
         if !pemPath.isEmpty {
             let exists = FileManager.default.fileExists(atPath: pemPath)
-            guard exists else { throw GitHubAPIError.invalidHost } // Re-use generic error for now
+            guard exists else { throw GitHubAPIError.invalidPEM }
             let pem = try String(contentsOfFile: pemPath, encoding: .utf8)
-            appJWT = try? JWTSigner.sign(appID: "2344358", pemString: pem)
+            let appJWT = try? JWTSigner.sign(appID: "2344358", pemString: pem)
             await DiagnosticsLogger.shared.message("Using PEM at \(pemPath); JWT generated: \(appJWT != nil)")
         } else {
             await DiagnosticsLogger.shared.message("No PEM provided; continuing with client secret only.")

@@ -5,6 +5,7 @@ enum GitHubAPIError: Error {
     case serviceUnavailable(retryAfter: Date?, message: String)
     case badStatus(code: Int, message: String?)
     case invalidHost
+    case invalidPEM
 
     var displayMessage: String {
         switch self {
@@ -12,6 +13,7 @@ enum GitHubAPIError: Error {
         case let .serviceUnavailable(_, message): message
         case let .badStatus(code, message): message ?? "GitHub returned \(code)."
         case .invalidHost: "GitHub Enterprise host must use HTTPS and trusted certs."
+        case .invalidPEM: "Private key file missing or unreadable."
         }
     }
 

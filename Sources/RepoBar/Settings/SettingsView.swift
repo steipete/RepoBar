@@ -102,6 +102,7 @@ struct AccountSettingsView: View {
     @State private var pemPath = ""
     @State private var enterpriseHost = ""
     @State private var port: Int = 53682
+    @State private var validationError: String?
 
     var body: some View {
         Form {
@@ -134,6 +135,12 @@ struct AccountSettingsView: View {
                     Text("Loopback port: \(self.port)")
                 }
             }
+
+            if let validationError {
+                Text(validationError)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
         }
         .padding()
         .onAppear {
@@ -162,10 +169,17 @@ struct AccountSettingsView: View {
                 self.session.settings.enterpriseHost = enterpriseURL
                 await self.appState.github.setAPIHost(enterpriseURL.appending(path: "/api/v3"))
                 self.session.settings.githubHost = enterpriseURL
+                self.validationError = nil
             } else {
+                if !self.enterpriseHost.trimmingCharacters(in: .whitespaces).isEmpty {
+                    self.validationError = "Enterprise host must be a valid https:// URL with a trusted certificate."
+                    self.session.account = .loggedOut
+                    return
+                }
                 await self.appState.github.setAPIHost(URL(string: "https://api.github.com")!)
                 self.session.settings.githubHost = URL(string: "https://github.com")!
                 self.session.settings.enterpriseHost = nil
+                self.validationError = nil
             }
             do {
                 try await self.appState.auth.login(
