@@ -4,6 +4,13 @@ struct HeatmapView: View {
     let cells: [HeatmapCell]
     let accentTone: AccentTone
     private let columns = 53 // roughly a year
+    private let rows = 7
+    private let spacing: CGFloat = 2
+    private var summary: String {
+        let total = cells.map(\.count).reduce(0, +)
+        let maxVal = cells.map(\.count).max() ?? 0
+        return "Commit activity heatmap, total \(total) commits, max \(maxVal) in a day."
+    }
 
     init(cells: [HeatmapCell], accentTone: AccentTone = .githubGreen) {
         self.cells = cells
@@ -11,20 +18,24 @@ struct HeatmapView: View {
     }
 
     var body: some View {
-        let rows = 7
-        let grid = HeatmapLayout.reshape(cells: self.cells, columns: self.columns, rows: rows)
-        HStack(alignment: .top, spacing: 3) {
-            ForEach(Array(grid.enumerated()), id: \.offset) { _, column in
-                VStack(spacing: 3) {
-                    ForEach(column) { cell in
-                        RoundedRectangle(cornerRadius: 2)
-                            .fill(self.color(for: cell.count))
-                            .frame(width: 10, height: 10)
-                            .accessibilityLabel(self.dateLabel(cell))
-                    }
+        let grid = HeatmapLayout.reshape(cells: self.cells, columns: self.columns, rows: self.rows)
+        Canvas { context, size in
+            let cellSide = self.cellSide(for: size)
+            for (x, column) in grid.enumerated() {
+                for (y, cell) in column.enumerated() {
+                    let origin = CGPoint(
+                        x: CGFloat(x) * (cellSide + self.spacing),
+                        y: CGFloat(y) * (cellSide + self.spacing))
+                    let rect = CGRect(origin: origin, size: CGSize(width: cellSide, height: cellSide))
+                    let path = Path(roundedRect: rect, cornerRadius: cellSide * 0.2)
+                    context.fill(path, with: .color(self.color(for: cell.count)))
                 }
             }
         }
+        .aspectRatio(CGFloat(self.columns) / CGFloat(self.rows), contentMode: .fit)
+        .frame(maxWidth: .infinity, minHeight: 48, maxHeight: 120, alignment: .leading)
+        .accessibilityLabel(self.summary)
+        .accessibilityElement(children: .ignore)
     }
 
     private func color(for count: Int) -> Color {
@@ -60,10 +71,13 @@ struct HeatmapView: View {
         }
     }
 
-    private func dateLabel(_ cell: HeatmapCell) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return "\(formatter.string(from: cell.date)): \(cell.count) commits"
+    private func cellSide(for size: CGSize) -> CGFloat {
+        let totalSpacingX = CGFloat(self.columns - 1) * self.spacing
+        let totalSpacingY = CGFloat(self.rows - 1) * self.spacing
+        let availableWidth = max(size.width - totalSpacingX, 0)
+        let availableHeight = max(size.height - totalSpacingY, 0)
+        let side = min(availableWidth / CGFloat(self.columns), availableHeight / CGFloat(self.rows))
+        return max(2, min(10, floor(side)))
     }
 }
 

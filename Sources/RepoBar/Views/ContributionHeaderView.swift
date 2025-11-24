@@ -21,6 +21,7 @@ struct ContributionHeaderView: View {
                     self.placeholder
                 }
             }
+            .accessibilityElement(children: .contain)
         }
     }
 
@@ -28,5 +29,6 @@ struct ContributionHeaderView: View {
         RoundedRectangle(cornerRadius: 8)
             .fill(Color.gray.opacity(0.2))
             .frame(height: 80)
+            .accessibilityLabel("Contribution graph unavailable")
     }
 }
