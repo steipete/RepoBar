@@ -1,4 +1,4 @@
-# RepoBar 🚦 — CI, PRs, releases—at a glance
+# RepoBar 🚦 - macOS menu bar app for GitHub repo health—CI, PRs, releases, traffic, and a commit heatmap at a glance
 
 macOS menubar app (Swift 6.2, Xcode 26) that surfaces GitHub repo health at a glance: CI state, open issues/PRs, latest release, recent comments, traffic uniques, and a custom commit heatmap. MenuBarExtraAccess distinguishes left/right clicks; Sparkle handles updates; PKCE browser-based login supports GitHub.com and GitHub Enterprise.
 
