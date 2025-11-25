@@ -64,10 +64,16 @@ struct ActivityEvent: Equatable {
     let url: URL
 }
 
-struct HeatmapCell: Identifiable, Equatable {
-    let id = UUID()
+struct HeatmapCell: Identifiable, Equatable, Codable {
+    let id: UUID
     let date: Date
     let count: Int
+
+    init(id: UUID = UUID(), date: Date, count: Int) {
+        self.id = id
+        self.date = date
+        self.count = count
+    }
 }
 
 struct CIStatusDetails {

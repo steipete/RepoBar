@@ -421,6 +421,9 @@ struct DebugSettingsView: View {
                         await self.loadDiagnosticsIfEnabled()
                     }
                 }
+                Button("Clear contribution heatmap cache") {
+                    self.appState.clearContributionCache()
+                }
                 Button("Force refresh") {
                     self.appState.refreshScheduler.forceRefresh()
                 }
