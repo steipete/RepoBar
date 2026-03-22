@@ -24,7 +24,6 @@ struct RepoBarApp: App {
                     await self.ensureStatusItemAttached()
                 }
         }
-        .menuBarExtraStyle(.menu)
         .menuBarExtraAccess(isPresented: self.$isMenuPresented) { item in
             self.logMenuEvent("menuBarExtraAccess statusItem=\(self.objectID(item)) menuManager=\(self.menuManager != nil)")
             if self.menuManager == nil {
@@ -32,6 +31,7 @@ struct RepoBarApp: App {
             }
             self.menuManager?.attachMainMenu(to: item)
         }
+        .menuBarExtraStyle(.menu)
         .onChange(of: self.isMenuPresented) { _, newValue in
             self.logMenuEvent("isMenuPresented=\(newValue)")
         }

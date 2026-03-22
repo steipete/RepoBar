@@ -1,5 +1,5 @@
 {
-  "originHash" : "88c021100d9cfb662e80c5e047f9f72f04129f7079c411478303e93b621dcec6",
+  "originHash" : "7c441efedb8eb9ce933695ba9ac0593dff9e736f1ede5beb38663c375bbf862c",
   "pins" : [
     {
       "identity" : "apollo-ios",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/orchetect/MenuBarExtraAccess",
       "state" : {
-        "revision" : "707dff6f55217b3ef5b6be84ced3e83511d4df5c",
-        "version" : "1.2.2"
+        "revision" : "33bb0e4b1e407feac791e047dcaaf9c69b25fd26",
+        "version" : "1.3.0"
       }
     },
     {
