@@ -89,6 +89,7 @@ extension AppState {
             let targets = self.selectMenuTargets(from: ordered)
             let hydrated = await self.hydrateMenuTargets(targets)
             try Task.checkCancellation()
+            await self.updateAccessibleRepositories(self.mergeHydrated(hydrated, into: repos))
             let merged = self.mergeHydrated(hydrated, into: ordered)
             let final = self.applyPinnedOrder(to: merged)
             let localSnapshot = await localSnapshotTask.value
@@ -281,11 +282,7 @@ extension AppState {
     }
 
     private func mergeHydrated(_ detailed: [Repository], into repos: [Repository]) -> [Repository] {
-        let lookup = Dictionary(
-            detailed.map { ($0.fullName.lowercased(), $0) },
-            uniquingKeysWith: { first, _ in first }
-        )
-        return repos.map { lookup[$0.fullName.lowercased()] ?? $0 }
+        RepositoryHydration.merge(detailed, into: repos)
     }
 
     private func applyCachedMenuSnapshotIfAvailable(now: Date) async {
