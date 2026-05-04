@@ -185,12 +185,12 @@ final class MenuItemHostingView: NSView, MenuItemMeasuring, MenuItemHighlighting
     }
 
     private func safeMeasuredHeight(from height: CGFloat) -> CGFloat {
-        if height.isFinite, height >= 0 {
+        if height.isFinite, height > 0 {
             return min(height, MenuItemMeasurementMetrics.maxHeight)
         }
 
         let intrinsic = self.hostingController.view.intrinsicContentSize.height
-        if intrinsic.isFinite, intrinsic >= 0 {
+        if intrinsic.isFinite, intrinsic > 0 {
             return min(intrinsic, MenuItemMeasurementMetrics.maxHeight)
         }
 

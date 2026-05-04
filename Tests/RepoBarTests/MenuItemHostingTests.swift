@@ -11,8 +11,16 @@ struct MenuItemHostingTests {
         let height = view.measuredHeight(width: 360)
 
         #expect(height.isFinite)
-        #expect(height >= 0)
+        #expect(height > 0)
         #expect(height <= 360)
+    }
+
+    @MainActor
+    @Test
+    func `zero height SwiftUI rows use fallback height`() {
+        let view = MenuItemHostingView(rootView: AnyView(EmptyView()))
+
+        #expect(view.measuredHeight(width: 320) > 0)
     }
 
     @MainActor
