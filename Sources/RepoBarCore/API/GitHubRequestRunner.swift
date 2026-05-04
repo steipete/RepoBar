@@ -58,7 +58,7 @@ actor GitHubRequestRunner {
             await self.diag.message("Cooldown active for \(url.absoluteString) until \(cooldown)")
             throw GitHubAPIError.serviceUnavailable(
                 retryAfter: cooldown,
-                message: "Cooldown active; retry \(RelativeFormatter.string(from: cooldown, relativeTo: Date()))."
+                message: Self.cooldownMessage(for: url, until: cooldown)
             )
         }
 
@@ -152,6 +152,10 @@ actor GitHubRequestRunner {
         return request
     }
 
+    static func cooldownMessage(for url: URL, until: Date, now: Date = Date()) -> String {
+        "GitHub endpoint cooldown (\(self.endpointDescription(for: url))); retry \(RelativeFormatter.string(from: until, relativeTo: now))"
+    }
+
     func clear() async {
         await self.etagCache.clear()
         await self.backoff.clear()
@@ -222,6 +226,36 @@ actor GitHubRequestRunner {
         } else if let reset = self.lastRateLimitReset, reset <= Date() {
             self.lastRateLimitReset = nil
             self.lastRateLimitError = nil
+        }
+    }
+
+    private static func endpointDescription(for url: URL) -> String {
+        let components = url.path.split(separator: "/").map(String.init)
+        let suffix: String = if let repoIndex = components.firstIndex(of: "repos"), components.count > repoIndex + 3 {
+            components[(repoIndex + 3)...].joined(separator: "/")
+        } else {
+            components.joined(separator: "/")
+        }
+
+        switch suffix {
+        case "":
+            return "repository details"
+        case "actions/runs":
+            return "Actions runs"
+        case "pulls":
+            return "pull requests"
+        case "issues":
+            return "issues"
+        case "releases":
+            return "releases"
+        case "stats/commit_activity":
+            return "commit activity"
+        case "traffic/clones":
+            return "traffic clones"
+        case "traffic/views":
+            return "traffic views"
+        default:
+            return suffix
         }
     }
 }
