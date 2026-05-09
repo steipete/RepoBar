@@ -6,6 +6,7 @@
 - Infer the GitHub repository for bare references from copied local git paths like `~/Projects/crabbox`.
 - Make GitHub reference updates feel faster with shorter clipboard polling, cached local path inference, and progressive concurrent lookups.
 - Grow inline GitHub reference previews on larger displays so more of the issue or pull request is visible in the menu.
+- Fix the iOS app target build by avoiding macOS-only filesystem and git APIs (#61, thanks @jsj).
 
 ## 0.5.0 - 2026-05-09
 
