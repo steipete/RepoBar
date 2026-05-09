@@ -11,6 +11,7 @@
     "check:coverage": "pnpm coverage",
     "docs:list": "node Scripts/docs-list.mjs",
     "test": "./Scripts/test.sh",
+    "test:github-emulator": "./Scripts/test_github_emulator.sh",
     "build": "./Scripts/build.sh",
     "repobar": "swift build --product repobarcli && ./Scripts/codesign_cli.sh .build/debug/repobarcli && .build/debug/repobarcli",
     "repobarcli": "pnpm -s repobar",

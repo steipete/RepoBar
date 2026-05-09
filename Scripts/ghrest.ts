@@ -83,8 +83,10 @@ program
           ].join('\n')
         );
       }
-      const rl = formatRate(rateReset);
-      if (rl) console.log(chalk.dim(rl));
+      if (!program.getOptionValue('json')) {
+        const rl = formatRate(rateReset);
+        if (rl) console.log(chalk.dim(rl));
+      }
     } catch (error) {
       spinner.stop();
       console.error(chalk.red((error as Error).message));
@@ -127,8 +129,10 @@ program
       } else {
         console.log('No runs found.');
       }
-      const rl = formatRate(rateReset);
-      if (rl) console.log(chalk.dim(rl));
+      if (!program.getOptionValue('json')) {
+        const rl = formatRate(rateReset);
+        if (rl) console.log(chalk.dim(rl));
+      }
     } catch (error) {
       spinner.stop();
       console.error(chalk.red((error as Error).message));
@@ -161,8 +165,10 @@ program
         console.log(`Unique visitors: ${(viewsResp.json as { uniques?: number }).uniques ?? 'n/a'}`);
         console.log(`Unique cloners: ${(clonesResp.json as { uniques?: number }).uniques ?? 'n/a'}`);
       }
-      const rl = formatRate(viewsResp.rateReset ?? clonesResp.rateReset);
-      if (rl) console.log(chalk.dim(rl));
+      if (!program.getOptionValue('json')) {
+        const rl = formatRate(viewsResp.rateReset ?? clonesResp.rateReset);
+        if (rl) console.log(chalk.dim(rl));
+      }
     } catch (error) {
       spinner.stop();
       console.error(chalk.red((error as Error).message));
@@ -200,8 +206,10 @@ program
         console.log(chalk.bold(`${owner}/${name}`));
         console.log(`Weeks: ${weeks.length}, total commits: ${total}`);
       }
-      const rl = formatRate(rateReset);
-      if (rl) console.log(chalk.dim(rl));
+      if (!program.getOptionValue('json')) {
+        const rl = formatRate(rateReset);
+        if (rl) console.log(chalk.dim(rl));
+      }
     } catch (error) {
       spinner.stop();
       console.error(chalk.red((error as Error).message));
@@ -249,8 +257,10 @@ program
       } else {
         console.log('No comments found.');
       }
-      const rl = formatRate(issues.rateReset ?? reviews.rateReset);
-      if (rl) console.log(chalk.dim(rl));
+      if (!program.getOptionValue('json')) {
+        const rl = formatRate(issues.rateReset ?? reviews.rateReset);
+        if (rl) console.log(chalk.dim(rl));
+      }
     } catch (error) {
       spinner.stop();
       console.error(chalk.red((error as Error).message));
@@ -291,8 +301,10 @@ program
           console.log('No releases found.');
         }
       }
-      const rl = formatRate(rateReset);
-      if (rl) console.log(chalk.dim(rl));
+      if (!program.getOptionValue('json')) {
+        const rl = formatRate(rateReset);
+        if (rl) console.log(chalk.dim(rl));
+      }
     } catch (error) {
       spinner.stop();
       console.error(chalk.red((error as Error).message));

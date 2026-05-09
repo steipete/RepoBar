@@ -1,0 +1,17 @@
+tokens:
+  gho_test_token_admin:
+    login: octocat
+    scopes: [repo, user, workflow]
+
+github:
+  users:
+    - login: octocat
+      name: The Octocat
+      email: octocat@github.com
+  repos:
+    - owner: octocat
+      name: hello-world
+      description: GitHub emulator fixture for RepoBar CI
+      language: Swift
+      topics: [repobar, ci]
+      auto_init: true
