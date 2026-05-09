@@ -15,7 +15,7 @@
     "repobar": "swift build --product repobarcli && ./Scripts/codesign_cli.sh .build/debug/repobarcli && .build/debug/repobarcli",
     "repobarcli": "pnpm -s repobar",
     "start": "./Scripts/compile_and_run.sh",
-    "restart": "true",
+    "restart": "./Scripts/compile_and_run.sh",
     "stop": "pkill -f \"RepoBar.app/Contents/MacOS/RepoBar\" || true",
     "codegen": "./Scripts/apollo_codegen.sh",
     "ghql": "pnpm exec tsx Scripts/ghql.ts",
