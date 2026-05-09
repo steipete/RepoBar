@@ -304,23 +304,28 @@ public enum GitHubArchiveStore {
     }
 
     private static func runGit(arguments: [String], workingDirectory: String?) throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
-        process.arguments = arguments
-        if let workingDirectory {
-            process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
-        }
-        process.standardOutput = Pipe()
-        let error = Pipe()
-        process.standardError = error
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            let errorData = try error.fileHandleForReading.readToEnd() ?? Data()
-            let message = (String(bytes: errorData, encoding: .utf8) ?? "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            throw GitHubArchiveStoreError.gitFailed(message.isEmpty ? "git failed: \(arguments.joined(separator: " "))" : message)
-        }
+        #if os(macOS)
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/git")
+            process.arguments = arguments
+            if let workingDirectory {
+                process.currentDirectoryURL = URL(fileURLWithPath: workingDirectory)
+            }
+            process.standardOutput = Pipe()
+            let error = Pipe()
+            process.standardError = error
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else {
+                let errorData = try error.fileHandleForReading.readToEnd() ?? Data()
+                let message = (String(bytes: errorData, encoding: .utf8) ?? "")
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                throw GitHubArchiveStoreError.gitFailed(message.isEmpty ? "git failed: \(arguments.joined(separator: " "))" : message)
+            }
+
+        #else
+            throw GitHubArchiveStoreError.gitFailed("git is unavailable on this platform")
+        #endif
     }
 }
 

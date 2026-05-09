@@ -145,8 +145,13 @@ extension TokenStore {
     }
 
     static func defaultFileDirectory() -> URL {
+        #if os(iOS)
+            let fallback = FileManager.default.temporaryDirectory
+        #else
+            let fallback = FileManager.default.homeDirectoryForCurrentUser
+        #endif
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)
-            .first ?? FileManager.default.homeDirectoryForCurrentUser
+            .first ?? fallback
         return base
             .appendingPathComponent("RepoBar", isDirectory: true)
             .appendingPathComponent("DebugAuth", isDirectory: true)

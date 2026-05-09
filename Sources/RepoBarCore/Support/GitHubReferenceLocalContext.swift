@@ -73,28 +73,32 @@ public enum GitHubReferenceLocalContext {
     }
 
     public nonisolated static func gitHubRepositoryFullName(at path: String) -> String? {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        process.arguments = ["git", "-C", path, "remote", "get-url", "origin"]
-        var environment = ProcessInfo.processInfo.environment
-        environment["GIT_TERMINAL_PROMPT"] = "0"
-        environment["GIT_OPTIONAL_LOCKS"] = "0"
-        process.environment = environment
+        #if os(macOS)
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
+            process.arguments = ["git", "-C", path, "remote", "get-url", "origin"]
+            var environment = ProcessInfo.processInfo.environment
+            environment["GIT_TERMINAL_PROMPT"] = "0"
+            environment["GIT_OPTIONAL_LOCKS"] = "0"
+            process.environment = environment
 
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = Pipe()
-        do {
-            try process.run()
-        } catch {
-            return nil
-        }
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else { return nil }
+            let output = Pipe()
+            process.standardOutput = output
+            process.standardError = Pipe()
+            do {
+                try process.run()
+            } catch {
+                return nil
+            }
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else { return nil }
 
-        let data = output.fileHandleForReading.readDataToEndOfFile()
-        let remote = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return self.gitHubRepositoryFullName(fromRemoteURL: remote)
+            let data = output.fileHandleForReading.readDataToEndOfFile()
+            let remote = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return self.gitHubRepositoryFullName(fromRemoteURL: remote)
+        #else
+            nil
+        #endif
     }
 
     public nonisolated static func gitHubRepositoryFullName(fromRemoteURL remote: String) -> String? {

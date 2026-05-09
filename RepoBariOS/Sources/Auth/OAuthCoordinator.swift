@@ -152,7 +152,7 @@ final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPr
 
 private extension OAuthCoordinator {
     static func formUrlEncoded(_ params: [String: String]) -> Data? {
-        let encoded = params.map { key, value in
+        let encoded: String = params.map { key, value -> String in
             let k = key.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? key
             let v = value.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? value
             return "\(k)=\(v)"
