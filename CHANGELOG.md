@@ -8,6 +8,7 @@
 - Make GitHub reference updates feel faster with shorter clipboard polling, cached local path inference, and progressive concurrent lookups.
 - Grow inline GitHub reference previews on larger displays so more of the issue or pull request is visible in the menu.
 - Fix the iOS app target build by avoiding macOS-only filesystem and git APIs (#61, thanks @jsj).
+- Restore `pnpm restart` so it rebuilds and relaunches the debug app as documented (#60, thanks @biefan).
 
 ## 0.5.0 - 2026-05-09
 
