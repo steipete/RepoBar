@@ -22,6 +22,9 @@ struct SettingsView: View {
             AccountSettingsView(session: self.session, appState: self.appState)
                 .tabItem { Label("Accounts", systemImage: "person.crop.circle") }
                 .tag(SettingsTab.accounts)
+            NotificationSettingsView(session: self.session, appState: self.appState)
+                .tabItem { Label("Notifications", systemImage: "bell.badge") }
+                .tag(SettingsTab.notifications)
             AdvancedSettingsView(session: self.session, appState: self.appState)
                 .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
                 .tag(SettingsTab.advanced)
@@ -74,6 +77,7 @@ struct SettingsView: View {
             SettingsTab.display.title,
             SettingsTab.repositories.title,
             SettingsTab.accounts.title,
+            SettingsTab.notifications.title,
             SettingsTab.advanced.title,
             SettingsTab.about.title
         ]
