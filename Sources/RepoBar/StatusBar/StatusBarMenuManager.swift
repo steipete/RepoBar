@@ -93,6 +93,12 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
             name: .gitHubReferenceMatchDidChange,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.openIssueNavigatorFromNotification(_:)),
+            name: .issueNavigatorOpenRequested,
+            object: nil
+        )
     }
 
     func tearDownStatusItems() {
@@ -162,12 +168,21 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
     }
 
     @objc func openIssueNavigator() {
+        self.openIssueNavigator(matches: [])
+    }
+
+    @objc private func openIssueNavigatorFromNotification(_ notification: Notification) {
+        let matches = notification.object as? [GitHubReferenceMatch] ?? []
+        self.openIssueNavigator(matches: matches)
+    }
+
+    private func openIssueNavigator(matches: [GitHubReferenceMatch]) {
         guard self.appState.session.account.isLoggedIn else {
             self.signIn()
             return
         }
 
-        self.issueNavigatorWindowController.show()
+        self.issueNavigatorWindowController.show(matches: matches)
     }
 
     @objc func openAbout() {
@@ -753,7 +768,7 @@ extension StatusBarMenuManager {
             return
         }
 
-        self.issueNavigatorWindowController.show(matches: matches)
+        self.openIssueNavigator(matches: matches)
     }
 }
 

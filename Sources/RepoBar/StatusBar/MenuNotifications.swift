@@ -10,4 +10,6 @@ extension Notification.Name {
     static let issueNavigatorRefresh = Notification.Name("issueNavigatorRefresh")
     static let issueNavigatorCopy = Notification.Name("issueNavigatorCopy")
     static let issueNavigatorOpen = Notification.Name("issueNavigatorOpen")
+    static let issueNavigatorOpenRequested = Notification.Name("issueNavigatorOpenRequested")
+    static let notificationBrowserOpenRequested = Notification.Name("notificationBrowserOpenRequested")
 }

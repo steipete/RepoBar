@@ -14,6 +14,7 @@ final class AppState {
     let github = GitHubClient()
     let refreshScheduler = RefreshScheduler()
     let settingsStore = SettingsStore()
+    let gitHubPullRequestNotificationRunner = GitHubPullRequestNotificationRunner()
     let localRepoManager = LocalRepoManager()
     let menuRefreshInterval: TimeInterval = 30
     var refreshTask: Task<Void, Never>?

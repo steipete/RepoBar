@@ -146,6 +146,9 @@ IDENTITY="${CODESIGN_IDENTITY:-${CODE_SIGN_IDENTITY:-}}"
 if [ -n "${IDENTITY}" ] && [ -d "${APP_BUNDLE}" ]; then
   log "==> Codesigning with ${IDENTITY}"
   "${ROOT_DIR}/Scripts/codesign_app.sh" "${APP_BUNDLE}" "${IDENTITY}" || true
+elif [ "${CONFIGURATION}" = "debug" ] && [ -d "${APP_BUNDLE}" ] && command -v codesign >/dev/null 2>&1; then
+  log "==> Ad-hoc codesigning debug app"
+  codesign --force --deep --sign - "${APP_BUNDLE}" || true
 fi
 
 # Package dSYM (release builds only)

@@ -2,6 +2,7 @@ import AppKit
 import Kingfisher
 import RepoBarCore
 import SwiftUI
+import UserNotifications
 
 @main
 struct RepoBarApp: App {
@@ -67,6 +68,7 @@ private struct RepoBarLifecycleKeepaliveView: View {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuManager: StatusBarMenuManager?
+    private var suppressIssueNavigatorReopenUntil: Date?
 
     func configure(menuManager: StatusBarMenuManager) {
         self.menuManager = menuManager
@@ -79,6 +81,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         configureImagePipeline()
+        UNUserNotificationCenter.current().delegate = RepoBarNotificationResponseHandler.shared
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.notificationBrowserOpenRequested),
+            name: .notificationBrowserOpenRequested,
+            object: nil
+        )
         self.menuManager?.ensureStatusItems()
     }
 
@@ -91,8 +100,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_: NSApplication, hasVisibleWindows _: Bool) -> Bool {
+        if let suppressIssueNavigatorReopenUntil, Date() < suppressIssueNavigatorReopenUntil {
+            return true
+        }
+        self.suppressIssueNavigatorReopenUntil = nil
         self.menuManager?.openIssueNavigator()
         return true
+    }
+
+    @objc private func notificationBrowserOpenRequested() {
+        self.suppressIssueNavigatorReopenUntil = Date().addingTimeInterval(2)
     }
 }
 

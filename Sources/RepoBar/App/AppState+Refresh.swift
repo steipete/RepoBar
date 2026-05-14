@@ -64,6 +64,7 @@ extension AppState {
                     await MainActor.run { self.session.account = .loggedIn(user) }
                 }
             }
+            await self.processGitHubPullRequestNotifications()
             let repos = try await self.fetchActivityRepos()
             try Task.checkCancellation()
             await self.updateAccessibleRepositories(repos)
