@@ -9,6 +9,10 @@ extension GitHubClient {
         try GitHubRecentDecoders.decodeRecentIssues(from: data)
     }
 
+    static func decodePullRequestIssueCommentCounts(from data: Data) throws -> [Int: Int] {
+        try GitHubRecentDecoders.decodePullRequestIssueCommentCounts(from: data)
+    }
+
     static func decodeRecentReleases(from data: Data) throws -> [RepoReleaseSummary] {
         try GitHubRecentDecoders.decodeRecentReleases(from: data)
     }

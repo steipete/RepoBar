@@ -46,6 +46,34 @@ struct RecentRepoItemsDecodingTests {
     }
 
     @Test
+    func `issues endpoint extracts pull request comment counts`() throws {
+        let json = """
+        [
+          {
+            "number": 1,
+            "title": "Issue one",
+            "html_url": "https://github.com/acme/widget/issues/1",
+            "updated_at": "2025-12-28T10:00:00Z",
+            "comments": 3,
+            "labels": []
+          },
+          {
+            "number": 2,
+            "title": "PR with conversation comments",
+            "html_url": "https://github.com/acme/widget/pull/2",
+            "updated_at": "2025-12-28T12:00:00Z",
+            "comments": 4,
+            "labels": [],
+            "pull_request": {}
+          }
+        ]
+        """
+
+        let counts = try GitHubClient.decodePullRequestIssueCommentCounts(from: Data(json.utf8))
+        #expect(counts == [2: 4])
+    }
+
+    @Test
     func `pulls endpoint maps draft and author`() throws {
         let json = """
         [
@@ -54,9 +82,17 @@ struct RecentRepoItemsDecodingTests {
             "title": "Add repo submenu items",
             "html_url": "https://github.com/acme/widget/pull/42",
             "updated_at": "2025-12-27T09:30:00Z",
+            "state": "closed",
+            "merged_at": "2025-12-27T10:00:00Z",
             "draft": true,
             "comments": 2,
             "review_comments": 5,
+            "requested_reviewers": [
+              { "login": "alice", "avatar_url": "https://avatars.githubusercontent.com/u/1?v=4" }
+            ],
+            "requested_teams": [
+              { "name": "ios" }
+            ],
             "labels": [
               { "name": "bug", "color": "d73a4a" }
             ],
@@ -70,11 +106,15 @@ struct RecentRepoItemsDecodingTests {
         let items = try GitHubClient.decodeRecentPullRequests(from: Data(json.utf8))
         #expect(items.count == 1)
         #expect(items.first?.number == 42)
+        #expect(items.first?.state == .closed)
+        #expect(items.first?.mergedAt == Date(timeIntervalSince1970: 1_766_829_600))
         #expect(items.first?.isDraft == true)
         #expect(items.first?.authorLogin == "steipete")
         #expect(items.first?.authorAvatarURL != nil)
         #expect(items.first?.commentCount == 2)
         #expect(items.first?.reviewCommentCount == 5)
+        #expect(items.first?.requestedReviewerLogins == ["alice"])
+        #expect(items.first?.requestedTeamNames == ["ios"])
         #expect(items.first?.labels.first?.name == "bug")
         #expect(items.first?.headRefName == "feature/menu-rows")
         #expect(items.first?.baseRefName == "main")

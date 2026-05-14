@@ -6,6 +6,7 @@ public struct UserSettings: Equatable, Codable {
     public var repoList = RepoListSettings()
     public var localProjects = LocalProjectsSettings()
     public var gitHubReferenceMonitor = GitHubReferenceMonitorSettings()
+    public var gitHubPullRequestNotifications = GitHubPullRequestNotificationSettings()
     public var githubArchives = GitHubArchiveSettings()
     public var menuCustomization = MenuCustomization()
     public var refreshInterval: RefreshInterval = .fiveMinutes
@@ -29,6 +30,7 @@ public struct UserSettings: Equatable, Codable {
         case repoList
         case localProjects
         case gitHubReferenceMonitor
+        case gitHubPullRequestNotifications
         case legacyIssueNumberMonitor = "issueNumberMonitor"
         case githubArchives
         case menuCustomization
@@ -55,6 +57,10 @@ public struct UserSettings: Equatable, Codable {
         self.gitHubReferenceMonitor = try container.decodeIfPresent(GitHubReferenceMonitorSettings.self, forKey: .gitHubReferenceMonitor)
             ?? container.decodeIfPresent(GitHubReferenceMonitorSettings.self, forKey: .legacyIssueNumberMonitor)
             ?? GitHubReferenceMonitorSettings()
+        self.gitHubPullRequestNotifications = try container.decodeIfPresent(
+            GitHubPullRequestNotificationSettings.self,
+            forKey: .gitHubPullRequestNotifications
+        ) ?? GitHubPullRequestNotificationSettings()
         self.githubArchives = try container.decodeIfPresent(GitHubArchiveSettings.self, forKey: .githubArchives) ?? GitHubArchiveSettings()
         self.menuCustomization = try container.decodeIfPresent(MenuCustomization.self, forKey: .menuCustomization) ?? MenuCustomization()
         self.refreshInterval = try container.decodeIfPresent(RefreshInterval.self, forKey: .refreshInterval) ?? .fiveMinutes
@@ -89,6 +95,7 @@ public struct UserSettings: Equatable, Codable {
         try container.encode(self.repoList, forKey: .repoList)
         try container.encode(self.localProjects, forKey: .localProjects)
         try container.encode(self.gitHubReferenceMonitor, forKey: .gitHubReferenceMonitor)
+        try container.encode(self.gitHubPullRequestNotifications, forKey: .gitHubPullRequestNotifications)
         try container.encode(self.githubArchives, forKey: .githubArchives)
         try container.encode(self.menuCustomization, forKey: .menuCustomization)
         try container.encode(self.refreshInterval, forKey: .refreshInterval)
@@ -229,6 +236,51 @@ public struct GitHubReferenceMonitorSettings: Equatable, Codable, Sendable {
     public var enabled = false
 
     public init() {}
+}
+
+public struct GitHubPullRequestNotificationSettings: Equatable, Codable, Sendable {
+    public var enabled = false
+    public var newPullRequests = true
+    public var pullRequestUpdates = true
+    public var reviewRequests = false
+    public var comments = false
+    public var clickAction: GitHubPullRequestNotificationClickAction = .openInBrowser
+
+    public init() {}
+
+    enum CodingKeys: String, CodingKey {
+        case enabled
+        case newPullRequests
+        case pullRequestUpdates
+        case reviewRequests
+        case comments
+        case clickAction
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        self.newPullRequests = try container.decodeIfPresent(Bool.self, forKey: .newPullRequests) ?? true
+        self.pullRequestUpdates = try container.decodeIfPresent(Bool.self, forKey: .pullRequestUpdates) ?? true
+        self.reviewRequests = try container.decodeIfPresent(Bool.self, forKey: .reviewRequests) ?? false
+        self.comments = try container.decodeIfPresent(Bool.self, forKey: .comments) ?? false
+        self.clickAction = try container.decodeIfPresent(
+            GitHubPullRequestNotificationClickAction.self,
+            forKey: .clickAction
+        ) ?? .openInBrowser
+    }
+}
+
+public enum GitHubPullRequestNotificationClickAction: String, CaseIterable, Hashable, Codable, Sendable {
+    case openInBrowser
+    case openIssueNavigator
+
+    public var label: String {
+        switch self {
+        case .openInBrowser: "Default browser"
+        case .openIssueNavigator: "Issue Navigator"
+        }
+    }
 }
 
 public struct GitHubArchiveSettings: Equatable, Codable, Sendable {

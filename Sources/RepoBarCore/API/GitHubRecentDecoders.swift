@@ -10,6 +10,8 @@ enum GitHubRecentDecoders {
                 url: $0.htmlUrl,
                 updatedAt: $0.updatedAt,
                 createdAt: $0.createdAt,
+                state: $0.state ?? .open,
+                mergedAt: $0.mergedAt,
                 authorLogin: $0.user?.login,
                 authorAvatarURL: $0.user?.avatarUrl,
                 isDraft: $0.draft ?? false,
@@ -17,7 +19,9 @@ enum GitHubRecentDecoders {
                 reviewCommentCount: $0.reviewComments ?? 0,
                 labels: ($0.labels ?? []).map { RepoIssueLabel(name: $0.name, colorHex: $0.color) },
                 headRefName: $0.head?.refName,
-                baseRefName: $0.base?.refName
+                baseRefName: $0.base?.refName,
+                requestedReviewerLogins: ($0.requestedReviewers ?? []).map(\.login),
+                requestedTeamNames: ($0.requestedTeams ?? []).map(\.name)
             )
         }
     }
@@ -30,6 +34,15 @@ enum GitHubRecentDecoders {
     static func decodeRecentIssuePage(from data: Data) throws -> RecentIssuePage {
         let responses = try GitHubDecoding.decode([IssueRecentResponse].self, from: data)
         return RecentIssuePage(rawCount: responses.count, issues: self.issueSummaries(from: responses))
+    }
+
+    static func decodePullRequestIssueCommentCounts(from data: Data) throws -> [Int: Int] {
+        let responses = try GitHubDecoding.decode([IssueRecentResponse].self, from: data)
+        return Dictionary(
+            uniqueKeysWithValues: responses
+                .filter { $0.pullRequest != nil }
+                .map { ($0.number, $0.comments) }
+        )
     }
 
     private static func issueSummaries(from responses: [IssueRecentResponse]) -> [RepoIssueSummary] {
@@ -191,6 +204,8 @@ enum GitHubRecentDecoders {
         let htmlUrl: URL
         let updatedAt: Date
         let createdAt: Date?
+        let state: RepoPullRequestSummary.State?
+        let mergedAt: Date?
         let user: RecentUser?
         let draft: Bool?
         let comments: Int?
@@ -198,14 +213,23 @@ enum GitHubRecentDecoders {
         let labels: [IssueLabel]?
         let head: PullRequestRef?
         let base: PullRequestRef?
+        let requestedReviewers: [RecentUser]?
+        let requestedTeams: [RequestedTeam]?
 
         enum CodingKeys: String, CodingKey {
-            case number, title, user, draft, comments, labels, head, base
+            case number, title, state, user, draft, comments, labels, head, base
             case htmlUrl = "html_url"
             case updatedAt = "updated_at"
             case createdAt = "created_at"
+            case mergedAt = "merged_at"
             case reviewComments = "review_comments"
+            case requestedReviewers = "requested_reviewers"
+            case requestedTeams = "requested_teams"
         }
+    }
+
+    private struct RequestedTeam: Decodable {
+        let name: String
     }
 
     private struct PullRequestRef: Decodable {

@@ -23,6 +23,9 @@ struct SettingsStoreCoverageTests {
         var settings = UserSettings()
         settings.repoList.displayLimit = 9
         settings.gitHubReferenceMonitor.enabled = true
+        settings.gitHubPullRequestNotifications.enabled = true
+        settings.gitHubPullRequestNotifications.reviewRequests = true
+        settings.gitHubPullRequestNotifications.clickAction = .openIssueNavigator
         settings.githubHost = try #require(URL(string: "https://github.example.com"))
         settings.githubArchives.sources = [
             GitHubArchiveSource(
@@ -37,6 +40,9 @@ struct SettingsStoreCoverageTests {
         let loaded = store.load()
         #expect(loaded.repoList.displayLimit == 9)
         #expect(loaded.gitHubReferenceMonitor.enabled)
+        #expect(loaded.gitHubPullRequestNotifications.enabled)
+        #expect(loaded.gitHubPullRequestNotifications.reviewRequests)
+        #expect(loaded.gitHubPullRequestNotifications.clickAction == .openIssueNavigator)
         #expect(loaded.githubHost == URL(string: "https://github.example.com")!)
         #expect(loaded.githubArchives.sources.first?.name == "openclaw")
         #expect(loaded.githubArchives.sources.first?.format == .discrawlSnapshot)
@@ -85,12 +91,14 @@ struct SettingsStoreCoverageTests {
         var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
         object.removeValue(forKey: "githubArchives")
         object.removeValue(forKey: "gitHubReferenceMonitor")
+        object.removeValue(forKey: "gitHubPullRequestNotifications")
         let legacyData = try JSONSerialization.data(withJSONObject: object)
 
         let loaded = try JSONDecoder().decode(UserSettings.self, from: legacyData)
         #expect(loaded.repoList.displayLimit == 4)
         #expect(loaded.gitHubReferenceMonitor == GitHubReferenceMonitorSettings())
         #expect(loaded.actions == ActionsSettings())
+        #expect(loaded.gitHubPullRequestNotifications == GitHubPullRequestNotificationSettings())
         #expect(loaded.githubArchives == GitHubArchiveSettings())
     }
 
@@ -174,6 +182,24 @@ struct SettingsStoreCoverageTests {
         let loaded = try JSONDecoder().decode(UserSettings.self, from: legacyData)
 
         #expect(loaded.gitHubReferenceMonitor.enabled)
+    }
+
+    @Test
+    func `load older pull request notification settings defaults click action`() throws {
+        let data = try JSONEncoder().encode(UserSettings())
+        var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        var notifications = try #require(object["gitHubPullRequestNotifications"] as? [String: Any])
+        notifications["enabled"] = true
+        notifications["reviewRequests"] = true
+        notifications.removeValue(forKey: "clickAction")
+        object["gitHubPullRequestNotifications"] = notifications
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+
+        let loaded = try JSONDecoder().decode(UserSettings.self, from: legacyData)
+
+        #expect(loaded.gitHubPullRequestNotifications.enabled)
+        #expect(loaded.gitHubPullRequestNotifications.reviewRequests)
+        #expect(loaded.gitHubPullRequestNotifications.clickAction == .openInBrowser)
     }
 
     @Test

@@ -489,21 +489,6 @@ struct GitHubRestAPI {
         return items.count
     }
 
-    func recentPullRequests(owner: String, name: String, limit: Int = 20) async throws -> [RepoPullRequestSummary] {
-        try await self.recentList(
-            owner: owner,
-            name: name,
-            path: "pulls",
-            limit: limit,
-            queryItems: [
-                URLQueryItem(name: "state", value: "open"),
-                URLQueryItem(name: "sort", value: "updated"),
-                URLQueryItem(name: "direction", value: "desc")
-            ],
-            decode: GitHubRecentDecoders.decodeRecentPullRequests(from:)
-        )
-    }
-
     func recentIssues(owner: String, name: String, limit: Int = 20) async throws -> [RepoIssueSummary] {
         let token = try await tokenProvider()
         let target = max(1, min(limit, 100))
@@ -634,7 +619,7 @@ struct GitHubRestAPI {
         return GitHubReleasePicker.latestRelease(from: releases)
     }
 
-    private func recentList<T>(
+    func recentList<T>(
         owner: String,
         name: String,
         path: String,

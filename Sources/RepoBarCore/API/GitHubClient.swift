@@ -409,9 +409,21 @@ public actor GitHubClient {
         return repos
     }
 
-    public func recentPullRequests(owner: String, name: String, limit: Int = 20) async throws -> [RepoPullRequestSummary] {
+    public func recentPullRequests(
+        owner: String,
+        name: String,
+        limit: Int = 20,
+        state: GitHubPullRequestListState = .open,
+        includeCommentCounts: Bool = false
+    ) async throws -> [RepoPullRequestSummary] {
         do {
-            return try await self.restAPI.recentPullRequests(owner: owner, name: name, limit: limit)
+            return try await self.restAPI.recentPullRequests(
+                owner: owner,
+                name: name,
+                limit: limit,
+                state: state,
+                includeCommentCounts: includeCommentCounts
+            )
         } catch {
             if let fallback = self.archivePullRequestFallback(owner: owner, name: name, limit: limit, error: error), fallback.isEmpty == false {
                 await self.diag.message("Using archive PR fallback for \(owner)/\(name) after \(error.userFacingMessage)")
