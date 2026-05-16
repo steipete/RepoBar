@@ -41,6 +41,47 @@ struct RepoBrowserRowsTests {
     }
 
     @Test
+    func `sortable keys fold missing stats to a low sentinel`() {
+        let loaded = RepoBrowserRows.make(
+            repositories: [Self.makeRepo("a/loaded", issues: 3, pulls: 4, stars: 5)],
+            pinnedRepositories: [],
+            hiddenRepositories: [],
+            now: Date(timeIntervalSinceReferenceDate: 1000)
+        ).first!
+        let manual = RepoBrowserRows.make(
+            repositories: [],
+            pinnedRepositories: ["a/manual"],
+            hiddenRepositories: [],
+            now: Date(timeIntervalSinceReferenceDate: 1000)
+        ).first!
+
+        #expect(loaded.sortableIssues == 3)
+        #expect(loaded.sortablePulls == 4)
+        #expect(loaded.sortableStars == 5)
+        #expect(manual.sortableIssues == -1)
+        #expect(manual.sortablePulls == -1)
+        #expect(manual.sortableStars == -1)
+        #expect(manual.sortablePushedAt == .distantPast)
+    }
+
+    @Test
+    func `sorted by stars descending puts highest first and manual rows last`() {
+        let rows = RepoBrowserRows.make(
+            repositories: [
+                Self.makeRepo("a/low", stars: 1),
+                Self.makeRepo("a/high", stars: 100),
+                Self.makeRepo("a/mid", stars: 50)
+            ],
+            pinnedRepositories: ["a/manual"],
+            hiddenRepositories: [],
+            now: Date(timeIntervalSinceReferenceDate: 1000)
+        )
+        let comparator = KeyPathComparator(\RepoBrowserRow.sortableStars, order: .reverse)
+        let sorted = rows.sorted(using: [comparator])
+        #expect(sorted.map(\.fullName) == ["a/high", "a/mid", "a/low", "a/manual"])
+    }
+
+    @Test
     func `matches finds private org repository by owner or name`() {
         let row = RepoBrowserRows.make(
             repositories: [Self.makeRepo("amantus-ai/sweetistics")],

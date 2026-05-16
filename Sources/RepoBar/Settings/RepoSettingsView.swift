@@ -11,6 +11,10 @@ struct RepoSettingsView: View {
     @State private var allRows: [RepoBrowserRow] = []
     @State private var filteredRows: [RepoBrowserRow] = []
     @State private var statusLine = ""
+    @State private var sortOrder: [KeyPathComparator<RepoBrowserRow>] = [
+        KeyPathComparator(\RepoBrowserRow.visibilitySortKey, order: .forward),
+        KeyPathComparator(\RepoBrowserRow.fullName, order: .forward)
+    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -50,8 +54,8 @@ struct RepoSettingsView: View {
                 .frame(width: 200)
             }
 
-            Table(self.filteredRows, selection: self.$selection) {
-                TableColumn("Repository") { row in
+            Table(self.filteredRows, selection: self.$selection, sortOrder: self.$sortOrder) {
+                TableColumn("Repository", value: \RepoBrowserRow.fullName) { row in
                     VStack(alignment: .leading, spacing: 2) {
                         Text(row.fullName)
                             .lineLimit(1)
@@ -77,35 +81,35 @@ struct RepoSettingsView: View {
                 }
                 .width(min: 300, ideal: 420, max: .infinity)
 
-                TableColumn("Issues") { row in
+                TableColumn("Issues", value: \RepoBrowserRow.sortableIssues) { row in
                     Text(row.issueLabel)
                         .monospacedDigit()
                         .foregroundStyle(row.isManual ? .secondary : .primary)
                 }
                 .width(min: 56, ideal: 64, max: 76)
 
-                TableColumn("PRs") { row in
+                TableColumn("PRs", value: \RepoBrowserRow.sortablePulls) { row in
                     Text(row.pullRequestLabel)
                         .monospacedDigit()
                         .foregroundStyle(row.isManual ? .secondary : .primary)
                 }
                 .width(min: 44, ideal: 52, max: 64)
 
-                TableColumn("Stars") { row in
+                TableColumn("Stars", value: \RepoBrowserRow.sortableStars) { row in
                     Text(row.starLabel)
                         .monospacedDigit()
                         .foregroundStyle(row.isManual ? .secondary : .primary)
                 }
                 .width(min: 52, ideal: 64, max: 76)
 
-                TableColumn("Updated") { row in
+                TableColumn("Updated", value: \RepoBrowserRow.sortablePushedAt) { row in
                     Text(row.updatedLabel)
                         .lineLimit(1)
                         .foregroundStyle(.secondary)
                 }
                 .width(min: 80, ideal: 96, max: 120)
 
-                TableColumn("Visibility") { row in
+                TableColumn("Visibility", value: \RepoBrowserRow.visibilitySortKey) { row in
                     RepoVisibilityMenu(visibility: row.visibility) { newValue in
                         Task { await self.set(row.fullName, to: newValue) }
                     }
@@ -152,6 +156,7 @@ struct RepoSettingsView: View {
             Task { try? await self.appState.github.prefetchedRepositories() }
         }
         .onChange(of: self.searchQuery) { _, _ in self.applySearch() }
+        .onChange(of: self.sortOrder) { _, _ in self.applySearch() }
         .onChange(of: self.session.accessibleRepositories) { _, _ in self.rebuildRows() }
         .onChange(of: self.session.repositories) { _, _ in self.rebuildRows() }
         .onChange(of: self.session.menuSnapshot) { _, _ in self.rebuildRows() }
@@ -207,7 +212,16 @@ struct RepoSettingsView: View {
     }
 
     private func applySearch() {
-        self.filteredRows = RepoBrowserRows.filter(self.allRows, query: self.searchQuery)
+        var rows = RepoBrowserRows.filter(self.allRows, query: self.searchQuery)
+        if !self.sortOrder.isEmpty {
+            // Append a stable fullName tiebreaker so equal-count rows keep a
+            // predictable order even when a header click reduces sortOrder
+            // to a single comparator.
+            var effective = self.sortOrder
+            effective.append(KeyPathComparator(\RepoBrowserRow.fullName, order: .forward))
+            rows.sort(using: effective)
+        }
+        self.filteredRows = rows
         self.selection.formIntersection(Set(self.filteredRows.map(\.id)))
         self.statusLine = RepoBrowserRows.statusLine(allRows: self.allRows, filteredRows: self.filteredRows)
     }
