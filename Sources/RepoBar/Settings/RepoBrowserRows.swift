@@ -29,15 +29,30 @@ struct RepoBrowserRow: Identifiable, Hashable {
     }
 
     // MARK: - Sortable keys
+
     //
     // KeyPathComparator needs concrete Comparable values, so optional stats are
     // folded to sentinels that sink unknown rows to the "low" end of the order.
 
-    var visibilitySortKey: Int { self.visibility.sortPriority }
-    var sortableIssues: Int { self.openIssues ?? -1 }
-    var sortablePulls: Int { self.openPulls ?? -1 }
-    var sortableStars: Int { self.stars ?? -1 }
-    var sortablePushedAt: Date { self.pushedAt ?? .distantPast }
+    var visibilitySortKey: Int {
+        self.visibility.sortPriority
+    }
+
+    var sortableIssues: Int {
+        self.openIssues ?? -1
+    }
+
+    var sortablePulls: Int {
+        self.openPulls ?? -1
+    }
+
+    var sortableStars: Int {
+        self.stars ?? -1
+    }
+
+    var sortablePushedAt: Date {
+        self.pushedAt ?? .distantPast
+    }
 
     func matches(_ query: String) -> Bool {
         let terms = query

@@ -41,19 +41,19 @@ struct RepoBrowserRowsTests {
     }
 
     @Test
-    func `sortable keys fold missing stats to a low sentinel`() {
-        let loaded = RepoBrowserRows.make(
+    func `sortable keys fold missing stats to a low sentinel`() throws {
+        let loaded = try #require(RepoBrowserRows.make(
             repositories: [Self.makeRepo("a/loaded", issues: 3, pulls: 4, stars: 5)],
             pinnedRepositories: [],
             hiddenRepositories: [],
             now: Date(timeIntervalSinceReferenceDate: 1000)
-        ).first!
-        let manual = RepoBrowserRows.make(
+        ).first)
+        let manual = try #require(RepoBrowserRows.make(
             repositories: [],
             pinnedRepositories: ["a/manual"],
             hiddenRepositories: [],
             now: Date(timeIntervalSinceReferenceDate: 1000)
-        ).first!
+        ).first)
 
         #expect(loaded.sortableIssues == 3)
         #expect(loaded.sortablePulls == 4)
