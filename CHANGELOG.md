@@ -2,6 +2,7 @@
 
 ## 0.6.3 - Unreleased
 
+- Make the Settings Repository table columns sortable (thanks @XueshiQiao).
 - Improve copied GitHub reference parsing for maintainer triage lists so bullet-leading references stay prioritized, compound issue lists resolve, and status counts are ignored.
 
 ## 0.6.2 - 2026-05-20
