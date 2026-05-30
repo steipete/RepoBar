@@ -102,14 +102,14 @@ struct AboutSettingsView: View {
                     Button("Check for Updates…") {
                         SparkleController.shared.checkForUpdates()
                     }
-                    Button("Copy Update Diagnostics") {
-                        self.copyUpdateDiagnostics()
-                    }
                 }
             } else {
                 Text("Updates unavailable in this build.")
                     .foregroundStyle(.secondary)
                     .padding(.top, 4)
+            }
+            Button("Copy Update Diagnostics") {
+                self.copyUpdateDiagnostics()
             }
 
             Text("© 2025 Peter Steinberger. MIT License.")
