@@ -2,6 +2,8 @@
 
 ## 0.6.7 - Unreleased
 
+- Add copyable update diagnostics in About so Sparkle install-location failures include bundle path, resolved path, signing, Homebrew, translocation, and quarantine signals. (#70)
+
 ## 0.6.6 - 2026-05-26
 
 - Open multi-reference GitHub detections in Issue Navigator on left click while keeping the preview menu on right click.

@@ -112,7 +112,7 @@ final class SparkleController: NSObject {
         self.updater.checkForUpdates(nil)
     }
 
-    private static func isDeveloperIDSigned(bundleURL: URL) -> Bool {
+    nonisolated static func isDeveloperIDSigned(bundleURL: URL) -> Bool {
         var staticCode: SecStaticCode?
         guard SecStaticCodeCreateWithPath(bundleURL as CFURL, SecCSFlags(), &staticCode) == errSecSuccess,
               let code = staticCode else { return false }

@@ -102,6 +102,9 @@ struct AboutSettingsView: View {
                     Button("Check for Updates…") {
                         SparkleController.shared.checkForUpdates()
                     }
+                    Button("Copy Update Diagnostics") {
+                        self.copyUpdateDiagnostics()
+                    }
                 }
             } else {
                 Text("Updates unavailable in this build.")
@@ -133,5 +136,13 @@ struct AboutSettingsView: View {
                 SparkleController.shared.automaticallyDownloadsUpdates = newValue
             }
         }
+    }
+
+    private func copyUpdateDiagnostics() {
+        let diagnostics = UpdateDiagnostics.current(
+            canCheckForUpdates: SparkleController.shared.canCheckForUpdates
+        )
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(diagnostics.pasteboardText, forType: .string)
     }
 }
