@@ -4,8 +4,10 @@ import Testing
 
 struct UpdateDiagnosticsTests {
     @Test
-    func `diagnostics include update location and install-origin signals`() throws {
-        let bundleURL = try #require(URL(string: "file:///Applications/RepoBar.app"))
+    func `diagnostics include update location and install-origin signals`() {
+        let bundleURL = FileManager.default.temporaryDirectory
+            .appending(path: "RepoBarDiagnosticsFixture", directoryHint: .isDirectory)
+            .appending(path: "RepoBar.app", directoryHint: .isDirectory)
         let diagnostics = UpdateDiagnostics(
             bundleURL: bundleURL,
             canCheckForUpdates: true,
@@ -13,13 +15,13 @@ struct UpdateDiagnosticsTests {
             quarantineReader: { _ in true }
         )
 
-        #expect(diagnostics.bundlePath == "/Applications/RepoBar.app")
+        #expect(diagnostics.bundlePath == bundleURL.path)
         #expect(diagnostics.canCheckForUpdates)
         #expect(diagnostics.developerIDSigned)
         #expect(!diagnostics.homebrewCask)
         #expect(!diagnostics.appTranslocated)
         #expect(diagnostics.quarantinePresent)
-        #expect(diagnostics.pasteboardText.contains("bundle_path: /Applications/RepoBar.app"))
+        #expect(diagnostics.pasteboardText.contains("bundle_path: \(bundleURL.path)"))
         #expect(diagnostics.pasteboardText.contains("quarantine_present: true"))
     }
 
