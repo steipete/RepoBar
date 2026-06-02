@@ -70,11 +70,24 @@ extension AppState {
 
     func addPinned(_ fullName: String) async {
         let normalized = self.normalizedFullName(fullName)
-        guard !self.session.settings.repoList.pinnedRepositories.contains(where: {
+        let alreadyPinned = self.session.settings.repoList.pinnedRepositories.contains {
             self.normalizedFullName($0) == normalized
-        }) else { return }
+        }
+        let isHidden = self.session.settings.repoList.hiddenRepositories.contains {
+            self.normalizedFullName($0) == normalized
+        }
+        // Nothing to do only when it is already pinned and not hidden. If it is
+        // already pinned but somehow still hidden, fall through to repair that.
+        guard !alreadyPinned || isHidden else { return }
 
-        self.session.settings.repoList.pinnedRepositories.append(fullName)
+        if !alreadyPinned {
+            self.session.settings.repoList.pinnedRepositories.append(fullName)
+        }
+        // If pinned, also unhide to keep pinned and hidden mutually exclusive.
+        // This mirrors hide(), which removes the repo from the pinned list.
+        self.session.settings.repoList.hiddenRepositories.removeAll {
+            self.normalizedFullName($0) == normalized
+        }
         self.settingsStore.save(self.session.settings)
         await self.refresh()
     }

@@ -41,6 +41,25 @@ struct RepoBrowserRowsTests {
     }
 
     @Test
+    func `make emits one unique row when a repo is both pinned and hidden`() {
+        let rows = RepoBrowserRows.make(
+            repositories: [],
+            pinnedRepositories: ["owner/X"],
+            hiddenRepositories: ["owner/X"],
+            now: Date(timeIntervalSinceReferenceDate: 1000)
+        )
+
+        let ids = rows.map(\.id)
+        // No duplicate ids: SwiftUI Table requires Identifiable.id to be unique.
+        #expect(Set(ids).count == ids.count)
+        // The shared name must collapse to exactly one row, not one per list.
+        #expect(rows.count(where: { $0.id == "owner/x" }) == 1)
+        #expect(rows.count == 1)
+        // Pinned wins: the user explicitly pinned it, so surface it as pinned.
+        #expect(rows.first?.visibility == .pinned)
+    }
+
+    @Test
     func `sortable keys fold missing stats to a low sentinel`() throws {
         let loaded = try #require(RepoBrowserRows.make(
             repositories: [Self.makeRepo("a/loaded", issues: 3, pulls: 4, stars: 5)],

@@ -65,6 +65,40 @@ struct VisibilityTests {
         #expect(!visible.contains(where: { $0.fullName == "me/r1" }))
     }
 
+    @MainActor
+    @Test
+    func `addPinned removes the repo from the hidden list`() async {
+        let appState = AppState()
+        appState.session.settings.repoList.pinnedRepositories = []
+        appState.session.settings.repoList.hiddenRepositories = ["owner/X"]
+
+        await appState.addPinned("owner/X")
+
+        let pinned = appState.session.settings.repoList.pinnedRepositories
+        let hidden = appState.session.settings.repoList.hiddenRepositories
+        // Pin and hide must be mutually exclusive, mirroring hide() which unpins.
+        #expect(pinned.contains { $0.caseInsensitiveCompare("owner/X") == .orderedSame })
+        #expect(!hidden.contains { $0.caseInsensitiveCompare("owner/X") == .orderedSame })
+    }
+
+    @MainActor
+    @Test
+    func `addPinned repairs an already-pinned repo that is still hidden`() async {
+        let appState = AppState()
+        // Inconsistent state: the repo is both pinned and hidden.
+        appState.session.settings.repoList.pinnedRepositories = ["owner/X"]
+        appState.session.settings.repoList.hiddenRepositories = ["owner/X"]
+
+        await appState.addPinned("owner/X")
+
+        let pinned = appState.session.settings.repoList.pinnedRepositories
+        let hidden = appState.session.settings.repoList.hiddenRepositories
+        // Re-pinning an already-pinned repo must still clear the stale hidden entry,
+        // and must not append a duplicate pin.
+        #expect(pinned.count(where: { $0.caseInsensitiveCompare("owner/X") == .orderedSame }) == 1)
+        #expect(!hidden.contains { $0.caseInsensitiveCompare("owner/X") == .orderedSame })
+    }
+
     @Test
     func `collapses duplicate repos before menu selection`() {
         let repos = [
