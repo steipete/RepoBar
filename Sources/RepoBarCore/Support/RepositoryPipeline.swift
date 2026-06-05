@@ -68,10 +68,16 @@ public enum RepositoryPipeline {
 
         switch query.scope {
         case .hidden:
-            filtered = filtered.filter { hiddenSet.contains($0.fullName.lowercased()) }
+            filtered = filtered.filter {
+                let key = $0.fullName.lowercased()
+                return hiddenSet.contains(key) && !pinnedSet.contains(key)
+            }
         case .all, .pinned:
             if !hiddenSet.isEmpty {
-                filtered = filtered.filter { !hiddenSet.contains($0.fullName.lowercased()) }
+                filtered = filtered.filter {
+                    let key = $0.fullName.lowercased()
+                    return !hiddenSet.contains(key) || pinnedSet.contains(key)
+                }
             }
         }
 

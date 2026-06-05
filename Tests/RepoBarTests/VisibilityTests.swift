@@ -46,6 +46,24 @@ struct VisibilityTests {
     }
 
     @Test
+    func `keeps pinned repository visible when stale hidden entry remains`() {
+        let repo = makeRepository(id: "1", name: "a")
+        let visible = AppState.selectVisible(
+            all: [repo],
+            options: AppState.VisibleSelectionOptions(
+                pinned: ["me/a"],
+                hidden: Set(["me/a"]),
+                includeForks: false,
+                includeArchived: false,
+                limit: 5,
+                ownerFilter: []
+            )
+        )
+
+        #expect(visible.map(\.fullName) == ["me/a"])
+    }
+
+    @Test
     func `applies limit after filtering`() {
         let repos = (0 ..< 10).map { idx in
             makeRepository(id: "\(idx)", name: "r\(idx)")

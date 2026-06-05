@@ -153,7 +153,10 @@ extension AppState {
         let uniqueRepos = RepositoryUniquing.byFullName(repos)
         let pinnedSet = Set(options.pinned.map { $0.lowercased() })
         let hiddenSet = Set(options.hidden.map { $0.lowercased() })
-        let filtered = uniqueRepos.filter { !hiddenSet.contains($0.fullName.lowercased()) }
+        let filtered = uniqueRepos.filter {
+            let key = $0.fullName.lowercased()
+            return !hiddenSet.contains(key) || pinnedSet.contains(key)
+        }
         let visible = RepositoryFilter.apply(
             filtered,
             includeForks: options.includeForks,

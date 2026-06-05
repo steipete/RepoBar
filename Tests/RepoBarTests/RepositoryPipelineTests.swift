@@ -59,6 +59,37 @@ struct RepositoryPipelineTests {
     }
 
     @Test
+    func `Pinned repository remains visible when stale hidden entry remains`() {
+        let repos = [
+            Self.makeRepo("a/one", issues: 0, pulls: 0),
+            Self.makeRepo("b/two", issues: 0, pulls: 0)
+        ]
+        let query = RepositoryQuery(
+            scope: .all,
+            pinned: ["b/two"],
+            hidden: Set(["b/two"]),
+            pinPriority: true
+        )
+        let result = RepositoryPipeline.apply(repos, query: query)
+        #expect(result.map(\.fullName) == ["b/two", "a/one"])
+    }
+
+    @Test
+    func `Hidden scope excludes repositories that are also pinned`() {
+        let repos = [
+            Self.makeRepo("a/one", issues: 0, pulls: 0),
+            Self.makeRepo("b/two", issues: 0, pulls: 0)
+        ]
+        let query = RepositoryQuery(
+            scope: .hidden,
+            pinned: ["b/two"],
+            hidden: Set(["a/one", "b/two"])
+        )
+        let result = RepositoryPipeline.apply(repos, query: query)
+        #expect(result.map(\.fullName) == ["a/one"])
+    }
+
+    @Test
     func `Pinned scope filters to pinned list`() {
         let repos = [
             Self.makeRepo("a/one", issues: 0, pulls: 0),
