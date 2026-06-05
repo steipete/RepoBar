@@ -7,8 +7,10 @@ namespace RepoBar.Windows;
 internal sealed class SettingsEditorForm : Form
 {
     private readonly WindowsSettingsStore _settingsStore;
+    private readonly Label _credentialState = new();
     private readonly TextBox _hostTextBox = new();
     private readonly TextBox _tokenEnvironmentTextBox = new();
+    private readonly TextBox _personalAccessTokenTextBox = new();
     private readonly NumericUpDown _refreshMinutes = new();
     private readonly CheckBox _openMenuOnLeftClick = new();
     private readonly CheckBox _discoverLocalProjects = new();
@@ -42,6 +44,7 @@ internal sealed class SettingsEditorForm : Form
         var settings = _settingsStore.Settings;
         _hostTextBox.Text = settings.GitHubHost;
         _tokenEnvironmentTextBox.Text = settings.TokenEnvironmentVariable;
+        _personalAccessTokenTextBox.UseSystemPasswordChar = true;
         _refreshMinutes.Minimum = 1;
         _refreshMinutes.Maximum = 60;
         _refreshMinutes.Value = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
@@ -92,10 +95,16 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         root.Controls.Add(settingsGrid);
 
+        _hostTextBox.TextChanged += (_, _) => UpdateCredentialState();
         AddLabeledControl(settingsGrid, "GitHub host", _hostTextBox);
         AddLabeledControl(settingsGrid, "Token env var", _tokenEnvironmentTextBox);
         AddLabeledControl(settingsGrid, "Refresh minutes", _refreshMinutes);
         AddLabeledControl(settingsGrid, "Local scan depth", _localProjectsDepth);
+        AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
+        _credentialState.AutoSize = true;
+        UpdateCredentialState();
+        settingsGrid.Controls.Add(new Label { Text = "Credential Manager", AutoSize = true, Anchor = AnchorStyles.Left });
+        settingsGrid.Controls.Add(_credentialState);
 
         _openMenuOnLeftClick.Text = "Open menu on left click";
         _discoverLocalProjects.Text = "Discover local projects";
@@ -141,8 +150,11 @@ internal sealed class SettingsEditorForm : Form
         addButton.Click += (_, _) => _repositories.Add(new RepositoryRow("", "", RepositoryVisibility.Visible));
         var removeButton = new Button { Text = "Remove selected" };
         removeButton.Click += (_, _) => RemoveSelectedRepositories();
+        var clearTokenButton = new Button { Text = "Clear token" };
+        clearTokenButton.Click += (_, _) => ClearCredentialToken();
         footer.Controls.Add(saveButton);
         footer.Controls.Add(cancelButton);
+        footer.Controls.Add(clearTokenButton);
         footer.Controls.Add(removeButton);
         footer.Controls.Add(addButton);
         root.Controls.Add(footer);
@@ -215,7 +227,8 @@ internal sealed class SettingsEditorForm : Form
     {
         _repositoriesGrid.EndEdit();
         var settings = _settingsStore.Settings;
-        settings.GitHubHost = string.IsNullOrWhiteSpace(_hostTextBox.Text) ? "github.com" : _hostTextBox.Text.Trim();
+        settings.GitHubHost = GitHubHost.Normalize(_hostTextBox.Text);
+        _hostTextBox.Text = settings.GitHubHost;
         settings.TokenEnvironmentVariable = _tokenEnvironmentTextBox.Text.Trim();
         settings.RefreshIntervalMinutes = (int)_refreshMinutes.Value;
         settings.OpenMenuOnLeftClick = _openMenuOnLeftClick.Checked;
@@ -237,6 +250,49 @@ internal sealed class SettingsEditorForm : Form
                 Name = repository.Name,
                 Visibility = repository.Visibility,
             }));
+
+        SaveCredentialTokenIfNeeded();
+    }
+
+    private void SaveCredentialTokenIfNeeded()
+    {
+        if (string.IsNullOrWhiteSpace(_personalAccessTokenTextBox.Text))
+        {
+            return;
+        }
+
+        try
+        {
+            new WindowsCredentialStore(_hostTextBox.Text).SaveToken(_personalAccessTokenTextBox.Text);
+            _personalAccessTokenTextBox.Clear();
+            UpdateCredentialState();
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Credential Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void ClearCredentialToken()
+    {
+        try
+        {
+            new WindowsCredentialStore(_hostTextBox.Text).ClearToken();
+            _personalAccessTokenTextBox.Clear();
+            UpdateCredentialState();
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Credential Manager", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void UpdateCredentialState()
+    {
+        var store = new WindowsCredentialStore(_hostTextBox.Text);
+        _credentialState.Text = store.HasToken()
+            ? $"Stored as {store.TargetName}"
+            : $"No stored token ({store.TargetName})";
     }
 
     private sealed class RepositoryRow

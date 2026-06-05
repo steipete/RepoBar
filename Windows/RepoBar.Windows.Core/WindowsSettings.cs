@@ -90,6 +90,7 @@ internal sealed class WindowsSettingsStore
 
         var rawSettings = File.ReadAllText(settingsPath);
         var settings = JsonSerializer.Deserialize<WindowsSettings>(rawSettings, JsonOptions) ?? new WindowsSettings();
+        settings.GitHubHost = GitHubHost.Normalize(settings.GitHubHost);
         if (string.IsNullOrWhiteSpace(settings.LocalProjectsRoot))
         {
             settings.LocalProjectsRoot = Path.Combine(
@@ -157,6 +158,12 @@ internal sealed class WindowsSettingsStore
 
     public string? ResolveToken()
     {
+        var credentialToken = new WindowsCredentialStore(Settings.GitHubHost).ReadToken();
+        if (!string.IsNullOrWhiteSpace(credentialToken))
+        {
+            return credentialToken;
+        }
+
         if (!string.IsNullOrWhiteSpace(Settings.TokenEnvironmentVariable))
         {
             var configuredToken = Environment.GetEnvironmentVariable(Settings.TokenEnvironmentVariable);

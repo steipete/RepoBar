@@ -15,7 +15,7 @@ The Windows app currently provides:
 - latest release link
 - recent issue, pull request, release, CI run, branch, tag, commit, and contributor submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for GitHub host, token environment variable, local project scanning, refresh cadence, and repository visibility
+- native Preferences window for GitHub host, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional GitHub API rate-limit row in the tray menu
 - optional Actions summary with latest workflow state per configured repository
@@ -95,7 +95,13 @@ CRABBOX_PROVIDER=aws CRABBOX_TARGET=windows pnpm windows:crabbox
 
 ## Authentication
 
-Set a token in the configured environment variable before launching:
+Use **Preferences** to save a personal access token in Windows Credential Manager. RepoBar stores it under a per-host target such as:
+
+```text
+RepoBar.Windows:github.com
+```
+
+Environment variables still work as bootstrap/fallback:
 
 ```powershell
 $env:REPOBAR_GITHUB_TOKEN = "<token>"

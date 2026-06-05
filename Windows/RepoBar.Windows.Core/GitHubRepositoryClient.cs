@@ -25,7 +25,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
         HttpMessageHandler messageHandler,
         GitHubResponseCache? cache)
     {
-        _host = string.IsNullOrWhiteSpace(settings.GitHubHost) ? "github.com" : settings.GitHubHost.Trim();
+        _host = GitHubHost.Normalize(settings.GitHubHost);
         var apiRoot = string.Equals(_host, "github.com", StringComparison.OrdinalIgnoreCase)
             ? "https://api.github.com/"
             : $"https://{_host}/api/v3/";
