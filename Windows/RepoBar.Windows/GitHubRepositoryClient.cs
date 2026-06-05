@@ -74,6 +74,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
             var pullCount = await LoadPullRequestCountAsync(repository, cancellationToken).ConfigureAwait(false);
             var latestRun = await LoadLatestWorkflowRunAsync(repository, defaultBranch, cancellationToken).ConfigureAwait(false);
             var latestRelease = await LoadLatestReleaseAsync(repository, cancellationToken).ConfigureAwait(false);
+            var recentLists = await LoadRecentListsAsync(repository, cancellationToken).ConfigureAwait(false);
 
             return new RepositoryStatus(
                 repository,
@@ -85,6 +86,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
                 pushedAt,
                 latestRun,
                 latestRelease,
+                recentLists,
                 localStatus,
                 ErrorMessage: null);
         }
@@ -175,11 +177,163 @@ internal sealed class GitHubRepositoryClient : IDisposable
         }
     }
 
+    private async Task<RecentRepositoryLists> LoadRecentListsAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var issues = await LoadRecentIssuesAsync(repository, cancellationToken).ConfigureAwait(false);
+        var pulls = await LoadRecentPullsAsync(repository, cancellationToken).ConfigureAwait(false);
+        var releases = await LoadRecentReleasesAsync(repository, cancellationToken).ConfigureAwait(false);
+        var branches = await LoadRecentBranchesAsync(repository, cancellationToken).ConfigureAwait(false);
+        var tags = await LoadRecentTagsAsync(repository, cancellationToken).ConfigureAwait(false);
+        var commits = await LoadRecentCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
+        return new RecentRepositoryLists(issues, pulls, releases, branches, tags, commits);
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentIssuesAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/issues?state=open&sort=updated&direction=desc&per_page=10",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateArray()
+            .Where(issue => !issue.TryGetProperty("pull_request", out _))
+            .Take(5)
+            .Select(issue => new GitHubListItem(
+                $"#{issue.GetProperty("number").GetInt32()} {TryGetString(issue, "title") ?? "Untitled issue"}",
+                TryGetString(issue, "html_url"),
+                Metadata(TryGetNestedString(issue, "user", "login"), TryGetDateTimeOffset(issue, "updated_at"))))
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentPullsAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/pulls?state=open&sort=updated&direction=desc&per_page=5",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateArray()
+            .Select(pull => new GitHubListItem(
+                $"#{pull.GetProperty("number").GetInt32()} {TryGetString(pull, "title") ?? "Untitled pull request"}",
+                TryGetString(pull, "html_url"),
+                Metadata(TryGetNestedString(pull, "user", "login"), TryGetDateTimeOffset(pull, "updated_at"))))
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentReleasesAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/releases?per_page=5",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateArray()
+            .Select(release => new GitHubListItem(
+                TryGetString(release, "name") is { Length: > 0 } name ? name : TryGetString(release, "tag_name") ?? "Release",
+                TryGetString(release, "html_url"),
+                Metadata(TryGetString(release, "tag_name"), TryGetDateTimeOffset(release, "published_at"))))
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentBranchesAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/branches?per_page=5",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateArray()
+            .Select(branch =>
+            {
+                var name = TryGetString(branch, "name") ?? "branch";
+                return new GitHubListItem(
+                    name,
+                    BuildWebUri(repository, $"tree/{Uri.EscapeDataString(name)}").ToString(),
+                    ShortSha(TryGetNestedString(branch, "commit", "sha")));
+            })
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentTagsAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/tags?per_page=5",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateArray()
+            .Select(tag =>
+            {
+                var name = TryGetString(tag, "name") ?? "tag";
+                return new GitHubListItem(
+                    name,
+                    BuildWebUri(repository, $"releases/tag/{Uri.EscapeDataString(name)}").ToString(),
+                    ShortSha(TryGetNestedString(tag, "commit", "sha")));
+            })
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentCommitsAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/commits?per_page=5",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateArray()
+            .Select(commit =>
+            {
+                var message = TryGetNestedString(commit, "commit", "message") ?? "Commit";
+                var firstLine = message.Split('\n', 2)[0].Trim();
+                return new GitHubListItem(
+                    $"{ShortSha(TryGetString(commit, "sha"))} {firstLine}",
+                    TryGetString(commit, "html_url"),
+                    Metadata(TryGetNestedString(commit, "commit", "author", "name"), TryGetNestedDateTimeOffset(commit, "commit", "author", "date")));
+            })
+            .ToArray();
+    }
+
     private async Task<string> ReadJsonAsync(string path, CancellationToken cancellationToken)
     {
         using var response = await _httpClient.GetAsync(path, cancellationToken).ConfigureAwait(false);
         await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
         return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<string?> TryReadJsonAsync(string path, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await ReadJsonAsync(path, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return null;
+        }
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
@@ -230,6 +384,20 @@ internal sealed class GitHubRepositoryClient : IDisposable
             : null;
     }
 
+    private static string? TryGetNestedString(JsonElement element, params string[] path)
+    {
+        var current = element;
+        foreach (var part in path)
+        {
+            if (!current.TryGetProperty(part, out current))
+            {
+                return null;
+            }
+        }
+
+        return current.ValueKind == JsonValueKind.String ? current.GetString() : null;
+    }
+
     private static DateTimeOffset? TryGetDateTimeOffset(JsonElement element, string propertyName)
     {
         return element.TryGetProperty(propertyName, out var property) &&
@@ -237,6 +405,42 @@ internal sealed class GitHubRepositoryClient : IDisposable
             DateTimeOffset.TryParse(property.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var value)
                 ? value
                 : null;
+    }
+
+    private static DateTimeOffset? TryGetNestedDateTimeOffset(JsonElement element, params string[] path)
+    {
+        var current = element;
+        foreach (var part in path)
+        {
+            if (!current.TryGetProperty(part, out current))
+            {
+                return null;
+            }
+        }
+
+        return current.ValueKind == JsonValueKind.String &&
+            DateTimeOffset.TryParse(current.GetString(), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var value)
+                ? value
+                : null;
+    }
+
+    private static string? Metadata(string? actor, DateTimeOffset? date)
+    {
+        var parts = new List<string>();
+        if (!string.IsNullOrWhiteSpace(actor))
+        {
+            parts.Add(actor);
+        }
+        if (date != null)
+        {
+            parts.Add(date.Value.LocalDateTime.ToString("g", CultureInfo.CurrentCulture));
+        }
+        return parts.Count == 0 ? null : string.Join(" - ", parts);
+    }
+
+    private static string? ShortSha(string? sha)
+    {
+        return string.IsNullOrWhiteSpace(sha) ? null : sha[..Math.Min(7, sha.Length)];
     }
 
     public void Dispose()
@@ -255,12 +459,13 @@ internal sealed record RepositoryStatus(
     DateTimeOffset? PushedAt,
     WorkflowRunStatus? LatestRun,
     ReleaseStatus? LatestRelease,
+    RecentRepositoryLists RecentLists,
     LocalGitRepositoryStatus? LocalStatus,
     string? ErrorMessage)
 {
     public static RepositoryStatus Failed(RepositoryRef repository, LocalGitRepositoryStatus? localStatus, string errorMessage)
     {
-        return new RepositoryStatus(repository, 0, 0, 0, 0, "", null, null, null, localStatus, errorMessage);
+        return new RepositoryStatus(repository, 0, 0, 0, 0, "", null, null, null, RecentRepositoryLists.Empty, localStatus, errorMessage);
     }
 
     public TrayHealth Health
@@ -298,6 +503,19 @@ internal sealed record WorkflowRunStatus(string Status, string? Conclusion, stri
 }
 
 internal sealed record ReleaseStatus(string TagName, string? Url, DateTimeOffset? PublishedAt);
+
+internal sealed record GitHubListItem(string Title, string? Url, string? Subtitle);
+
+internal sealed record RecentRepositoryLists(
+    IReadOnlyList<GitHubListItem> Issues,
+    IReadOnlyList<GitHubListItem> Pulls,
+    IReadOnlyList<GitHubListItem> Releases,
+    IReadOnlyList<GitHubListItem> Branches,
+    IReadOnlyList<GitHubListItem> Tags,
+    IReadOnlyList<GitHubListItem> Commits)
+{
+    public static readonly RecentRepositoryLists Empty = new([], [], [], [], [], []);
+}
 
 internal enum TrayHealth
 {

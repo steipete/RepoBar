@@ -2,7 +2,7 @@
 
 ## 0.7.1 - Unreleased
 
-- Add an initial native Windows taskbar tray companion with configured repository status, local Git state, repository visibility controls, Actions, release, and GitHub navigation links.
+- Add an initial native Windows taskbar tray companion with configured repository status, local Git state, repository visibility controls, recent lists, Actions, release, and GitHub navigation links.
 - Keep Issue Navigator reference clicks from being overwritten by clipboard seeding, and show unresolved GitHub metadata as the reference label instead of "preview unavailable."
 - Keep the Repositories settings table from rendering duplicate rows when the same repository is both pinned and hidden (thanks @devYRPauli). (#73)
 

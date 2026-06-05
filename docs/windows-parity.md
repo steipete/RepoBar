@@ -8,7 +8,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | --- | --- | --- | --- |
 | Tray chrome | Menu bar status item, left/right click behavior, single instance | Notification-area icon, left/right click menu, single instance | Started |
 | Repository rows | Issue/PR counts, stars, forks, CI, release, activity, traffic, heatmap | Same repository status signals, rendered in native tray/flyout | Partial |
-| Repository submenu | GitHub links, local state, worktrees, issues, PRs, releases, changelog, CI runs, discussions, tags, branches, contributors, commits, activity, pin/hide | Same actions where GitHub APIs support them; Windows shell opens folders/terminal | Partial |
+| Repository submenu | GitHub links, local state, worktrees, issues, PRs, releases, changelog, CI runs, discussions, tags, branches, contributors, commits, activity, pin/hide | Same actions where GitHub APIs support them; Windows shell opens folders/terminal | Started |
 | Local projects | Scan project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Finder/Terminal, sync actions | Scan Windows project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Explorer/Terminal, later safe sync actions | Started |
 | Auth/accounts | GitHub App OAuth, PAT fallback, GitHub Enterprise, multi-account storage | PAT/env bootstrap first, then Windows Credential Manager + OAuth/GHE account UI | Missing |
 | Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with search and visibility controls | Started |

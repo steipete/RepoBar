@@ -12,6 +12,7 @@ The Windows app currently provides:
 - issue and pull request counts
 - latest default-branch Actions run status
 - latest release link
+- recent issue, pull request, release, branch, tag, and commit submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
 
 ## Build

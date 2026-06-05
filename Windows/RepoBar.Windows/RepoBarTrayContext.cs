@@ -164,6 +164,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         item.DropDownItems.Add(new ToolStripMenuItem("Open issues", null, (_, _) => OpenRepository(status.Repository, "issues")));
         item.DropDownItems.Add(new ToolStripMenuItem("Open pull requests", null, (_, _) => OpenRepository(status.Repository, "pulls")));
         item.DropDownItems.Add(new ToolStripMenuItem("Open Actions", null, (_, _) => OpenRepository(status.Repository, "actions")));
+        AddRecentItemsSubmenu(item.DropDownItems, "Issues", status.RecentLists.Issues);
+        AddRecentItemsSubmenu(item.DropDownItems, "Pull Requests", status.RecentLists.Pulls);
+        AddRecentItemsSubmenu(item.DropDownItems, "Releases", status.RecentLists.Releases);
+        AddRecentItemsSubmenu(item.DropDownItems, "Branches", status.RecentLists.Branches);
+        AddRecentItemsSubmenu(item.DropDownItems, "Tags", status.RecentLists.Tags);
+        AddRecentItemsSubmenu(item.DropDownItems, "Commits", status.RecentLists.Commits);
 
         if (status.LatestRelease is { Url: { Length: > 0 } releaseUrl })
         {
@@ -236,6 +242,33 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         items.Add(new ToolStripSeparator());
         items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
         items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+    }
+
+    private static void AddRecentItemsSubmenu(ToolStripItemCollection items, string title, IReadOnlyList<GitHubListItem> recentItems)
+    {
+        if (recentItems.Count == 0)
+        {
+            return;
+        }
+
+        var submenu = new ToolStripMenuItem(title);
+        foreach (var recent in recentItems)
+        {
+            var item = new ToolStripMenuItem(recent.Title, null, (_, _) =>
+            {
+                if (!string.IsNullOrWhiteSpace(recent.Url))
+                {
+                    OpenUrl(recent.Url);
+                }
+            })
+            {
+                Enabled = !string.IsNullOrWhiteSpace(recent.Url),
+                ToolTipText = recent.Subtitle ?? recent.Title,
+            };
+            submenu.DropDownItems.Add(item);
+        }
+
+        items.Add(submenu);
     }
 
     private void AddVisibilityItems(ToolStripItemCollection items, string fullName)
