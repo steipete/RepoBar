@@ -140,6 +140,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem(_isRefreshing ? "Refreshing..." : "Refresh now", null, (_, _) => BeginRefresh()) { Enabled = !_isRefreshing });
+        if (_settingsStore.Settings.ShowActionsUsage)
+        {
+            AddActionsUsageItems(_menu.Items);
+        }
         if (_settingsStore.Settings.ShowRateLimits && _githubClient.LastRateLimit != null)
         {
             _menu.Items.Add(new ToolStripMenuItem($"GitHub API: {_githubClient.LastRateLimit.DisplayText}") { Enabled = false });
@@ -148,6 +152,39 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
         _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
         _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
+    }
+
+    private void AddActionsUsageItems(ToolStripItemCollection items)
+    {
+        if (_statuses.Count == 0)
+        {
+            return;
+        }
+
+        var running = _statuses.Count(status => status.LatestRun is { Status: var latestStatus } &&
+            !string.Equals(latestStatus, "completed", StringComparison.OrdinalIgnoreCase));
+        var failing = _statuses.Count(status => status.LatestRun is { Status: "completed", Conclusion: var conclusion } &&
+            !string.Equals(conclusion, "success", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(conclusion, "skipped", StringComparison.OrdinalIgnoreCase));
+        var healthy = _statuses.Count(status => status.LatestRun is { Status: "completed", Conclusion: var conclusion } &&
+            (string.Equals(conclusion, "success", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(conclusion, "skipped", StringComparison.OrdinalIgnoreCase)));
+
+        var actions = new ToolStripMenuItem($"Actions: {running} running  {failing} failing  {healthy} healthy");
+        foreach (var status in _statuses.Where(status => status.LatestRun != null))
+        {
+            var item = new ToolStripMenuItem($"{status.Repository.FullName}: {status.LatestRun!.DisplayText}")
+            {
+                Enabled = !string.IsNullOrWhiteSpace(status.LatestRun.Url),
+            };
+            if (!string.IsNullOrWhiteSpace(status.LatestRun.Url))
+            {
+                item.Click += (_, _) => OpenUrl(status.LatestRun.Url);
+            }
+            actions.DropDownItems.Add(item);
+        }
+
+        items.Add(actions);
     }
 
     private ToolStripMenuItem BuildRepositoryMenu(RepositoryStatus status)
