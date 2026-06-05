@@ -17,6 +17,7 @@ The Windows app currently provides:
 - native Preferences window for GitHub host, token environment variable, local project scanning, refresh cadence, and repository visibility
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional GitHub API rate-limit row in the tray menu
+- optional pull request notifications through Windows tray balloons
 
 ## Build
 

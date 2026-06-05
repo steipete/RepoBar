@@ -11,6 +11,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private readonly ContextMenuStrip _menu = new();
     private readonly System.Windows.Forms.Timer _refreshTimer = new();
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly PullRequestNotificationTracker _pullRequestNotificationTracker = PullRequestNotificationTracker.CreateDefault();
     private GitHubRepositoryClient _githubClient;
     private IReadOnlyList<RepositoryStatus> _statuses = [];
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
@@ -81,6 +82,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 _settingsStore.VisibleRepositories,
                 _localGitIndex,
                 _shutdown.Token);
+            ShowPullRequestNotifications(_statuses);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
@@ -353,6 +355,29 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         _settingsStore.SetVisibility(fullName, visibility);
         BeginRefresh();
+    }
+
+    private void ShowPullRequestNotifications(IReadOnlyList<RepositoryStatus> statuses)
+    {
+        if (!_settingsStore.Settings.EnablePullRequestNotifications)
+        {
+            return;
+        }
+
+        foreach (var status in statuses.Where(status => status.ErrorMessage == null))
+        {
+            var newPulls = _pullRequestNotificationTracker.DetectNewPullRequests(
+                status.Repository.FullName,
+                status.RecentLists.Pulls);
+            foreach (var pull in newPulls.Take(3))
+            {
+                _notifyIcon.ShowBalloonTip(
+                    timeout: 8000,
+                    tipTitle: $"{status.Repository.FullName} pull request",
+                    tipText: pull.Title,
+                    tipIcon: ToolTipIcon.Info);
+            }
+        }
     }
 
     private void ShowPreferences()
