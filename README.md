@@ -1,6 +1,6 @@
 # 🚦 RepoBar
 
-RepoBar is a native macOS menu bar app for keeping GitHub work visible without living in a browser. It shows the repositories you care about, their current issue and PR pressure, recent activity, CI state, releases, local checkout status, and rate-limit health in a compact menu.
+RepoBar is a native macOS menu bar app for keeping GitHub work visible without living in a browser. It shows the repositories you care about, their current issue and PR pressure, recent activity, CI state, releases, local checkout status, and rate-limit health in a compact menu. An early native Windows taskbar tray companion is available under `Windows/`.
 
 ![RepoBar screenshot](docs/assets/repobar.png)
 
@@ -22,6 +22,15 @@ brew install --cask repobar
 ```
 
 Direct downloads are available from the [latest GitHub release](https://github.com/steipete/RepoBar/releases/latest).
+
+Windows preview builds are developer-run for now:
+
+```powershell
+.\Scripts\build_windows.ps1 build -Runtime win-x64
+.\Scripts\build_windows.ps1 publish -Runtime win-x64
+```
+
+See [docs/windows.md](docs/windows.md).
 
 ## What It Shows
 
@@ -155,6 +164,8 @@ Common commands:
 pnpm check     # swiftformat + swiftlint + swift test
 pnpm test      # Swift Testing suite
 pnpm build     # debug Swift build
+pnpm windows:build
+pnpm windows:publish
 pnpm start     # build, package, sign, and launch the app
 pnpm restart   # relaunch the app from this checkout
 pnpm stop      # quit RepoBar
@@ -171,6 +182,7 @@ pgrep -af "RepoBar.app/Contents/MacOS/RepoBar"
 - `Sources/RepoBar/` - macOS app, menu, settings, auth coordination, local project UI.
 - `Sources/RepoBarCore/` - GitHub client, cache/archive readers, models, settings, local Git services.
 - `Sources/repobarcli/` - command-line interface.
+- `Windows/RepoBar.Windows/` - native Windows taskbar tray companion.
 - `Tests/RepoBarTests/` - Swift Testing coverage.
 - `docs/` - design notes and operational docs.
 - `Scripts/` - build, package, signing, testing, and launch wrappers.

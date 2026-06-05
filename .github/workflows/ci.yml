@@ -59,3 +59,20 @@ jobs:
 
       - name: Run checks
         run: pnpm check
+
+  windows:
+    name: Windows tray
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5.3.0
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build tray
+        shell: pwsh
+        run: ./Scripts/build_windows.ps1 build -Runtime win-x64
