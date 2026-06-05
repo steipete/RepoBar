@@ -33,9 +33,22 @@ Requirements:
 .\Scripts\build_windows.ps1 build -Runtime win-x64
 .\Scripts\build_windows.ps1 test
 .\Scripts\build_windows.ps1 publish -Runtime win-x64
+.\Scripts\package_windows.ps1 -Runtime win-x64
 ```
 
 Use `win-arm64` on Windows on Arm.
+
+## Package
+
+`Scripts\package_windows.ps1` publishes a self-contained Windows build into `dist\windows\publish\<runtime>` and, when Inno Setup 6 is installed, builds an installer from `Windows\installer.iss`.
+
+Use `-SkipInstaller` to validate the publish layout without requiring the Inno compiler:
+
+```powershell
+.\Scripts\package_windows.ps1 -Runtime win-x64 -SkipInstaller
+```
+
+The installer can optionally create a desktop shortcut and a current-user startup entry.
 
 ## Run
 

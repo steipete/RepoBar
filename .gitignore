@@ -14,6 +14,7 @@ xcuserdata/
 *.dSYM
 *.zip
 *.tgz
+dist/windows/
 
 ## Playgrounds
 timeline.xctimeline

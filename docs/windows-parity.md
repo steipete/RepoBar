@@ -17,7 +17,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Actions usage | Optional Actions/runners billing menu | Optional Actions workflow summary first, billing later | Partial |
 | Issue Navigator | Clipboard/reference resolver window with browser preview | Windows reference resolver/flyout or window | Partial |
 | Notifications | Optional PR notifications | Windows tray notifications | Partial |
-| Updates/install | Sparkle/Homebrew/DMG | MSIX or installer plus update path | Missing |
+| Updates/install | Sparkle/Homebrew/DMG | Installer plus update path | Partial |
 | Tests | Swift tests for parsing, auth, cache, refs, menu signatures | .NET unit tests plus Windows Crabbox build/runtime smoke | Partial |
 
 ## Implementation Order

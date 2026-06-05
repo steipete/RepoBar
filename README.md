@@ -29,6 +29,7 @@ Windows preview builds are developer-run for now:
 .\Scripts\build_windows.ps1 build -Runtime win-x64
 .\Scripts\build_windows.ps1 test
 .\Scripts\build_windows.ps1 publish -Runtime win-x64
+.\Scripts\package_windows.ps1 -Runtime win-x64
 ```
 
 See [docs/windows.md](docs/windows.md) and [docs/windows-parity.md](docs/windows-parity.md).
@@ -168,6 +169,7 @@ pnpm build     # debug Swift build
 pnpm windows:build
 pnpm windows:test
 pnpm windows:publish
+pnpm windows:package
 pnpm windows:smoke
 pnpm windows:crabbox
 pnpm start     # build, package, sign, and launch the app

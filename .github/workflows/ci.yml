@@ -80,3 +80,7 @@ jobs:
       - name: Test tray
         shell: pwsh
         run: ./Scripts/build_windows.ps1 test
+
+      - name: Package tray layout
+        shell: pwsh
+        run: ./Scripts/package_windows.ps1 -Runtime win-x64 -SkipInstaller
