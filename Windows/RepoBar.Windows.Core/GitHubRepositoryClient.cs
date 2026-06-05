@@ -207,7 +207,8 @@ internal sealed class GitHubRepositoryClient : IDisposable
         var tags = await LoadRecentTagsAsync(repository, cancellationToken).ConfigureAwait(false);
         var commits = await LoadRecentCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
         var contributors = await LoadRecentContributorsAsync(repository, cancellationToken).ConfigureAwait(false);
-        return new RecentRepositoryLists(issues, pulls, releases, workflowRuns, branches, tags, commits, contributors);
+        var activity = await LoadRecentActivityAsync(repository, cancellationToken).ConfigureAwait(false);
+        return new RecentRepositoryLists(issues, pulls, releases, workflowRuns, branches, tags, commits, contributors, activity);
     }
 
     private async Task<IReadOnlyList<GitHubListItem>> LoadRecentIssuesAsync(RepositoryRef repository, CancellationToken cancellationToken)
@@ -398,6 +399,125 @@ internal sealed class GitHubRepositoryClient : IDisposable
                     count);
             })
             .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentActivityAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/events?per_page=10",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return document.RootElement.EnumerateArray()
+            .Select(activity => BuildActivityItem(repository, activity))
+            .Where(item => item != null)
+            .Take(5)
+            .Cast<GitHubListItem>()
+            .ToArray();
+    }
+
+    private GitHubListItem? BuildActivityItem(RepositoryRef repository, JsonElement activity)
+    {
+        var type = TryGetString(activity, "type") ?? "Event";
+        var actor = TryGetNestedString(activity, "actor", "login");
+        var createdAt = TryGetDateTimeOffset(activity, "created_at");
+        var payload = activity.TryGetProperty("payload", out var payloadElement) &&
+            payloadElement.ValueKind == JsonValueKind.Object
+                ? payloadElement
+                : default;
+
+        return type switch
+        {
+            "PushEvent" => BuildPushActivity(repository, payload, actor, createdAt),
+            "PullRequestEvent" => BuildNumberedActivity(payload, "pull_request", "PR", actor, createdAt),
+            "IssuesEvent" => BuildNumberedActivity(payload, "issue", "Issue", actor, createdAt),
+            "ReleaseEvent" => BuildReleaseActivity(payload, actor, createdAt),
+            "CreateEvent" => new GitHubListItem(
+                $"Created {TryGetPayloadString(payload, "ref_type") ?? "ref"} {TryGetPayloadString(payload, "ref") ?? ""}".Trim(),
+                BuildWebUri(repository).ToString(),
+                Metadata(actor, createdAt)),
+            _ => new GitHubListItem(
+                type.EndsWith("Event", StringComparison.Ordinal) ? type[..^5] : type,
+                BuildWebUri(repository).ToString(),
+                Metadata(actor, createdAt)),
+        };
+    }
+
+    private GitHubListItem BuildPushActivity(
+        RepositoryRef repository,
+        JsonElement payload,
+        string? actor,
+        DateTimeOffset? createdAt)
+    {
+        var commitCount = payload.ValueKind == JsonValueKind.Object &&
+            payload.TryGetProperty("commits", out var commits) &&
+            commits.ValueKind == JsonValueKind.Array
+            ? commits.GetArrayLength()
+            : 0;
+        var branch = TryGetPayloadString(payload, "ref")?.Split('/').LastOrDefault() ?? "branch";
+        var head = TryGetPayloadString(payload, "head");
+        return new GitHubListItem(
+            $"Pushed {commitCount} commit{(commitCount == 1 ? "" : "s")} to {branch}",
+            head == null ? BuildWebUri(repository).ToString() : BuildWebUri(repository, $"commit/{head}").ToString(),
+            Metadata(actor, createdAt));
+    }
+
+    private static GitHubListItem? BuildNumberedActivity(
+        JsonElement payload,
+        string payloadName,
+        string label,
+        string? actor,
+        DateTimeOffset? createdAt)
+    {
+        if (payload.ValueKind != JsonValueKind.Object ||
+            !payload.TryGetProperty(payloadName, out var item) ||
+            item.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var action = TryGetString(payload, "action") ?? "updated";
+        var number = item.TryGetProperty("number", out var numberElement) && numberElement.ValueKind == JsonValueKind.Number
+            ? numberElement.GetInt32()
+            : 0;
+        var title = TryGetString(item, "title");
+        var url = TryGetString(item, "html_url");
+        var subject = number > 0 ? $"{label} #{number}" : label;
+        return new GitHubListItem(
+            $"{action} {subject}{(string.IsNullOrWhiteSpace(title) ? "" : $": {title}")}",
+            url,
+            Metadata(actor, createdAt));
+    }
+
+    private static GitHubListItem? BuildReleaseActivity(JsonElement payload, string? actor, DateTimeOffset? createdAt)
+    {
+        if (payload.ValueKind != JsonValueKind.Object ||
+            !payload.TryGetProperty("release", out var release) ||
+            release.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var action = TryGetString(payload, "action") ?? "published";
+        var name = TryGetString(release, "name") ?? TryGetString(release, "tag_name") ?? "release";
+        return new GitHubListItem(
+            $"{action} release {name}",
+            TryGetString(release, "html_url"),
+            Metadata(actor, createdAt));
+    }
+
+    private static string? TryGetPayloadString(JsonElement payload, string propertyName)
+    {
+        return payload.ValueKind == JsonValueKind.Object ? TryGetString(payload, propertyName) : null;
     }
 
     private async Task<TrafficStatus?> LoadTrafficAsync(RepositoryRef repository, CancellationToken cancellationToken)
@@ -807,9 +927,10 @@ internal sealed record RecentRepositoryLists(
     IReadOnlyList<GitHubListItem> Branches,
     IReadOnlyList<GitHubListItem> Tags,
     IReadOnlyList<GitHubListItem> Commits,
-    IReadOnlyList<GitHubListItem> Contributors)
+    IReadOnlyList<GitHubListItem> Contributors,
+    IReadOnlyList<GitHubListItem> Activity)
 {
-    public static readonly RecentRepositoryLists Empty = new([], [], [], [], [], [], [], []);
+    public static readonly RecentRepositoryLists Empty = new([], [], [], [], [], [], [], [], []);
 }
 
 internal enum TrayHealth

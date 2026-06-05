@@ -59,6 +59,33 @@ public sealed class GitHubResponseCacheTests
                     ]
                     """),
                 "/repos/owner/name/contents/CHANGELOG.md?ref=main" => ChangelogResponse("## 1.2.3\n- shipped"),
+                "/repos/owner/name/events?per_page=10" => JsonResponse("""
+                    [
+                      {
+                        "type": "PushEvent",
+                        "created_at": "2026-06-01T12:00:00Z",
+                        "actor": { "login": "alice" },
+                        "payload": {
+                          "ref": "refs/heads/main",
+                          "head": "abcdef123456",
+                          "commits": [{"sha":"abcdef1"}]
+                        }
+                      },
+                      {
+                        "type": "IssuesEvent",
+                        "created_at": "2026-06-01T11:00:00Z",
+                        "actor": { "login": "bob" },
+                        "payload": {
+                          "action": "opened",
+                          "issue": {
+                            "number": 42,
+                            "title": "Crash",
+                            "html_url": "https://github.com/owner/name/issues/42"
+                          }
+                        }
+                      }
+                    ]
+                    """),
                 _ => JsonResponse("[]"),
             };
             response.Headers.TryAddWithoutValidation("X-RateLimit-Limit", "5000");
@@ -78,6 +105,8 @@ public sealed class GitHubResponseCacheTests
         Assert.Equal(42, statuses[0].Traffic?.Views);
         Assert.Equal(7, statuses[0].Heatmap?.TotalCommits);
         Assert.Equal("1.2.3", statuses[0].Changelog?.Headline);
+        Assert.Contains(statuses[0].RecentLists.Activity, item => item.Title == "Pushed 1 commit to main");
+        Assert.Contains(statuses[0].RecentLists.Activity, item => item.Title.Contains("opened Issue #42", StringComparison.Ordinal));
         Assert.NotNull(client.LastRateLimit);
         Assert.Equal(4999, client.LastRateLimit.Remaining);
         Assert.Contains("4999/5000", client.LastRateLimit.DisplayText);

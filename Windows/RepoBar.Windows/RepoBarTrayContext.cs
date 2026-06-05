@@ -217,6 +217,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         AddRecentItemsSubmenu(item.DropDownItems, "Tags", status.RecentLists.Tags);
         AddRecentItemsSubmenu(item.DropDownItems, "Commits", status.RecentLists.Commits);
         AddRecentItemsSubmenu(item.DropDownItems, "Contributors", status.RecentLists.Contributors);
+        AddRecentItemsSubmenu(item.DropDownItems, "Activity", status.RecentLists.Activity);
 
         if (status.LatestRelease is { Url: { Length: > 0 } releaseUrl })
         {
