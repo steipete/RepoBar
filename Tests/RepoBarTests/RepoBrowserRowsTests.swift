@@ -60,6 +60,22 @@ struct RepoBrowserRowsTests {
     }
 
     @Test
+    func `make shows loaded repo as pinned when it is both pinned and hidden`() throws {
+        let rows = RepoBrowserRows.make(
+            repositories: [Self.makeRepo("owner/X")],
+            pinnedRepositories: ["owner/X"],
+            hiddenRepositories: ["owner/X"],
+            now: Date(timeIntervalSinceReferenceDate: 1000)
+        )
+
+        let row = try #require(rows.first)
+        #expect(row.id == "owner/x")
+        #expect(row.isManual == false)
+        #expect(row.visibility == .pinned)
+        #expect(rows.count == 1)
+    }
+
+    @Test
     func `sortable keys fold missing stats to a low sentinel`() throws {
         let loaded = try #require(RepoBrowserRows.make(
             repositories: [Self.makeRepo("a/loaded", issues: 3, pulls: 4, stars: 5)],

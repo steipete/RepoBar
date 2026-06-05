@@ -69,25 +69,8 @@ extension AppState {
     }
 
     func addPinned(_ fullName: String) async {
-        let normalized = self.normalizedFullName(fullName)
-        let alreadyPinned = self.session.settings.repoList.pinnedRepositories.contains {
-            self.normalizedFullName($0) == normalized
-        }
-        let isHidden = self.session.settings.repoList.hiddenRepositories.contains {
-            self.normalizedFullName($0) == normalized
-        }
-        // Nothing to do only when it is already pinned and not hidden. If it is
-        // already pinned but somehow still hidden, fall through to repair that.
-        guard !alreadyPinned || isHidden else { return }
+        guard self.session.settings.repoList.pinRepository(fullName) else { return }
 
-        if !alreadyPinned {
-            self.session.settings.repoList.pinnedRepositories.append(fullName)
-        }
-        // If pinned, also unhide to keep pinned and hidden mutually exclusive.
-        // This mirrors hide(), which removes the repo from the pinned list.
-        self.session.settings.repoList.hiddenRepositories.removeAll {
-            self.normalizedFullName($0) == normalized
-        }
         self.settingsStore.save(self.session.settings)
         await self.refresh()
     }
@@ -196,6 +179,36 @@ extension AppState {
     }
 
     private func normalizedFullName(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+}
+
+extension RepoListSettings {
+    @discardableResult
+    mutating func pinRepository(_ fullName: String) -> Bool {
+        let normalized = Self.normalizedFullName(fullName)
+        let alreadyPinned = self.pinnedRepositories.contains {
+            Self.normalizedFullName($0) == normalized
+        }
+        let isHidden = self.hiddenRepositories.contains {
+            Self.normalizedFullName($0) == normalized
+        }
+        // Nothing to do only when it is already pinned and not hidden. If it is
+        // already pinned but somehow still hidden, fall through to repair that.
+        guard !alreadyPinned || isHidden else { return false }
+
+        if !alreadyPinned {
+            self.pinnedRepositories.append(fullName)
+        }
+        // If pinned, also unhide to keep pinned and hidden mutually exclusive.
+        // This mirrors hide(), which removes the repo from the pinned list.
+        self.hiddenRepositories.removeAll {
+            Self.normalizedFullName($0) == normalized
+        }
+        return true
+    }
+
+    private static func normalizedFullName(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
     }
 }

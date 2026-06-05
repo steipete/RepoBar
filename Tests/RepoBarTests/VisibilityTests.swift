@@ -65,36 +65,36 @@ struct VisibilityTests {
         #expect(!visible.contains(where: { $0.fullName == "me/r1" }))
     }
 
-    @MainActor
     @Test
-    func `addPinned removes the repo from the hidden list`() async {
-        let appState = AppState()
-        appState.session.settings.repoList.pinnedRepositories = []
-        appState.session.settings.repoList.hiddenRepositories = ["owner/X"]
+    func `pinRepository removes the repo from the hidden list`() {
+        var settings = RepoListSettings()
+        settings.pinnedRepositories = []
+        settings.hiddenRepositories = ["owner/X"]
 
-        await appState.addPinned("owner/X")
+        let changed = settings.pinRepository("owner/X")
 
-        let pinned = appState.session.settings.repoList.pinnedRepositories
-        let hidden = appState.session.settings.repoList.hiddenRepositories
+        let pinned = settings.pinnedRepositories
+        let hidden = settings.hiddenRepositories
         // Pin and hide must be mutually exclusive, mirroring hide() which unpins.
+        #expect(changed)
         #expect(pinned.contains { $0.caseInsensitiveCompare("owner/X") == .orderedSame })
         #expect(!hidden.contains { $0.caseInsensitiveCompare("owner/X") == .orderedSame })
     }
 
-    @MainActor
     @Test
-    func `addPinned repairs an already-pinned repo that is still hidden`() async {
-        let appState = AppState()
+    func `pinRepository repairs an already-pinned repo that is still hidden`() {
+        var settings = RepoListSettings()
         // Inconsistent state: the repo is both pinned and hidden.
-        appState.session.settings.repoList.pinnedRepositories = ["owner/X"]
-        appState.session.settings.repoList.hiddenRepositories = ["owner/X"]
+        settings.pinnedRepositories = ["owner/X"]
+        settings.hiddenRepositories = ["owner/X"]
 
-        await appState.addPinned("owner/X")
+        let changed = settings.pinRepository("owner/X")
 
-        let pinned = appState.session.settings.repoList.pinnedRepositories
-        let hidden = appState.session.settings.repoList.hiddenRepositories
+        let pinned = settings.pinnedRepositories
+        let hidden = settings.hiddenRepositories
         // Re-pinning an already-pinned repo must still clear the stale hidden entry,
         // and must not append a duplicate pin.
+        #expect(changed)
         #expect(pinned.count(where: { $0.caseInsensitiveCompare("owner/X") == .orderedSame }) == 1)
         #expect(!hidden.contains { $0.caseInsensitiveCompare("owner/X") == .orderedSame })
     }

@@ -88,10 +88,10 @@ enum RepoBrowserRows {
 
         var rows = uniqueRepos.map { repo in
             let key = Self.normalized(repo.fullName)
-            let visibility: RepoVisibility = if hiddenSet.contains(key) {
-                .hidden
-            } else if pinnedSet.contains(key) {
+            let visibility: RepoVisibility = if pinnedSet.contains(key) {
                 .pinned
+            } else if hiddenSet.contains(key) {
+                .hidden
             } else {
                 .visible
             }
