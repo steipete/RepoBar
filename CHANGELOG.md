@@ -3,6 +3,7 @@
 ## 0.7.1 - Unreleased
 
 - Keep Issue Navigator reference clicks from being overwritten by clipboard seeding, and show unresolved GitHub metadata as the reference label instead of "preview unavailable."
+- Keep the Repositories settings table from rendering duplicate rows when the same repository is both pinned and hidden (thanks @devYRPauli). (#73)
 
 ## 0.7.0 - 2026-05-31
 
