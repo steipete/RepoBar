@@ -23,6 +23,8 @@ The Windows app currently provides:
 - optional Actions summary with latest workflow state per configured repository
 - optional pull request notifications through Windows tray balloons
 - Issue Navigator window for pasted GitHub URLs and issue/PR references
+- optional launch-at-login registration for the current Windows user
+- manual update check against the latest GitHub release
 
 ## Build
 
@@ -52,6 +54,8 @@ Use `-SkipInstaller` to validate the publish layout without requiring the Inno c
 
 The installer can optionally create a desktop shortcut and a current-user startup entry.
 
+Use **Launch at login** in Preferences to add or remove the current executable from the current user's Windows `Run` registry key. Use **Check for updates** from the tray menu to compare the running app version with the latest RepoBar GitHub release.
+
 ## Run
 
 ```powershell
@@ -72,6 +76,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "tokenEnvironmentVariable": "REPOBAR_GITHUB_TOKEN",
   "refreshIntervalMinutes": 5,
   "openMenuOnLeftClick": true,
+  "launchAtLogin": false,
   "discoverLocalProjects": true,
   "localProjectsRoot": "%USERPROFILE%\\Projects",
   "localProjectsMaxDepth": 3,

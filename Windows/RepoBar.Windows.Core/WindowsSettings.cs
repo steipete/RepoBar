@@ -9,6 +9,7 @@ internal sealed class WindowsSettings
     public string TokenEnvironmentVariable { get; set; } = "REPOBAR_GITHUB_TOKEN";
     public int RefreshIntervalMinutes { get; set; } = 5;
     public bool OpenMenuOnLeftClick { get; set; } = true;
+    public bool LaunchAtLogin { get; set; }
     public bool DiscoverLocalProjects { get; set; } = true;
     public string? LocalProjectsRoot { get; set; }
     public int LocalProjectsMaxDepth { get; set; } = 3;

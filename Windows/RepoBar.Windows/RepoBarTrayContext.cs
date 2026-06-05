@@ -150,6 +150,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
         _menu.Items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
         _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
+        _menu.Items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
         _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
         _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
     }
@@ -503,6 +504,34 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         using var form = new ReferenceNavigatorForm(_settingsStore.Settings);
         form.ShowDialog();
+    }
+
+    private static async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            using var checker = new WindowsUpdateChecker();
+            var status = await checker.CheckLatestAsync(WindowsUpdateChecker.CurrentVersion(), CancellationToken.None).ConfigureAwait(true);
+            if (status.IsNewer && !string.IsNullOrWhiteSpace(status.ReleaseUrl))
+            {
+                var result = MessageBox.Show(
+                    $"{status.DisplayText}.\n\nOpen the latest release?",
+                    "RepoBar Updates",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Information);
+                if (result == DialogResult.Yes)
+                {
+                    OpenUrl(status.ReleaseUrl);
+                }
+                return;
+            }
+
+            MessageBox.Show(status.DisplayText, "RepoBar Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Updates", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private static void OpenFile(string path)

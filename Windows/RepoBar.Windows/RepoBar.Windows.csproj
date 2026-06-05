@@ -8,6 +8,9 @@
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AssemblyName>RepoBar.Windows</AssemblyName>
     <RootNamespace>RepoBar.Windows</RootNamespace>
+    <Version>0.7.0</Version>
+    <AssemblyVersion>0.7.0.0</AssemblyVersion>
+    <FileVersion>0.7.0.0</FileVersion>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
   </PropertyGroup>
