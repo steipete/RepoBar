@@ -20,7 +20,7 @@ The Windows app currently provides:
 - repository discovery from GitHub's accessible repository list
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional GitHub API rate-limit row in the tray menu
-- optional Actions summary with latest workflow state per configured repository
+- optional Actions summary with latest workflow state, active queue counts, and self-hosted runner state per configured repository
 - optional pull request notifications through Windows tray balloons
 - Issue Navigator window for pasted GitHub URLs and issue/PR references
 - optional launch-at-login registration for the current Windows user

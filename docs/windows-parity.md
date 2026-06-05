@@ -14,7 +14,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with accessible repo discovery and visibility controls | Partial |
 | Cache/offline | SQLite cache, ETags, archive fallback | Shared cache schema or Windows-owned equivalent with ETags/offline reads | Partial |
 | Rate limits | REST/GraphQL resource meter and blocker banner | Tray tooltip/menu rate-limit state and blocker row | Partial |
-| Actions usage | Optional Actions/runners billing menu | Optional Actions workflow summary first, billing later | Partial |
+| Actions usage | Optional Actions/runners billing menu | Optional workflow summary plus queue and self-hosted runner state; billing later | Partial |
 | Issue Navigator | Clipboard/reference resolver window with browser preview | Windows reference resolver/flyout or window | Partial |
 | Notifications | Optional PR notifications | Windows tray notifications | Partial |
 | Updates/install | Sparkle/Homebrew/DMG | Installer, current-user startup option, and manual GitHub release check | Partial |

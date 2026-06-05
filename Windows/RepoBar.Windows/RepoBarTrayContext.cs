@@ -14,6 +14,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private readonly PullRequestNotificationTracker _pullRequestNotificationTracker = PullRequestNotificationTracker.CreateDefault();
     private GitHubRepositoryClient _githubClient;
     private IReadOnlyList<RepositoryStatus> _statuses = [];
+    private ActionsInsights _actionsInsights = ActionsInsights.Empty;
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
     private bool _isRefreshing;
     private string? _lastError;
@@ -71,6 +72,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         _isRefreshing = true;
         _lastError = null;
+        _actionsInsights = ActionsInsights.Empty;
         BuildMenu();
 
         try
@@ -82,6 +84,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 _settingsStore.VisibleRepositories,
                 _localGitIndex,
                 _shutdown.Token);
+            _actionsInsights = _settingsStore.Settings.ShowActionsUsage
+                ? await LoadActionsInsightsAsync(_settingsStore.VisibleRepositories, _shutdown.Token).ConfigureAwait(false)
+                : ActionsInsights.Empty;
             ShowPullRequestNotifications(_statuses);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -171,7 +176,36 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             (string.Equals(conclusion, "success", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(conclusion, "skipped", StringComparison.OrdinalIgnoreCase)));
 
-        var actions = new ToolStripMenuItem($"Actions: {running} running  {failing} failing  {healthy} healthy");
+        var actions = new ToolStripMenuItem(_actionsInsights.HasData
+            ? $"{_actionsInsights.DisplayText}  {failing} failing  {healthy} healthy"
+            : $"Actions: {running} running  {failing} failing  {healthy} healthy");
+        if (_actionsInsights.HasData)
+        {
+            foreach (var insight in _actionsInsights.Repositories)
+            {
+                var repositoryItem = new ToolStripMenuItem($"{insight.Repository.FullName}: {insight.DisplayText}");
+                if (insight.ErrorMessage != null)
+                {
+                    repositoryItem.DropDownItems.Add(new ToolStripMenuItem(insight.ErrorMessage) { Enabled = false });
+                }
+                else
+                {
+                    repositoryItem.DropDownItems.Add(new ToolStripMenuItem($"{insight.Queue.InProgressCount:n0} running  {insight.Queue.QueuedCount:n0} queued") { Enabled = false });
+                    repositoryItem.DropDownItems.Add(new ToolStripMenuItem($"{insight.Runners.OnlineCount:n0} online  {insight.Runners.BusyCount:n0} busy  {insight.Runners.OfflineCount:n0} offline") { Enabled = false });
+                    foreach (var runner in insight.Runners.Runners.Take(10))
+                    {
+                        repositoryItem.DropDownItems.Add(new ToolStripMenuItem(runner.DisplayText) { Enabled = false });
+                    }
+                    if (insight.Runners.TotalCount > 10)
+                    {
+                        repositoryItem.DropDownItems.Add(new ToolStripMenuItem($"... and {insight.Runners.TotalCount - 10:n0} more runners") { Enabled = false });
+                    }
+                }
+                actions.DropDownItems.Add(repositoryItem);
+            }
+
+            actions.DropDownItems.Add(new ToolStripSeparator());
+        }
         foreach (var status in _statuses.Where(status => status.LatestRun != null))
         {
             var item = new ToolStripMenuItem($"{status.Repository.FullName}: {status.LatestRun!.DisplayText}")
@@ -186,6 +220,14 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
 
         items.Add(actions);
+    }
+
+    private async Task<ActionsInsights> LoadActionsInsightsAsync(
+        IReadOnlyList<RepositoryRef> repositories,
+        CancellationToken cancellationToken)
+    {
+        using var client = new GitHubActionsInsightClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+        return await client.LoadAsync(repositories, cancellationToken).ConfigureAwait(false);
     }
 
     private ToolStripMenuItem BuildRepositoryMenu(RepositoryStatus status)
