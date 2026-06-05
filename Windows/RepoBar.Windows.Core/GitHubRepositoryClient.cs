@@ -195,10 +195,12 @@ internal sealed class GitHubRepositoryClient : IDisposable
         var issues = await LoadRecentIssuesAsync(repository, cancellationToken).ConfigureAwait(false);
         var pulls = await LoadRecentPullsAsync(repository, cancellationToken).ConfigureAwait(false);
         var releases = await LoadRecentReleasesAsync(repository, cancellationToken).ConfigureAwait(false);
+        var workflowRuns = await LoadRecentWorkflowRunsAsync(repository, cancellationToken).ConfigureAwait(false);
         var branches = await LoadRecentBranchesAsync(repository, cancellationToken).ConfigureAwait(false);
         var tags = await LoadRecentTagsAsync(repository, cancellationToken).ConfigureAwait(false);
         var commits = await LoadRecentCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
-        return new RecentRepositoryLists(issues, pulls, releases, branches, tags, commits);
+        var contributors = await LoadRecentContributorsAsync(repository, cancellationToken).ConfigureAwait(false);
+        return new RecentRepositoryLists(issues, pulls, releases, workflowRuns, branches, tags, commits, contributors);
     }
 
     private async Task<IReadOnlyList<GitHubListItem>> LoadRecentIssuesAsync(RepositoryRef repository, CancellationToken cancellationToken)
@@ -257,6 +259,41 @@ internal sealed class GitHubRepositoryClient : IDisposable
                 TryGetString(release, "name") is { Length: > 0 } name ? name : TryGetString(release, "tag_name") ?? "Release",
                 TryGetString(release, "html_url"),
                 Metadata(TryGetString(release, "tag_name"), TryGetDateTimeOffset(release, "published_at"))))
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentWorkflowRunsAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/actions/runs?per_page=5",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Object ||
+            !document.RootElement.TryGetProperty("workflow_runs", out var runs) ||
+            runs.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return runs.EnumerateArray()
+            .Select(run =>
+            {
+                var name = TryGetString(run, "name") ?? "Workflow";
+                var status = TryGetString(run, "status") ?? "unknown";
+                var conclusion = TryGetString(run, "conclusion");
+                var displayStatus = string.Equals(status, "completed", StringComparison.OrdinalIgnoreCase)
+                    ? conclusion ?? status
+                    : status;
+                return new GitHubListItem(
+                    $"{name}: {displayStatus}",
+                    TryGetString(run, "html_url"),
+                    Metadata(TryGetNestedString(run, "head_commit", "author", "name"), TryGetDateTimeOffset(run, "updated_at")));
+            })
             .ToArray();
     }
 
@@ -326,6 +363,32 @@ internal sealed class GitHubRepositoryClient : IDisposable
                     $"{ShortSha(TryGetString(commit, "sha"))} {firstLine}",
                     TryGetString(commit, "html_url"),
                     Metadata(TryGetNestedString(commit, "commit", "author", "name"), TryGetNestedDateTimeOffset(commit, "commit", "author", "date")));
+            })
+            .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentContributorsAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/contributors?per_page=5",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return [];
+        }
+
+        using var document = JsonDocument.Parse(json);
+        return document.RootElement.EnumerateArray()
+            .Select(contributor =>
+            {
+                var login = TryGetString(contributor, "login") ?? "contributor";
+                var count = contributor.TryGetProperty("contributions", out var contributions) && contributions.ValueKind == JsonValueKind.Number
+                    ? $"{contributions.GetInt32()} commits"
+                    : null;
+                return new GitHubListItem(
+                    login,
+                    TryGetString(contributor, "html_url"),
+                    count);
             })
             .ToArray();
     }
@@ -550,11 +613,13 @@ internal sealed record RecentRepositoryLists(
     IReadOnlyList<GitHubListItem> Issues,
     IReadOnlyList<GitHubListItem> Pulls,
     IReadOnlyList<GitHubListItem> Releases,
+    IReadOnlyList<GitHubListItem> WorkflowRuns,
     IReadOnlyList<GitHubListItem> Branches,
     IReadOnlyList<GitHubListItem> Tags,
-    IReadOnlyList<GitHubListItem> Commits)
+    IReadOnlyList<GitHubListItem> Commits,
+    IReadOnlyList<GitHubListItem> Contributors)
 {
-    public static readonly RecentRepositoryLists Empty = new([], [], [], [], [], []);
+    public static readonly RecentRepositoryLists Empty = new([], [], [], [], [], [], [], []);
 }
 
 internal enum TrayHealth

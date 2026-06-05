@@ -12,7 +12,7 @@ The Windows app currently provides:
 - issue and pull request counts
 - latest default-branch Actions run status
 - latest release link
-- recent issue, pull request, release, branch, tag, and commit submenus
+- recent issue, pull request, release, CI run, branch, tag, commit, and contributor submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
 - native Preferences window for GitHub host, token environment variable, local project scanning, refresh cadence, and repository visibility
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable

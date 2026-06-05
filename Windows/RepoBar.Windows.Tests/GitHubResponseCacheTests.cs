@@ -48,6 +48,7 @@ public sealed class GitHubResponseCacheTests
                     }
                     """),
                 "/repos/owner/name/actions/runs?branch=main&per_page=1" => JsonResponse("""{"workflow_runs":[]}"""),
+                "/repos/owner/name/actions/runs?per_page=5" => JsonResponse("""{"workflow_runs":[]}"""),
                 "/repos/owner/name/releases/latest" => new HttpResponseMessage(HttpStatusCode.NotFound),
                 _ => JsonResponse("[]"),
             };

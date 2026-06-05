@@ -172,9 +172,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         AddRecentItemsSubmenu(item.DropDownItems, "Issues", status.RecentLists.Issues);
         AddRecentItemsSubmenu(item.DropDownItems, "Pull Requests", status.RecentLists.Pulls);
         AddRecentItemsSubmenu(item.DropDownItems, "Releases", status.RecentLists.Releases);
+        AddRecentItemsSubmenu(item.DropDownItems, "CI Runs", status.RecentLists.WorkflowRuns);
         AddRecentItemsSubmenu(item.DropDownItems, "Branches", status.RecentLists.Branches);
         AddRecentItemsSubmenu(item.DropDownItems, "Tags", status.RecentLists.Tags);
         AddRecentItemsSubmenu(item.DropDownItems, "Commits", status.RecentLists.Commits);
+        AddRecentItemsSubmenu(item.DropDownItems, "Contributors", status.RecentLists.Contributors);
 
         if (status.LatestRelease is { Url: { Length: > 0 } releaseUrl })
         {
