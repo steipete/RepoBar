@@ -13,8 +13,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
-      <_Parameter1>RepoBar.Windows.Tests</_Parameter1>
-    </AssemblyAttribute>
+    <ProjectReference Include="..\RepoBar.Windows.Core\RepoBar.Windows.Core.csproj" />
   </ItemGroup>
 </Project>

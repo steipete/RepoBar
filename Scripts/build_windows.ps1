@@ -19,7 +19,7 @@ switch ($Command) {
         dotnet build $project -c $Configuration -r $Runtime
     }
     "test" {
-        dotnet test $testProject -c $Configuration -r $Runtime
+        dotnet test $testProject -c $Configuration
     }
     "publish" {
         dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
