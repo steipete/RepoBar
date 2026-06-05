@@ -30,7 +30,7 @@ Windows preview builds are developer-run for now:
 .\Scripts\build_windows.ps1 publish -Runtime win-x64
 ```
 
-See [docs/windows.md](docs/windows.md).
+See [docs/windows.md](docs/windows.md) and [docs/windows-parity.md](docs/windows-parity.md).
 
 ## What It Shows
 

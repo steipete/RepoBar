@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("build", "publish", "run")]
+    [ValidateSet("build", "test", "publish", "run")]
     [string]$Command = "build",
 
     [ValidateSet("win-x64", "win-arm64")]
@@ -12,10 +12,14 @@ $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $project = Join-Path $root "Windows/RepoBar.Windows/RepoBar.Windows.csproj"
+$testProject = Join-Path $root "Windows/RepoBar.Windows.Tests/RepoBar.Windows.Tests.csproj"
 
 switch ($Command) {
     "build" {
         dotnet build $project -c $Configuration -r $Runtime
+    }
+    "test" {
+        dotnet test $testProject -c $Configuration -r $Runtime
     }
     "publish" {
         dotnet publish $project -c $Configuration -r $Runtime --self-contained true `

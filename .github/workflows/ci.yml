@@ -76,3 +76,7 @@ jobs:
       - name: Build tray
         shell: pwsh
         run: ./Scripts/build_windows.ps1 build -Runtime win-x64
+
+      - name: Test tray
+        shell: pwsh
+        run: ./Scripts/build_windows.ps1 test -Runtime win-x64

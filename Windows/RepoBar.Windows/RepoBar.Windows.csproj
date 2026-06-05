@@ -11,4 +11,10 @@
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
   </PropertyGroup>
+
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>RepoBar.Windows.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

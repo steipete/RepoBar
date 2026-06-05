@@ -13,6 +13,7 @@
     "test": "./Scripts/test.sh",
     "build": "./Scripts/build.sh",
     "windows:build": "pwsh ./Scripts/build_windows.ps1 build",
+    "windows:test": "pwsh ./Scripts/build_windows.ps1 test",
     "windows:publish": "pwsh ./Scripts/build_windows.ps1 publish",
     "repobar": "swift build --product repobarcli && ./Scripts/codesign_cli.sh .build/debug/repobarcli && .build/debug/repobarcli",
     "repobarcli": "pnpm -s repobar",
