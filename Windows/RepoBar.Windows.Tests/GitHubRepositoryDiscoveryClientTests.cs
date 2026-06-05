@@ -1,0 +1,62 @@
+using System.Net;
+using System.Text;
+using Xunit;
+
+namespace RepoBar.Windows.Tests;
+
+public sealed class GitHubRepositoryDiscoveryClientTests
+{
+    [Fact]
+    public async Task LoadAccessibleRepositories_reads_and_deduplicates_user_repositories()
+    {
+        var handler = new StubHandler(request =>
+        {
+            var path = request.RequestUri?.PathAndQuery ?? "";
+            return path switch
+            {
+                "/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=1" => JsonResponse("""
+                    [
+                      {"full_name":"owner/one","description":"first","pushed_at":"2026-06-01T00:00:00Z"},
+                      {"full_name":"owner/two","description":"second","pushed_at":"2026-06-02T00:00:00Z"}
+                    ]
+                    """),
+                "/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=2" => JsonResponse("""
+                    [
+                      {"full_name":"owner/one","description":"duplicate","pushed_at":"2026-06-03T00:00:00Z"}
+                    ]
+                    """),
+                _ => JsonResponse("[]"),
+            };
+        });
+        using var client = new GitHubRepositoryDiscoveryClient(new WindowsSettings(), token: null, handler);
+
+        var repositories = await client.LoadAccessibleRepositoriesAsync(CancellationToken.None);
+
+        Assert.Equal(2, repositories.Count);
+        Assert.Equal("owner/two", repositories[0].FullName);
+        Assert.Equal("owner/one", repositories[1].FullName);
+    }
+
+    private static HttpResponseMessage JsonResponse(string json)
+    {
+        return new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json"),
+        };
+    }
+
+    private sealed class StubHandler : HttpMessageHandler
+    {
+        private readonly Func<HttpRequestMessage, HttpResponseMessage> _handler;
+
+        public StubHandler(Func<HttpRequestMessage, HttpResponseMessage> handler)
+        {
+            _handler = handler;
+        }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            return Task.FromResult(_handler(request));
+        }
+    }
+}

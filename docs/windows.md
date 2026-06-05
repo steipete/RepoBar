@@ -17,6 +17,7 @@ The Windows app currently provides:
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
 - native Preferences window for GitHub host, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
+- repository discovery from GitHub's accessible repository list
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional GitHub API rate-limit row in the tray menu
 - optional Actions summary with latest workflow state per configured repository

@@ -148,6 +148,8 @@ internal sealed class SettingsEditorForm : Form
         var cancelButton = new Button { Text = "Cancel", DialogResult = DialogResult.Cancel };
         var addButton = new Button { Text = "Add repo" };
         addButton.Click += (_, _) => _repositories.Add(new RepositoryRow("", "", RepositoryVisibility.Visible));
+        var discoverButton = new Button { Text = "Discover repos" };
+        discoverButton.Click += async (_, _) => await DiscoverRepositoriesAsync();
         var removeButton = new Button { Text = "Remove selected" };
         removeButton.Click += (_, _) => RemoveSelectedRepositories();
         var clearTokenButton = new Button { Text = "Clear token" };
@@ -156,6 +158,7 @@ internal sealed class SettingsEditorForm : Form
         footer.Controls.Add(cancelButton);
         footer.Controls.Add(clearTokenButton);
         footer.Controls.Add(removeButton);
+        footer.Controls.Add(discoverButton);
         footer.Controls.Add(addButton);
         root.Controls.Add(footer);
 
@@ -223,6 +226,42 @@ internal sealed class SettingsEditorForm : Form
         }
     }
 
+    private async Task DiscoverRepositoriesAsync()
+    {
+        SaveCredentialTokenIfNeeded();
+        try
+        {
+            using var client = new GitHubRepositoryDiscoveryClient(CurrentSettingsSnapshot(), ResolveTokenForSnapshot());
+            var repositories = await client.LoadAccessibleRepositoriesAsync(CancellationToken.None).ConfigureAwait(true);
+            var existing = _repositories
+                .Where(repository => !string.IsNullOrWhiteSpace(repository.Owner) && !string.IsNullOrWhiteSpace(repository.Name))
+                .ToDictionary(repository => $"{repository.Owner}/{repository.Name}", StringComparer.OrdinalIgnoreCase);
+            var added = 0;
+            foreach (var repository in repositories)
+            {
+                if (existing.ContainsKey(repository.FullName))
+                {
+                    continue;
+                }
+
+                var row = new RepositoryRow(repository.Owner, repository.Name, RepositoryVisibility.Visible);
+                _repositories.Add(row);
+                existing[repository.FullName] = row;
+                added++;
+            }
+
+            MessageBox.Show(
+                added == 0 ? "No new repositories found." : $"Added {added} repositories.",
+                "RepoBar Repository Discovery",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Repository Discovery", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
     private void SaveSettings()
     {
         _repositoriesGrid.EndEdit();
@@ -252,6 +291,43 @@ internal sealed class SettingsEditorForm : Form
             }));
 
         SaveCredentialTokenIfNeeded();
+    }
+
+    private WindowsSettings CurrentSettingsSnapshot()
+    {
+        return new WindowsSettings
+        {
+            GitHubHost = GitHubHost.Normalize(_hostTextBox.Text),
+            TokenEnvironmentVariable = _tokenEnvironmentTextBox.Text.Trim(),
+        };
+    }
+
+    private string? ResolveTokenForSnapshot()
+    {
+        var snapshot = CurrentSettingsSnapshot();
+        if (!string.IsNullOrWhiteSpace(_personalAccessTokenTextBox.Text))
+        {
+            return _personalAccessTokenTextBox.Text;
+        }
+
+        var credentialToken = new WindowsCredentialStore(snapshot.GitHubHost).ReadToken();
+        if (!string.IsNullOrWhiteSpace(credentialToken))
+        {
+            return credentialToken;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snapshot.TokenEnvironmentVariable))
+        {
+            var configuredToken = Environment.GetEnvironmentVariable(snapshot.TokenEnvironmentVariable);
+            if (!string.IsNullOrWhiteSpace(configuredToken))
+            {
+                return configuredToken;
+            }
+        }
+
+        return Environment.GetEnvironmentVariable("REPOBAR_GITHUB_TOKEN") ??
+            Environment.GetEnvironmentVariable("GITHUB_TOKEN") ??
+            Environment.GetEnvironmentVariable("GH_TOKEN");
     }
 
     private void SaveCredentialTokenIfNeeded()
