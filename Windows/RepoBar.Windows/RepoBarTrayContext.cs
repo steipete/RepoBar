@@ -227,6 +227,18 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         item.DropDownItems.Add(new ToolStripMenuItem($"CI: {status.LatestRun?.DisplayText ?? "not available"}") { Enabled = false });
         item.DropDownItems.Add(new ToolStripMenuItem($"Stars: {status.Stars}  Forks: {status.Forks}") { Enabled = false });
         item.DropDownItems.Add(new ToolStripMenuItem($"Default branch: {status.DefaultBranch}") { Enabled = false });
+        if (status.Traffic is { DisplayText.Length: > 0 })
+        {
+            item.DropDownItems.Add(new ToolStripMenuItem($"Traffic: {status.Traffic.DisplayText}") { Enabled = false });
+        }
+        if (status.Heatmap != null)
+        {
+            item.DropDownItems.Add(new ToolStripMenuItem($"Heatmap: {status.Heatmap.DisplayText}") { Enabled = false });
+        }
+        if (status.Changelog != null)
+        {
+            item.DropDownItems.Add(new ToolStripMenuItem($"Changelog: {status.Changelog.Headline}", null, (_, _) => OpenUrl(status.Changelog.Url)));
+        }
         if (status.LocalStatus != null)
         {
             item.DropDownItems.Add(new ToolStripSeparator());

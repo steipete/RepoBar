@@ -50,6 +50,15 @@ public sealed class GitHubResponseCacheTests
                 "/repos/owner/name/actions/runs?branch=main&per_page=1" => JsonResponse("""{"workflow_runs":[]}"""),
                 "/repos/owner/name/actions/runs?per_page=5" => JsonResponse("""{"workflow_runs":[]}"""),
                 "/repos/owner/name/releases/latest" => new HttpResponseMessage(HttpStatusCode.NotFound),
+                "/repos/owner/name/traffic/views" => JsonResponse("""{"count":42,"uniques":12}"""),
+                "/repos/owner/name/traffic/clones" => JsonResponse("""{"count":8,"uniques":3}"""),
+                "/repos/owner/name/stats/commit_activity" => JsonResponse("""
+                    [
+                      {"week": 1780272000, "total": 0, "days": [0,0,0,0,0,0,0]},
+                      {"week": 1780876800, "total": 7, "days": [1,1,1,1,1,1,1]}
+                    ]
+                    """),
+                "/repos/owner/name/contents/CHANGELOG.md?ref=main" => ChangelogResponse("## 1.2.3\n- shipped"),
                 _ => JsonResponse("[]"),
             };
             response.Headers.TryAddWithoutValidation("X-RateLimit-Limit", "5000");
@@ -66,6 +75,9 @@ public sealed class GitHubResponseCacheTests
             CancellationToken.None);
 
         Assert.Single(statuses);
+        Assert.Equal(42, statuses[0].Traffic?.Views);
+        Assert.Equal(7, statuses[0].Heatmap?.TotalCommits);
+        Assert.Equal("1.2.3", statuses[0].Changelog?.Headline);
         Assert.NotNull(client.LastRateLimit);
         Assert.Equal(4999, client.LastRateLimit.Remaining);
         Assert.Contains("4999/5000", client.LastRateLimit.DisplayText);
@@ -77,6 +89,12 @@ public sealed class GitHubResponseCacheTests
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
         };
+    }
+
+    private static HttpResponseMessage ChangelogResponse(string markdown)
+    {
+        var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(markdown));
+        return JsonResponse($$"""{"encoding":"base64","content":"{{content}}"}""");
     }
 
     private sealed class StubHandler : HttpMessageHandler

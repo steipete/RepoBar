@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -88,6 +89,9 @@ internal sealed class GitHubRepositoryClient : IDisposable
             var latestRun = await LoadLatestWorkflowRunAsync(repository, defaultBranch, cancellationToken).ConfigureAwait(false);
             var latestRelease = await LoadLatestReleaseAsync(repository, cancellationToken).ConfigureAwait(false);
             var recentLists = await LoadRecentListsAsync(repository, cancellationToken).ConfigureAwait(false);
+            var traffic = await LoadTrafficAsync(repository, cancellationToken).ConfigureAwait(false);
+            var heatmap = await LoadHeatmapAsync(repository, cancellationToken).ConfigureAwait(false);
+            var changelog = await LoadChangelogAsync(repository, defaultBranch, cancellationToken).ConfigureAwait(false);
 
             return new RepositoryStatus(
                 repository,
@@ -100,6 +104,9 @@ internal sealed class GitHubRepositoryClient : IDisposable
                 latestRun,
                 latestRelease,
                 recentLists,
+                traffic,
+                heatmap,
+                changelog,
                 localStatus,
                 ErrorMessage: null);
         }
@@ -393,6 +400,118 @@ internal sealed class GitHubRepositoryClient : IDisposable
             .ToArray();
     }
 
+    private async Task<TrafficStatus?> LoadTrafficAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var views = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/traffic/views",
+            cancellationToken).ConfigureAwait(false);
+        var clones = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/traffic/clones",
+            cancellationToken).ConfigureAwait(false);
+        if (views == null && clones == null)
+        {
+            return null;
+        }
+
+        var (viewCount, viewUniques) = ParseTrafficCounts(views);
+        var (cloneCount, cloneUniques) = ParseTrafficCounts(clones);
+        if (viewCount == null && viewUniques == null && cloneCount == null && cloneUniques == null)
+        {
+            return null;
+        }
+
+        return new TrafficStatus(viewCount, viewUniques, cloneCount, cloneUniques);
+    }
+
+    private async Task<HeatmapStatus?> LoadHeatmapAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    {
+        var json = await TryReadJsonAsync(
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/stats/commit_activity",
+            cancellationToken).ConfigureAwait(false);
+        if (json == null)
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        var totalCommits = 0;
+        var activeWeeks = 0;
+        DateTimeOffset? firstWeek = null;
+        DateTimeOffset? lastWeek = null;
+        foreach (var week in document.RootElement.EnumerateArray())
+        {
+            var weekTotal = week.TryGetProperty("total", out var total) && total.ValueKind == JsonValueKind.Number
+                ? total.GetInt32()
+                : 0;
+            totalCommits += weekTotal;
+            if (weekTotal > 0)
+            {
+                activeWeeks++;
+            }
+            if (week.TryGetProperty("week", out var weekStart) && weekStart.ValueKind == JsonValueKind.Number)
+            {
+                var date = DateTimeOffset.FromUnixTimeSeconds(weekStart.GetInt64());
+                firstWeek ??= date;
+                lastWeek = date;
+            }
+        }
+
+        return new HeatmapStatus(totalCommits, activeWeeks, firstWeek, lastWeek);
+    }
+
+    private async Task<ChangelogStatus?> LoadChangelogAsync(
+        RepositoryRef repository,
+        string defaultBranch,
+        CancellationToken cancellationToken)
+    {
+        foreach (var fileName in new[] { "CHANGELOG.md", "CHANGELOG" })
+        {
+            var json = await TryReadJsonAsync(
+                $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/contents/{fileName}?ref={Uri.EscapeDataString(defaultBranch)}",
+                cancellationToken).ConfigureAwait(false);
+            if (json == null)
+            {
+                continue;
+            }
+
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+            {
+                continue;
+            }
+
+            var content = TryGetString(document.RootElement, "content");
+            var encoding = TryGetString(document.RootElement, "encoding");
+            if (!string.Equals(encoding, "base64", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(content))
+            {
+                continue;
+            }
+
+            string markdown;
+            try
+            {
+                var base64 = new string(content.Where(character => !char.IsWhiteSpace(character)).ToArray());
+                markdown = Encoding.UTF8.GetString(Convert.FromBase64String(base64));
+            }
+            catch
+            {
+                continue;
+            }
+
+            var headline = ParseChangelogHeadline(markdown);
+            return headline == null
+                ? null
+                : new ChangelogStatus(headline, BuildWebUri(repository, $"blob/{Uri.EscapeDataString(defaultBranch)}/{fileName}").ToString());
+        }
+
+        return null;
+    }
+
     private async Task<string> ReadJsonAsync(string path, CancellationToken cancellationToken)
     {
         var cached = _cache?.Read(path);
@@ -546,6 +665,44 @@ internal sealed class GitHubRepositoryClient : IDisposable
         return string.IsNullOrWhiteSpace(sha) ? null : sha[..Math.Min(7, sha.Length)];
     }
 
+    private static (int? count, int? uniques) ParseTrafficCounts(string? json)
+    {
+        if (json == null)
+        {
+            return (null, null);
+        }
+
+        using var document = JsonDocument.Parse(json);
+        if (document.RootElement.ValueKind != JsonValueKind.Object)
+        {
+            return (null, null);
+        }
+
+        int? count = document.RootElement.TryGetProperty("count", out var countProperty) &&
+            countProperty.ValueKind == JsonValueKind.Number
+                ? countProperty.GetInt32()
+                : null;
+        int? uniques = document.RootElement.TryGetProperty("uniques", out var uniquesProperty) &&
+            uniquesProperty.ValueKind == JsonValueKind.Number
+                ? uniquesProperty.GetInt32()
+                : null;
+        return (count, uniques);
+    }
+
+    internal static string? ParseChangelogHeadline(string markdown)
+    {
+        foreach (var line in markdown.Split(["\r\n", "\n"], StringSplitOptions.None))
+        {
+            var trimmed = line.Trim();
+            if (trimmed.StartsWith("## ", StringComparison.Ordinal))
+            {
+                return trimmed.TrimStart('#', ' ').Trim();
+            }
+        }
+
+        return null;
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();
@@ -563,12 +720,15 @@ internal sealed record RepositoryStatus(
     WorkflowRunStatus? LatestRun,
     ReleaseStatus? LatestRelease,
     RecentRepositoryLists RecentLists,
+    TrafficStatus? Traffic,
+    HeatmapStatus? Heatmap,
+    ChangelogStatus? Changelog,
     LocalGitRepositoryStatus? LocalStatus,
     string? ErrorMessage)
 {
     public static RepositoryStatus Failed(RepositoryRef repository, LocalGitRepositoryStatus? localStatus, string errorMessage)
     {
-        return new RepositoryStatus(repository, 0, 0, 0, 0, "", null, null, null, RecentRepositoryLists.Empty, localStatus, errorMessage);
+        return new RepositoryStatus(repository, 0, 0, 0, 0, "", null, null, null, RecentRepositoryLists.Empty, null, null, null, localStatus, errorMessage);
     }
 
     public TrayHealth Health
@@ -606,6 +766,36 @@ internal sealed record WorkflowRunStatus(string Status, string? Conclusion, stri
 }
 
 internal sealed record ReleaseStatus(string TagName, string? Url, DateTimeOffset? PublishedAt);
+
+internal sealed record TrafficStatus(int? Views, int? UniqueViews, int? Clones, int? UniqueClones)
+{
+    public string DisplayText
+    {
+        get
+        {
+            var views = Views == null ? null : $"{Views:n0} views";
+            var viewUniques = UniqueViews == null ? null : $"{UniqueViews:n0} unique";
+            var clones = Clones == null ? null : $"{Clones:n0} clones";
+            var cloneUniques = UniqueClones == null ? null : $"{UniqueClones:n0} unique";
+            return string.Join("  ", new[] { JoinPair(views, viewUniques), JoinPair(clones, cloneUniques) }
+                .Where(part => !string.IsNullOrWhiteSpace(part)));
+        }
+    }
+
+    private static string? JoinPair(string? first, string? second)
+    {
+        return first == null ? null : second == null ? first : $"{first}, {second}";
+    }
+}
+
+internal sealed record HeatmapStatus(int TotalCommits, int ActiveWeeks, DateTimeOffset? FirstWeek, DateTimeOffset? LastWeek)
+{
+    public string DisplayText => LastWeek == null
+        ? $"{TotalCommits:n0} commits"
+        : $"{TotalCommits:n0} commits across {ActiveWeeks:n0} active weeks";
+}
+
+internal sealed record ChangelogStatus(string Headline, string Url);
 
 internal sealed record GitHubListItem(string Title, string? Url, string? Subtitle);
 
