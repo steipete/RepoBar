@@ -94,7 +94,25 @@ public sealed class GitHubResponseCacheTests
             return response;
         });
         var settings = new WindowsSettings { EnableResponseCache = false };
-        using var client = new GitHubRepositoryClient(settings, token: null, handler, cache: null);
+        using var client = new GitHubRepositoryClient(settings, token: null, handler, new StubHandler(request =>
+            JsonResponse("""
+                {
+                  "data": {
+                    "repository": {
+                      "discussions": {
+                        "nodes": [
+                          {
+                            "title": "Roadmap",
+                            "url": "https://github.com/owner/name/discussions/1",
+                            "updatedAt": "2026-06-01T13:00:00Z",
+                            "author": { "login": "carol" }
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+                """)), cache: null);
 
         var statuses = await client.LoadRepositoriesAsync(
             [new RepositoryRef { Owner = "owner", Name = "name" }],
@@ -107,6 +125,7 @@ public sealed class GitHubResponseCacheTests
         Assert.Equal("1.2.3", statuses[0].Changelog?.Headline);
         Assert.Contains(statuses[0].RecentLists.Activity, item => item.Title == "Pushed 1 commit to main");
         Assert.Contains(statuses[0].RecentLists.Activity, item => item.Title.Contains("opened Issue #42", StringComparison.Ordinal));
+        Assert.Contains(statuses[0].RecentLists.Discussions, item => item.Title == "Roadmap");
         Assert.NotNull(client.LastRateLimit);
         Assert.Equal(4999, client.LastRateLimit.Remaining);
         Assert.Contains("4999/5000", client.LastRateLimit.DisplayText);

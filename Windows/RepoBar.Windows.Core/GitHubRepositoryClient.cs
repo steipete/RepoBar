@@ -12,11 +12,17 @@ internal sealed class GitHubRepositoryClient : IDisposable
     private static readonly Regex LastPageRegex = new(@"[?&]page=(\d+)[^>]*>\s*;\s*rel=""last""", RegexOptions.Compiled);
 
     private readonly HttpClient _httpClient;
+    private readonly HttpClient _graphQlClient;
     private readonly string _host;
     private readonly GitHubResponseCache? _cache;
 
     public GitHubRepositoryClient(WindowsSettings settings, string? token)
-        : this(settings, token, new HttpClientHandler(), settings.EnableResponseCache ? GitHubResponseCache.CreateDefault() : null)
+        : this(
+            settings,
+            token,
+            new HttpClientHandler(),
+            new HttpClientHandler(),
+            settings.EnableResponseCache ? GitHubResponseCache.CreateDefault() : null)
     {
     }
 
@@ -24,22 +30,32 @@ internal sealed class GitHubRepositoryClient : IDisposable
         WindowsSettings settings,
         string? token,
         HttpMessageHandler messageHandler,
+        HttpMessageHandler graphQlMessageHandler,
         GitHubResponseCache? cache)
     {
         _host = GitHubHost.Normalize(settings.GitHubHost);
         var apiRoot = string.Equals(_host, "github.com", StringComparison.OrdinalIgnoreCase)
             ? "https://api.github.com/"
             : $"https://{_host}/api/v3/";
+        var graphQlRoot = string.Equals(_host, "github.com", StringComparison.OrdinalIgnoreCase)
+            ? "https://api.github.com/"
+            : $"https://{_host}/api/";
 
         _cache = cache;
         _httpClient = new HttpClient(messageHandler) { BaseAddress = new Uri(apiRoot) };
-        _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("RepoBar-Windows/0.1");
-        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
-        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
+        _graphQlClient = new HttpClient(graphQlMessageHandler) { BaseAddress = new Uri(graphQlRoot) };
+        ConfigureGitHubClient(_httpClient, token);
+        ConfigureGitHubClient(_graphQlClient, token);
+    }
 
+    private static void ConfigureGitHubClient(HttpClient client, string? token)
+    {
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("RepoBar-Windows/0.1");
+        client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+        client.DefaultRequestHeaders.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
         if (!string.IsNullOrWhiteSpace(token))
         {
-            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
     }
 
@@ -208,7 +224,8 @@ internal sealed class GitHubRepositoryClient : IDisposable
         var commits = await LoadRecentCommitsAsync(repository, cancellationToken).ConfigureAwait(false);
         var contributors = await LoadRecentContributorsAsync(repository, cancellationToken).ConfigureAwait(false);
         var activity = await LoadRecentActivityAsync(repository, cancellationToken).ConfigureAwait(false);
-        return new RecentRepositoryLists(issues, pulls, releases, workflowRuns, branches, tags, commits, contributors, activity);
+        var discussions = await LoadRecentDiscussionsAsync(repository, cancellationToken).ConfigureAwait(false);
+        return new RecentRepositoryLists(issues, pulls, releases, workflowRuns, branches, tags, commits, contributors, activity, discussions);
     }
 
     private async Task<IReadOnlyList<GitHubListItem>> LoadRecentIssuesAsync(RepositoryRef repository, CancellationToken cancellationToken)
@@ -423,6 +440,75 @@ internal sealed class GitHubRepositoryClient : IDisposable
             .Take(5)
             .Cast<GitHubListItem>()
             .ToArray();
+    }
+
+    private async Task<IReadOnlyList<GitHubListItem>> LoadRecentDiscussionsAsync(
+        RepositoryRef repository,
+        CancellationToken cancellationToken)
+    {
+        const string query = """
+            query RepoBarDiscussions($owner: String!, $name: String!) {
+              repository(owner: $owner, name: $name) {
+                discussions(first: 5, orderBy: {field: UPDATED_AT, direction: DESC}) {
+                  nodes {
+                    title
+                    url
+                    updatedAt
+                    author {
+                      login
+                    }
+                  }
+                }
+              }
+            }
+            """;
+
+        var body = JsonSerializer.Serialize(new
+        {
+            query,
+            variables = new { owner = repository.Owner, name = repository.Name },
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Post, "graphql")
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json"),
+        };
+
+        try
+        {
+            using var response = await _graphQlClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            LastRateLimit = GitHubRateLimitSnapshot.FromHeaders(response) ?? LastRateLimit;
+            if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
+            {
+                return [];
+            }
+
+            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.TryGetProperty("errors", out var errors) &&
+                errors.ValueKind == JsonValueKind.Array &&
+                errors.GetArrayLength() > 0)
+            {
+                return [];
+            }
+
+            if (!TryGetNestedProperty(document.RootElement, out var nodes, "data", "repository", "discussions", "nodes") ||
+                nodes.ValueKind != JsonValueKind.Array)
+            {
+                return [];
+            }
+
+            return nodes.EnumerateArray()
+                .Select(node => new GitHubListItem(
+                    TryGetString(node, "title") ?? "Discussion",
+                    TryGetString(node, "url"),
+                    Metadata(TryGetNestedString(node, "author", "login"), TryGetDateTimeOffset(node, "updatedAt"))))
+                .ToArray();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return [];
+        }
     }
 
     private GitHubListItem? BuildActivityItem(RepositoryRef repository, JsonElement activity)
@@ -740,6 +826,20 @@ internal sealed class GitHubRepositoryClient : IDisposable
         return current.ValueKind == JsonValueKind.String ? current.GetString() : null;
     }
 
+    private static bool TryGetNestedProperty(JsonElement element, out JsonElement value, params string[] path)
+    {
+        value = element;
+        foreach (var part in path)
+        {
+            if (value.ValueKind != JsonValueKind.Object || !value.TryGetProperty(part, out value))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private static DateTimeOffset? TryGetDateTimeOffset(JsonElement element, string propertyName)
     {
         return element.TryGetProperty(propertyName, out var property) &&
@@ -826,6 +926,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
     public void Dispose()
     {
         _httpClient.Dispose();
+        _graphQlClient.Dispose();
     }
 }
 
@@ -928,9 +1029,10 @@ internal sealed record RecentRepositoryLists(
     IReadOnlyList<GitHubListItem> Tags,
     IReadOnlyList<GitHubListItem> Commits,
     IReadOnlyList<GitHubListItem> Contributors,
-    IReadOnlyList<GitHubListItem> Activity)
+    IReadOnlyList<GitHubListItem> Activity,
+    IReadOnlyList<GitHubListItem> Discussions)
 {
-    public static readonly RecentRepositoryLists Empty = new([], [], [], [], [], [], [], [], []);
+    public static readonly RecentRepositoryLists Empty = new([], [], [], [], [], [], [], [], [], []);
 }
 
 internal enum TrayHealth
