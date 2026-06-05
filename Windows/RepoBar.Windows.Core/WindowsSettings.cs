@@ -12,6 +12,10 @@ internal sealed class WindowsSettings
     public bool DiscoverLocalProjects { get; set; } = true;
     public string? LocalProjectsRoot { get; set; }
     public int LocalProjectsMaxDepth { get; set; } = 3;
+    public bool EnableResponseCache { get; set; } = true;
+    public bool ShowRateLimits { get; set; } = true;
+    public bool EnablePullRequestNotifications { get; set; }
+    public bool ShowActionsUsage { get; set; }
     public List<RepositoryRef> Repositories { get; set; } = [];
 }
 
@@ -91,6 +95,7 @@ internal sealed class WindowsSettingsStore
                 "Projects");
         }
         settings.LocalProjectsMaxDepth = Math.Clamp(settings.LocalProjectsMaxDepth, 0, 8);
+        settings.RefreshIntervalMinutes = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
         settings.Repositories ??= [];
         settings.Repositories = settings.Repositories
             .Where(repository => repository.IsValid)
@@ -122,6 +127,24 @@ internal sealed class WindowsSettingsStore
         }
 
         repository.Visibility = visibility;
+        Save();
+    }
+
+    public void ReplaceRepositories(IEnumerable<RepositoryRef> repositories)
+    {
+        Settings.Repositories = repositories
+            .Where(repository => repository.IsValid)
+            .Select(repository => new RepositoryRef
+            {
+                Owner = repository.Owner.Trim(),
+                Name = repository.Name.Trim(),
+                Visibility = repository.Visibility,
+            })
+            .GroupBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(repository => repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
+            .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
         Save();
     }
 

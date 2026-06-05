@@ -12,15 +12,26 @@ internal sealed class GitHubRepositoryClient : IDisposable
 
     private readonly HttpClient _httpClient;
     private readonly string _host;
+    private readonly GitHubResponseCache? _cache;
 
     public GitHubRepositoryClient(WindowsSettings settings, string? token)
+        : this(settings, token, new HttpClientHandler(), settings.EnableResponseCache ? GitHubResponseCache.CreateDefault() : null)
+    {
+    }
+
+    internal GitHubRepositoryClient(
+        WindowsSettings settings,
+        string? token,
+        HttpMessageHandler messageHandler,
+        GitHubResponseCache? cache)
     {
         _host = string.IsNullOrWhiteSpace(settings.GitHubHost) ? "github.com" : settings.GitHubHost.Trim();
         var apiRoot = string.Equals(_host, "github.com", StringComparison.OrdinalIgnoreCase)
             ? "https://api.github.com/"
             : $"https://{_host}/api/v3/";
 
-        _httpClient = new HttpClient { BaseAddress = new Uri(apiRoot) };
+        _cache = cache;
+        _httpClient = new HttpClient(messageHandler) { BaseAddress = new Uri(apiRoot) };
         _httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("RepoBar-Windows/0.1");
         _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
         _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("X-GitHub-Api-Version", "2022-11-28");
@@ -30,6 +41,8 @@ internal sealed class GitHubRepositoryClient : IDisposable
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
     }
+
+    public GitHubRateLimitSnapshot? LastRateLimit { get; private set; }
 
     public async Task<IReadOnlyList<RepositoryStatus>> LoadRepositoriesAsync(
         IReadOnlyList<RepositoryRef> repositories,
@@ -319,9 +332,36 @@ internal sealed class GitHubRepositoryClient : IDisposable
 
     private async Task<string> ReadJsonAsync(string path, CancellationToken cancellationToken)
     {
-        using var response = await _httpClient.GetAsync(path, cancellationToken).ConfigureAwait(false);
-        await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-        return await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        var cached = _cache?.Read(path);
+        using var request = new HttpRequestMessage(HttpMethod.Get, path);
+        if (!string.IsNullOrWhiteSpace(cached?.ETag))
+        {
+            request.Headers.TryAddWithoutValidation("If-None-Match", cached.ETag);
+        }
+
+        try
+        {
+            using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+            LastRateLimit = GitHubRateLimitSnapshot.FromHeaders(response) ?? LastRateLimit;
+            if (response.StatusCode == HttpStatusCode.NotModified && cached != null)
+            {
+                return cached.Json;
+            }
+
+            await EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
+            var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            _cache?.Write(path, response.Headers.ETag?.Tag, json);
+            return json;
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            if (cached != null)
+            {
+                return cached.Json;
+            }
+
+            throw;
+        }
     }
 
     private async Task<string?> TryReadJsonAsync(string path, CancellationToken cancellationToken)

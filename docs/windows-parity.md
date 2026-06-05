@@ -11,14 +11,14 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Repository submenu | GitHub links, local state, worktrees, issues, PRs, releases, changelog, CI runs, discussions, tags, branches, contributors, commits, activity, pin/hide | Same actions where GitHub APIs support them; Windows shell opens folders/terminal | Started |
 | Local projects | Scan project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Finder/Terminal, sync actions | Scan Windows project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Explorer/Terminal, later safe sync actions | Started |
 | Auth/accounts | GitHub App OAuth, PAT fallback, GitHub Enterprise, multi-account storage | PAT/env bootstrap first, then Windows Credential Manager + OAuth/GHE account UI | Missing |
-| Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with search and visibility controls | Started |
-| Cache/offline | SQLite cache, ETags, archive fallback | Shared cache schema or Windows-owned equivalent with ETags/offline reads | Missing |
-| Rate limits | REST/GraphQL resource meter and blocker banner | Tray tooltip/menu rate-limit state and blocker row | Missing |
+| Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with search and visibility controls | Partial |
+| Cache/offline | SQLite cache, ETags, archive fallback | Shared cache schema or Windows-owned equivalent with ETags/offline reads | Partial |
+| Rate limits | REST/GraphQL resource meter and blocker banner | Tray tooltip/menu rate-limit state and blocker row | Partial |
 | Actions usage | Optional Actions/runners billing menu | Optional Actions/runners billing menu | Missing |
 | Issue Navigator | Clipboard/reference resolver window with browser preview | Windows reference resolver/flyout or window | Missing |
-| Notifications | Optional PR notifications | Windows toast notifications | Missing |
+| Notifications | Optional PR notifications | Windows toast notifications | Settings only |
 | Updates/install | Sparkle/Homebrew/DMG | MSIX or installer plus update path | Missing |
-| Tests | Swift tests for parsing, auth, cache, refs, menu signatures | .NET unit tests plus Windows Crabbox build/runtime smoke | Started |
+| Tests | Swift tests for parsing, auth, cache, refs, menu signatures | .NET unit tests plus Windows Crabbox build/runtime smoke | Partial |
 
 ## Implementation Order
 
@@ -38,3 +38,17 @@ Feature parity is not complete until the Windows target has:
 - A Crabbox Windows run proving build and tests against the dirty checkout.
 - A Crabbox desktop smoke that launches the tray, captures the notification-area process, and verifies the generated settings file.
 - A manual or automated proof artifact for at least one repository with GitHub status and local git status shown together.
+
+## Current Validation Commands
+
+```powershell
+.\Scripts\build_windows.ps1 build -Runtime win-x64
+.\Scripts\build_windows.ps1 test
+.\Scripts\smoke_windows.ps1 -Runtime win-x64
+```
+
+```bash
+CRABBOX_PROVIDER=aws CRABBOX_TARGET=windows pnpm windows:crabbox
+```
+
+The Crabbox gate is the required hosted proof. If the coordinator returns `401 unauthorized`, the implementation is not considered Crabbox-validated.

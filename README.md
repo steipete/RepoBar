@@ -27,6 +27,7 @@ Windows preview builds are developer-run for now:
 
 ```powershell
 .\Scripts\build_windows.ps1 build -Runtime win-x64
+.\Scripts\build_windows.ps1 test
 .\Scripts\build_windows.ps1 publish -Runtime win-x64
 ```
 
@@ -165,7 +166,10 @@ pnpm check     # swiftformat + swiftlint + swift test
 pnpm test      # Swift Testing suite
 pnpm build     # debug Swift build
 pnpm windows:build
+pnpm windows:test
 pnpm windows:publish
+pnpm windows:smoke
+pnpm windows:crabbox
 pnpm start     # build, package, sign, and launch the app
 pnpm restart   # relaunch the app from this checkout
 pnpm stop      # quit RepoBar

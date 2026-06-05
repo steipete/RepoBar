@@ -15,6 +15,8 @@
     "windows:build": "pwsh ./Scripts/build_windows.ps1 build",
     "windows:test": "pwsh ./Scripts/build_windows.ps1 test",
     "windows:publish": "pwsh ./Scripts/build_windows.ps1 publish",
+    "windows:smoke": "pwsh ./Scripts/smoke_windows.ps1",
+    "windows:crabbox": "./Scripts/validate_windows_crabbox.sh",
     "repobar": "swift build --product repobarcli && ./Scripts/codesign_cli.sh .build/debug/repobarcli && .build/debug/repobarcli",
     "repobarcli": "pnpm -s repobar",
     "start": "./Scripts/compile_and_run.sh",

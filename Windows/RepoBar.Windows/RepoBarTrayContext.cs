@@ -6,12 +6,12 @@ namespace RepoBar.Windows;
 internal sealed class RepoBarTrayContext : ApplicationContext
 {
     private readonly WindowsSettingsStore _settingsStore;
-    private readonly GitHubRepositoryClient _githubClient;
     private readonly LocalGitService _localGitService = new();
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _menu = new();
     private readonly System.Windows.Forms.Timer _refreshTimer = new();
     private readonly CancellationTokenSource _shutdown = new();
+    private GitHubRepositoryClient _githubClient;
     private IReadOnlyList<RepositoryStatus> _statuses = [];
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
     private bool _isRefreshing;
@@ -138,6 +138,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem(_isRefreshing ? "Refreshing..." : "Refresh now", null, (_, _) => BeginRefresh()) { Enabled = !_isRefreshing });
+        if (_settingsStore.Settings.ShowRateLimits && _githubClient.LastRateLimit != null)
+        {
+            _menu.Items.Add(new ToolStripMenuItem($"GitHub API: {_githubClient.LastRateLimit.DisplayText}") { Enabled = false });
+        }
+        _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
         _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
         _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
     }
@@ -283,8 +288,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         var repoCount = _settingsStore.VisibleRepositories.Count;
         var tokenState = _settingsStore.ResolveToken() == null ? "no token" : "token";
+        var cacheState = _settingsStore.Settings.EnableResponseCache ? "cache" : "no cache";
         var refreshState = _isRefreshing ? "refreshing" : "ready";
-        return $"RepoBar Windows - {repoCount} repos - {_localGitIndex.Repositories.Count} local - {tokenState} - {refreshState}";
+        return $"RepoBar Windows - {repoCount} repos - {_localGitIndex.Repositories.Count} local - {tokenState} - {cacheState} - {refreshState}";
     }
 
     private void UpdateTrayIcon()
@@ -345,6 +351,18 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         _settingsStore.SetVisibility(fullName, visibility);
         BeginRefresh();
+    }
+
+    private void ShowPreferences()
+    {
+        using var form = new SettingsEditorForm(_settingsStore);
+        if (form.ShowDialog() == DialogResult.OK)
+        {
+            _refreshTimer.Interval = Math.Clamp(_settingsStore.Settings.RefreshIntervalMinutes, 1, 60) * 60 * 1000;
+            _githubClient.Dispose();
+            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+            BeginRefresh();
+        }
     }
 
     private static void OpenFile(string path)
