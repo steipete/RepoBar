@@ -52,7 +52,7 @@ Edit that file to choose repositories:
   "localProjectsRoot": "%USERPROFILE%\\Projects",
   "localProjectsMaxDepth": 3,
   "repositories": [
-    { "owner": "steipete", "name": "RepoBar" }
+    { "owner": "steipete", "name": "RepoBar", "visibility": "pinned" }
   ]
 }
 ```
@@ -72,6 +72,8 @@ The app also checks `GITHUB_TOKEN` and `GH_TOKEN`. Tokens are not written to the
 When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, and folder/terminal actions to the tray menu.
 
 Local-only repositories are shown in their own tray section so Windows can still be useful without GitHub authentication.
+
+Repository entries support `visible`, `pinned`, and `hidden` visibility. The tray menu can pin, hide, or restore configured repositories, and writes the updated settings file immediately.
 
 ## Design Notes
 

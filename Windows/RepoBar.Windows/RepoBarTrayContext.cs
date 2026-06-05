@@ -78,7 +78,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 _settingsStore.Settings,
                 _shutdown.Token);
             _statuses = await _githubClient.LoadRepositoriesAsync(
-                _settingsStore.Settings.Repositories,
+                _settingsStore.VisibleRepositories,
                 _localGitIndex,
                 _shutdown.Token);
         }
@@ -103,7 +103,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _menu.Items.Add(new ToolStripMenuItem(BuildHeaderText()) { Enabled = false });
         _menu.Items.Add(new ToolStripSeparator());
 
-        if (_settingsStore.Settings.Repositories.Count == 0)
+        var visibleRepositories = _settingsStore.VisibleRepositories;
+        if (visibleRepositories.Count == 0)
         {
             AddLocalOnlyRepositories();
             if (_localGitIndex.Repositories.Count == 0)
@@ -115,7 +116,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
         else if (_statuses.Count == 0)
         {
-            foreach (var repository in _settingsStore.Settings.Repositories)
+            foreach (var repository in visibleRepositories)
             {
                 _menu.Items.Add(new ToolStripMenuItem($"[ ] {repository.FullName}") { Enabled = false });
             }
@@ -155,6 +156,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 item.DropDownItems.Add(new ToolStripSeparator());
                 AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
             }
+            AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
             return item;
         }
 
@@ -181,6 +183,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             item.DropDownItems.Add(new ToolStripMenuItem($"Pushed: {status.PushedAt.Value.LocalDateTime:g}") { Enabled = false });
         }
+        AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
 
         return item;
     }
@@ -205,6 +208,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             var item = new ToolStripMenuItem($"[git] {local.DisplayName}  {local.SyncDetail}");
             AddLocalStatusItems(item.DropDownItems, local);
+            if (!string.IsNullOrWhiteSpace(local.FullName))
+            {
+                item.DropDownItems.Add(new ToolStripSeparator());
+                item.DropDownItems.Add(new ToolStripMenuItem("Pin in RepoBar", null, (_, _) => SetVisibility(local.FullName, RepositoryVisibility.Pinned)));
+            }
             _menu.Items.Add(item);
         }
     }
@@ -230,9 +238,17 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
     }
 
+    private void AddVisibilityItems(ToolStripItemCollection items, string fullName)
+    {
+        items.Add(new ToolStripSeparator());
+        items.Add(new ToolStripMenuItem("Pin", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Pinned)));
+        items.Add(new ToolStripMenuItem("Set Visible", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Visible)));
+        items.Add(new ToolStripMenuItem("Hide", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Hidden)));
+    }
+
     private string BuildHeaderText()
     {
-        var repoCount = _settingsStore.Settings.Repositories.Count;
+        var repoCount = _settingsStore.VisibleRepositories.Count;
         var tokenState = _settingsStore.ResolveToken() == null ? "no token" : "token";
         var refreshState = _isRefreshing ? "refreshing" : "ready";
         return $"RepoBar Windows - {repoCount} repos - {_localGitIndex.Repositories.Count} local - {tokenState} - {refreshState}";
@@ -276,7 +292,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             TrayHealth.Failing => "needs attention",
             _ => "ready",
         };
-        return $"RepoBar - {_settingsStore.Settings.Repositories.Count} repos / {_localGitIndex.Repositories.Count} local - {summary}";
+        return $"RepoBar - {_settingsStore.VisibleRepositories.Count} repos / {_localGitIndex.Repositories.Count} local - {summary}";
     }
 
     private void OnNotifyIconMouseUp(object? sender, MouseEventArgs eventArgs)
@@ -290,6 +306,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private void OpenRepository(RepositoryRef repository, string? path = null)
     {
         OpenUrl(_githubClient.BuildWebUri(repository, path).ToString());
+    }
+
+    private void SetVisibility(string fullName, RepositoryVisibility visibility)
+    {
+        _settingsStore.SetVisibility(fullName, visibility);
+        BeginRefresh();
     }
 
     private static void OpenFile(string path)
