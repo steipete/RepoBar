@@ -14,6 +14,8 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _discoverLocalProjects = new();
     private readonly TextBox _localProjectsRoot = new();
     private readonly NumericUpDown _localProjectsDepth = new();
+    private readonly CheckBox _fetchLocalProjectsBeforeStatus = new();
+    private readonly CheckBox _autoSyncLocalProjects = new();
     private readonly CheckBox _enableResponseCache = new();
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showActionsUsage = new();
@@ -49,6 +51,8 @@ internal sealed class SettingsEditorForm : Form
         _localProjectsDepth.Minimum = 0;
         _localProjectsDepth.Maximum = 8;
         _localProjectsDepth.Value = Math.Clamp(settings.LocalProjectsMaxDepth, 0, 8);
+        _fetchLocalProjectsBeforeStatus.Checked = settings.FetchLocalProjectsBeforeStatus;
+        _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
         _enableResponseCache.Checked = settings.EnableResponseCache;
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
@@ -95,6 +99,8 @@ internal sealed class SettingsEditorForm : Form
 
         _openMenuOnLeftClick.Text = "Open menu on left click";
         _discoverLocalProjects.Text = "Discover local projects";
+        _fetchLocalProjectsBeforeStatus.Text = "Fetch before status";
+        _autoSyncLocalProjects.Text = "Auto-sync clean behind repos";
         _enableResponseCache.Text = "Use response cache";
         _showRateLimits.Text = "Show rate limits";
         _showActionsUsage.Text = "Show Actions usage";
@@ -102,6 +108,8 @@ internal sealed class SettingsEditorForm : Form
 
         settingsGrid.Controls.Add(_openMenuOnLeftClick);
         settingsGrid.Controls.Add(_discoverLocalProjects);
+        settingsGrid.Controls.Add(_fetchLocalProjectsBeforeStatus);
+        settingsGrid.Controls.Add(_autoSyncLocalProjects);
         settingsGrid.Controls.Add(_enableResponseCache);
         settingsGrid.Controls.Add(_showRateLimits);
         settingsGrid.Controls.Add(_showActionsUsage);
@@ -214,6 +222,8 @@ internal sealed class SettingsEditorForm : Form
         settings.DiscoverLocalProjects = _discoverLocalProjects.Checked;
         settings.LocalProjectsRoot = string.IsNullOrWhiteSpace(_localProjectsRoot.Text) ? null : _localProjectsRoot.Text.Trim();
         settings.LocalProjectsMaxDepth = (int)_localProjectsDepth.Value;
+        settings.FetchLocalProjectsBeforeStatus = _fetchLocalProjectsBeforeStatus.Checked;
+        settings.AutoSyncLocalProjects = _autoSyncLocalProjects.Checked;
         settings.EnableResponseCache = _enableResponseCache.Checked;
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;

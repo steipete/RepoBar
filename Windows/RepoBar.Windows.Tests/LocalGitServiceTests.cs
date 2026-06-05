@@ -43,4 +43,51 @@ public sealed class LocalGitServiceTests
             }
         }
     }
+
+    [Fact]
+    public void ParseWorktrees_reads_porcelain_output()
+    {
+        var worktrees = LocalGitService.ParseWorktrees("""
+            worktree C:/Projects/repo
+            HEAD abc123
+            branch refs/heads/main
+
+            worktree C:/Projects/repo/.work/feature
+            HEAD def456
+            branch refs/heads/feature
+
+            """);
+
+        Assert.Equal(2, worktrees.Count);
+        Assert.Equal("C:/Projects/repo", worktrees[0].Path);
+        Assert.Equal("main", worktrees[0].Branch);
+        Assert.Equal("feature", worktrees[1].Branch);
+    }
+
+    [Fact]
+    public void Local_status_can_fast_forward_only_when_clean_and_behind()
+    {
+        var cleanBehind = new LocalGitRepositoryStatus(
+            Path: "repo",
+            Name: "repo",
+            FullName: "owner/repo",
+            Branch: "main",
+            IsClean: true,
+            AheadCount: 0,
+            BehindCount: 2,
+            SyncState: LocalSyncState.Behind,
+            DirtyCounts: LocalDirtyCounts.Empty,
+            DirtyFiles: [],
+            WorktreeName: null,
+            UpstreamBranch: "origin/main");
+        var dirtyBehind = cleanBehind with
+        {
+            IsClean = false,
+            SyncState = LocalSyncState.Dirty,
+            DirtyCounts = new LocalDirtyCounts(0, 1, 0),
+        };
+
+        Assert.True(cleanBehind.CanFastForward);
+        Assert.False(dirtyBehind.CanFastForward);
+    }
 }

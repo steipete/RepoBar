@@ -15,6 +15,7 @@ internal sealed record LocalGitRepositoryStatus(
     string? UpstreamBranch)
 {
     public string DisplayName => FullName ?? Name;
+    public bool CanFastForward => IsClean && SyncState == LocalSyncState.Behind;
 
     public string SyncDetail => SyncState switch
     {
@@ -102,5 +103,26 @@ internal sealed class LocalGitIndex
             .OrderBy(repository => repository.WorktreeName is null ? 0 : 1)
             .ThenBy(repository => repository.Path, StringComparer.OrdinalIgnoreCase)
             .First();
+    }
+}
+
+internal sealed record LocalGitWorktree(string Path, string? Branch, string? Head, bool IsBare);
+
+internal sealed record LocalGitActionResult(bool Success, string Output, string Error)
+{
+    public string DisplayText
+    {
+        get
+        {
+            if (!string.IsNullOrWhiteSpace(Output))
+            {
+                return Output.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(Error))
+            {
+                return Error.Trim();
+            }
+            return Success ? "OK" : "Git command failed";
+        }
     }
 }

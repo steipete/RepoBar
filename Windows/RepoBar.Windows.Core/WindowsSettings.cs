@@ -12,6 +12,8 @@ internal sealed class WindowsSettings
     public bool DiscoverLocalProjects { get; set; } = true;
     public string? LocalProjectsRoot { get; set; }
     public int LocalProjectsMaxDepth { get; set; } = 3;
+    public bool FetchLocalProjectsBeforeStatus { get; set; } = true;
+    public bool AutoSyncLocalProjects { get; set; }
     public bool EnableResponseCache { get; set; } = true;
     public bool ShowRateLimits { get; set; } = true;
     public bool EnablePullRequestNotifications { get; set; }

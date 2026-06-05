@@ -9,6 +9,7 @@ The Windows app currently provides:
 - configured repository status rows
 - optional local project discovery
 - local branch, upstream, ahead/behind, dirty-file, and worktree state
+- local fetch and fast-forward sync actions
 - issue and pull request counts
 - latest default-branch Actions run status
 - latest release link
@@ -57,6 +58,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "discoverLocalProjects": true,
   "localProjectsRoot": "%USERPROFILE%\\Projects",
   "localProjectsMaxDepth": 3,
+  "fetchLocalProjectsBeforeStatus": true,
+  "autoSyncLocalProjects": false,
   "enableResponseCache": true,
   "showRateLimits": true,
   "enablePullRequestNotifications": false,
@@ -100,7 +103,9 @@ The app also checks `GITHUB_TOKEN` and `GH_TOKEN`. Tokens are not written to the
 
 ## Local Projects
 
-When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, and folder/terminal actions to the tray menu.
+When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, worktree, fetch, sync, and folder/terminal actions to the tray menu.
+
+Sync is intentionally conservative: manual and automatic sync use `git pull --ff-only`, and auto-sync only runs for clean repositories that are behind their upstream.
 
 Local-only repositories are shown in their own tray section so Windows can still be useful without GitHub authentication.
 

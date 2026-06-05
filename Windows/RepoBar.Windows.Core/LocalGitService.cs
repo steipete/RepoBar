@@ -25,7 +25,21 @@ internal sealed class LocalGitService
         foreach (var repoRoot in roots)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (settings.FetchLocalProjectsBeforeStatus)
+            {
+                _ = await TryGitAsync(repoRoot, ["fetch", "--prune", "--quiet"], cancellationToken).ConfigureAwait(false);
+            }
+
             var status = await LoadStatusAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+            if (settings.AutoSyncLocalProjects && status?.CanFastForward == true)
+            {
+                var sync = await FastForwardAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+                if (sync.Success)
+                {
+                    status = await LoadStatusAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
             if (status != null)
             {
                 statuses.Add(status);
@@ -111,7 +125,29 @@ internal sealed class LocalGitService
             upstream);
     }
 
+    internal async Task<LocalGitActionResult> FetchAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        return await RunGitAsync(repoRoot, ["fetch", "--prune"], cancellationToken).ConfigureAwait(false);
+    }
+
+    internal async Task<LocalGitActionResult> FastForwardAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        return await RunGitAsync(repoRoot, ["pull", "--ff-only"], cancellationToken).ConfigureAwait(false);
+    }
+
+    internal async Task<IReadOnlyList<LocalGitWorktree>> ListWorktreesAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        var output = await TryGitAsync(repoRoot, ["worktree", "list", "--porcelain"], cancellationToken).ConfigureAwait(false);
+        return output == null ? [] : ParseWorktrees(output);
+    }
+
     private static async Task<string?> TryGitAsync(string workingDirectory, string[] arguments, CancellationToken cancellationToken)
+    {
+        var result = await RunGitAsync(workingDirectory, arguments, cancellationToken).ConfigureAwait(false);
+        return result.Success ? result.Output : null;
+    }
+
+    private static async Task<LocalGitActionResult> RunGitAsync(string workingDirectory, string[] arguments, CancellationToken cancellationToken)
     {
         try
         {
@@ -130,19 +166,70 @@ internal sealed class LocalGitService
             using var process = Process.Start(startInfo);
             if (process == null)
             {
-                return null;
+                return new LocalGitActionResult(false, "", "Failed to start git.");
             }
 
             var stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
             var stderrTask = process.StandardError.ReadToEndAsync(cancellationToken);
             await process.WaitForExitAsync(cancellationToken).ConfigureAwait(false);
             var stdout = await stdoutTask.ConfigureAwait(false);
-            _ = await stderrTask.ConfigureAwait(false);
-            return process.ExitCode == 0 ? stdout : null;
+            var stderr = await stderrTask.ConfigureAwait(false);
+            return new LocalGitActionResult(process.ExitCode == 0, stdout, stderr);
         }
-        catch
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return null;
+            return new LocalGitActionResult(false, "", exception.Message);
+        }
+    }
+
+    internal static IReadOnlyList<LocalGitWorktree> ParseWorktrees(string porcelain)
+    {
+        var worktrees = new List<LocalGitWorktree>();
+        string? path = null;
+        string? branch = null;
+        string? head = null;
+        var isBare = false;
+
+        foreach (var line in porcelain.Split(["\r\n", "\n"], StringSplitOptions.None))
+        {
+            if (line.StartsWith("worktree ", StringComparison.Ordinal))
+            {
+                Flush();
+                path = line["worktree ".Length..].Trim();
+            }
+            else if (line.StartsWith("branch ", StringComparison.Ordinal))
+            {
+                branch = line["branch ".Length..].Trim();
+                const string refsHeads = "refs/heads/";
+                if (branch.StartsWith(refsHeads, StringComparison.Ordinal))
+                {
+                    branch = branch[refsHeads.Length..];
+                }
+            }
+            else if (line.StartsWith("HEAD ", StringComparison.Ordinal))
+            {
+                head = line["HEAD ".Length..].Trim();
+            }
+            else if (line == "bare")
+            {
+                isBare = true;
+            }
+        }
+
+        Flush();
+        return worktrees;
+
+        void Flush()
+        {
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                worktrees.Add(new LocalGitWorktree(path, branch, head, isBare));
+            }
+
+            path = null;
+            branch = null;
+            head = null;
+            isBare = false;
         }
     }
 

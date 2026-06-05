@@ -232,7 +232,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
     }
 
-    private static void AddLocalStatusItems(ToolStripItemCollection items, LocalGitRepositoryStatus local)
+    private void AddLocalStatusItems(ToolStripItemCollection items, LocalGitRepositoryStatus local)
     {
         items.Add(new ToolStripMenuItem($"Branch: {local.Branch}") { Enabled = false });
         if (!string.IsNullOrWhiteSpace(local.UpstreamBranch))
@@ -249,8 +249,63 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
         }
         items.Add(new ToolStripSeparator());
+        items.Add(new ToolStripMenuItem("Fetch", null, async (_, _) => await RunLocalGitActionAsync(
+            "Fetch",
+            token => _localGitService.FetchAsync(local.Path, token))));
+        items.Add(new ToolStripMenuItem("Sync fast-forward", null, async (_, _) => await RunLocalGitActionAsync(
+            "Sync",
+            token => _localGitService.FastForwardAsync(local.Path, token)))
+        {
+            Enabled = local.CanFastForward,
+        });
+        AddWorktreesSubmenu(items, local);
+        items.Add(new ToolStripSeparator());
         items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
         items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+    }
+
+    private void AddWorktreesSubmenu(ToolStripItemCollection items, LocalGitRepositoryStatus local)
+    {
+        var submenu = new ToolStripMenuItem("Worktrees");
+        submenu.DropDownOpening += async (_, _) =>
+        {
+            submenu.DropDownItems.Clear();
+            submenu.DropDownItems.Add(new ToolStripMenuItem("Loading...") { Enabled = false });
+            var worktrees = await _localGitService.ListWorktreesAsync(local.Path, _shutdown.Token).ConfigureAwait(true);
+            submenu.DropDownItems.Clear();
+            if (worktrees.Count == 0)
+            {
+                submenu.DropDownItems.Add(new ToolStripMenuItem("No worktrees") { Enabled = false });
+                return;
+            }
+
+            foreach (var worktree in worktrees)
+            {
+                var branch = string.IsNullOrWhiteSpace(worktree.Branch) ? "detached" : worktree.Branch;
+                var label = $"{Path.GetFileName(worktree.Path)}  {branch}";
+                var item = new ToolStripMenuItem(label);
+                item.DropDownItems.Add(new ToolStripMenuItem(worktree.Path) { Enabled = false });
+                item.DropDownItems.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(worktree.Path)));
+                item.DropDownItems.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(worktree.Path)));
+                submenu.DropDownItems.Add(item);
+            }
+        };
+        items.Add(submenu);
+    }
+
+    private async Task RunLocalGitActionAsync(
+        string actionName,
+        Func<CancellationToken, Task<LocalGitActionResult>> action)
+    {
+        var result = await action(_shutdown.Token).ConfigureAwait(true);
+        if (!result.Success)
+        {
+            MessageBox.Show(result.DisplayText, $"RepoBar {actionName}", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        _notifyIcon.ShowBalloonTip(5000, $"RepoBar {actionName}", result.DisplayText, ToolTipIcon.Info);
+        BeginRefresh();
     }
 
     private static void AddRecentItemsSubmenu(ToolStripItemCollection items, string title, IReadOnlyList<GitHubListItem> recentItems)
