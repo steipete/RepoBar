@@ -15,7 +15,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Cache/offline | SQLite cache, ETags, archive fallback | Shared cache schema or Windows-owned equivalent with ETags/offline reads | Partial |
 | Rate limits | REST/GraphQL resource meter and blocker banner | Tray tooltip/menu rate-limit state and blocker row | Partial |
 | Actions usage | Optional Actions/runners billing menu | Optional Actions/runners billing menu | Missing |
-| Issue Navigator | Clipboard/reference resolver window with browser preview | Windows reference resolver/flyout or window | Missing |
+| Issue Navigator | Clipboard/reference resolver window with browser preview | Windows reference resolver/flyout or window | Partial |
 | Notifications | Optional PR notifications | Windows tray notifications | Partial |
 | Updates/install | Sparkle/Homebrew/DMG | MSIX or installer plus update path | Missing |
 | Tests | Swift tests for parsing, auth, cache, refs, menu signatures | .NET unit tests plus Windows Crabbox build/runtime smoke | Partial |

@@ -19,6 +19,7 @@ The Windows app currently provides:
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional GitHub API rate-limit row in the tray menu
 - optional pull request notifications through Windows tray balloons
+- Issue Navigator window for pasted GitHub URLs and issue/PR references
 
 ## Build
 

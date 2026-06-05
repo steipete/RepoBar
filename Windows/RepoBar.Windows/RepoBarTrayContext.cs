@@ -144,6 +144,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             _menu.Items.Add(new ToolStripMenuItem($"GitHub API: {_githubClient.LastRateLimit.DisplayText}") { Enabled = false });
         }
+        _menu.Items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
         _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
         _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
         _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
@@ -445,6 +446,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
             BeginRefresh();
         }
+    }
+
+    private void ShowIssueNavigator()
+    {
+        using var form = new ReferenceNavigatorForm(_settingsStore.Settings);
+        form.ShowDialog();
     }
 
     private static void OpenFile(string path)
