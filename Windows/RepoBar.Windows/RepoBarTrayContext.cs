@@ -7,11 +7,13 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 {
     private readonly WindowsSettingsStore _settingsStore;
     private readonly GitHubRepositoryClient _githubClient;
+    private readonly LocalGitService _localGitService = new();
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _menu = new();
     private readonly System.Windows.Forms.Timer _refreshTimer = new();
     private readonly CancellationTokenSource _shutdown = new();
     private IReadOnlyList<RepositoryStatus> _statuses = [];
+    private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
     private bool _isRefreshing;
     private string? _lastError;
 
@@ -72,8 +74,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         try
         {
+            _localGitIndex = await _localGitService.LoadIndexAsync(
+                _settingsStore.Settings,
+                _shutdown.Token);
             _statuses = await _githubClient.LoadRepositoriesAsync(
                 _settingsStore.Settings.Repositories,
+                _localGitIndex,
                 _shutdown.Token);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -99,7 +105,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         if (_settingsStore.Settings.Repositories.Count == 0)
         {
-            _menu.Items.Add(new ToolStripMenuItem("No repositories configured") { Enabled = false });
+            AddLocalOnlyRepositories();
+            if (_localGitIndex.Repositories.Count == 0)
+            {
+                _menu.Items.Add(new ToolStripMenuItem("No repositories configured") { Enabled = false });
+            }
             _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
             _menu.Items.Add(new ToolStripMenuItem("Open Windows setup doc", null, (_, _) => OpenUrl("https://github.com/steipete/RepoBar/blob/main/docs/windows.md")));
         }
@@ -116,6 +126,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             {
                 _menu.Items.Add(BuildRepositoryMenu(status));
             }
+            AddLocalOnlyRepositories();
         }
 
         if (!string.IsNullOrWhiteSpace(_lastError))
@@ -139,6 +150,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             item.DropDownItems.Add(new ToolStripMenuItem(status.ErrorMessage) { Enabled = false });
             item.DropDownItems.Add(new ToolStripMenuItem("Open repository", null, (_, _) => OpenRepository(status.Repository)));
+            if (status.LocalStatus != null)
+            {
+                item.DropDownItems.Add(new ToolStripSeparator());
+                AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
+            }
             return item;
         }
 
@@ -156,6 +172,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         item.DropDownItems.Add(new ToolStripMenuItem($"CI: {status.LatestRun?.DisplayText ?? "not available"}") { Enabled = false });
         item.DropDownItems.Add(new ToolStripMenuItem($"Stars: {status.Stars}  Forks: {status.Forks}") { Enabled = false });
         item.DropDownItems.Add(new ToolStripMenuItem($"Default branch: {status.DefaultBranch}") { Enabled = false });
+        if (status.LocalStatus != null)
+        {
+            item.DropDownItems.Add(new ToolStripSeparator());
+            AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
+        }
         if (status.PushedAt != null)
         {
             item.DropDownItems.Add(new ToolStripMenuItem($"Pushed: {status.PushedAt.Value.LocalDateTime:g}") { Enabled = false });
@@ -164,12 +185,57 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         return item;
     }
 
+    private void AddLocalOnlyRepositories()
+    {
+        var configured = _settingsStore.Settings.Repositories
+            .Select(repository => repository.FullName)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var localOnly = _localGitIndex.Repositories
+            .Where(repository => repository.FullName == null || !configured.Contains(repository.FullName))
+            .Take(10)
+            .ToArray();
+        if (localOnly.Length == 0)
+        {
+            return;
+        }
+
+        _menu.Items.Add(new ToolStripSeparator());
+        _menu.Items.Add(new ToolStripMenuItem("Local repositories") { Enabled = false });
+        foreach (var local in localOnly)
+        {
+            var item = new ToolStripMenuItem($"[git] {local.DisplayName}  {local.SyncDetail}");
+            AddLocalStatusItems(item.DropDownItems, local);
+            _menu.Items.Add(item);
+        }
+    }
+
+    private static void AddLocalStatusItems(ToolStripItemCollection items, LocalGitRepositoryStatus local)
+    {
+        items.Add(new ToolStripMenuItem($"Branch: {local.Branch}") { Enabled = false });
+        if (!string.IsNullOrWhiteSpace(local.UpstreamBranch))
+        {
+            items.Add(new ToolStripMenuItem($"Upstream: {local.UpstreamBranch}") { Enabled = false });
+        }
+        items.Add(new ToolStripMenuItem(local.SyncDetail) { Enabled = false });
+        if (local.DirtyFiles.Count > 0)
+        {
+            items.Add(new ToolStripMenuItem("Dirty files") { Enabled = false });
+            foreach (var file in local.DirtyFiles)
+            {
+                items.Add(new ToolStripMenuItem(file) { Enabled = false });
+            }
+        }
+        items.Add(new ToolStripSeparator());
+        items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
+        items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+    }
+
     private string BuildHeaderText()
     {
         var repoCount = _settingsStore.Settings.Repositories.Count;
         var tokenState = _settingsStore.ResolveToken() == null ? "no token" : "token";
         var refreshState = _isRefreshing ? "refreshing" : "ready";
-        return $"RepoBar Windows - {repoCount} repos - {tokenState} - {refreshState}";
+        return $"RepoBar Windows - {repoCount} repos - {_localGitIndex.Repositories.Count} local - {tokenState} - {refreshState}";
     }
 
     private void UpdateTrayIcon()
@@ -210,7 +276,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             TrayHealth.Failing => "needs attention",
             _ => "ready",
         };
-        return $"RepoBar - {_settingsStore.Settings.Repositories.Count} repos - {summary}";
+        return $"RepoBar - {_settingsStore.Settings.Repositories.Count} repos / {_localGitIndex.Repositories.Count} local - {summary}";
     }
 
     private void OnNotifyIconMouseUp(object? sender, MouseEventArgs eventArgs)
@@ -229,6 +295,26 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private static void OpenFile(string path)
     {
         StartShell(path);
+    }
+
+    private static void OpenTerminal(string path)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo("wt.exe")
+            {
+                UseShellExecute = true,
+                Arguments = $"-d \"{path}\"",
+            });
+        }
+        catch
+        {
+            Process.Start(new ProcessStartInfo("cmd.exe")
+            {
+                UseShellExecute = true,
+                Arguments = $"/K cd /d \"{path}\"",
+            });
+        }
     }
 
     private static void OpenUrl(string url)

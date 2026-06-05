@@ -8,6 +8,9 @@ internal sealed class WindowsSettings
     public string TokenEnvironmentVariable { get; set; } = "REPOBAR_GITHUB_TOKEN";
     public int RefreshIntervalMinutes { get; set; } = 5;
     public bool OpenMenuOnLeftClick { get; set; } = true;
+    public bool DiscoverLocalProjects { get; set; } = true;
+    public string? LocalProjectsRoot { get; set; }
+    public int LocalProjectsMaxDepth { get; set; } = 3;
     public List<RepositoryRef> Repositories { get; set; } = [];
 }
 
@@ -51,6 +54,9 @@ internal sealed class WindowsSettingsStore
         {
             var sampleSettings = new WindowsSettings
             {
+                LocalProjectsRoot = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                    "Projects"),
                 Repositories =
                 [
                     new RepositoryRef { Owner = "steipete", Name = "RepoBar" },
@@ -62,6 +68,13 @@ internal sealed class WindowsSettingsStore
 
         var rawSettings = File.ReadAllText(settingsPath);
         var settings = JsonSerializer.Deserialize<WindowsSettings>(rawSettings, JsonOptions) ?? new WindowsSettings();
+        if (string.IsNullOrWhiteSpace(settings.LocalProjectsRoot))
+        {
+            settings.LocalProjectsRoot = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                "Projects");
+        }
+        settings.LocalProjectsMaxDepth = Math.Clamp(settings.LocalProjectsMaxDepth, 0, 8);
         settings.Repositories ??= [];
         settings.Repositories = settings.Repositories
             .Where(repository => repository.IsValid)

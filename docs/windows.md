@@ -7,6 +7,8 @@ The Windows app currently provides:
 - a single-instance tray process
 - left-click or right-click taskbar menu access
 - configured repository status rows
+- optional local project discovery
+- local branch, upstream, ahead/behind, dirty-file, and worktree state
 - issue and pull request counts
 - latest default-branch Actions run status
 - latest release link
@@ -46,6 +48,9 @@ Edit that file to choose repositories:
   "tokenEnvironmentVariable": "REPOBAR_GITHUB_TOKEN",
   "refreshIntervalMinutes": 5,
   "openMenuOnLeftClick": true,
+  "discoverLocalProjects": true,
+  "localProjectsRoot": "%USERPROFILE%\\Projects",
+  "localProjectsMaxDepth": 3,
   "repositories": [
     { "owner": "steipete", "name": "RepoBar" }
   ]
@@ -62,6 +67,12 @@ $env:REPOBAR_GITHUB_TOKEN = "<token>"
 
 The app also checks `GITHUB_TOKEN` and `GH_TOKEN`. Tokens are not written to the settings file. Private repositories require a token with repository read access.
 
+## Local Projects
+
+When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, and folder/terminal actions to the tray menu.
+
+Local-only repositories are shown in their own tray section so Windows can still be useful without GitHub authentication.
+
 ## Design Notes
 
 The Windows target follows the same tray-first shape used by robust Windows companions:
@@ -72,3 +83,5 @@ The Windows target follows the same tray-first shape used by robust Windows comp
 - use native shell opening for GitHub links and settings files
 
 The next natural step is a WinUI 3 flyout for richer cards once the basic Windows packaging path is proven.
+
+See [windows-parity.md](windows-parity.md) for the full parity checklist.

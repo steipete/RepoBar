@@ -33,12 +33,13 @@ internal sealed class GitHubRepositoryClient : IDisposable
 
     public async Task<IReadOnlyList<RepositoryStatus>> LoadRepositoriesAsync(
         IReadOnlyList<RepositoryRef> repositories,
+        LocalGitIndex localGitIndex,
         CancellationToken cancellationToken)
     {
         var results = new List<RepositoryStatus>(repositories.Count);
         foreach (var repository in repositories)
         {
-            results.Add(await LoadRepositoryAsync(repository, cancellationToken).ConfigureAwait(false));
+            results.Add(await LoadRepositoryAsync(repository, localGitIndex.Find(repository), cancellationToken).ConfigureAwait(false));
         }
 
         return results;
@@ -51,7 +52,10 @@ internal sealed class GitHubRepositoryClient : IDisposable
         return new Uri($"https://{_host}/{basePath}{suffix}");
     }
 
-    private async Task<RepositoryStatus> LoadRepositoryAsync(RepositoryRef repository, CancellationToken cancellationToken)
+    private async Task<RepositoryStatus> LoadRepositoryAsync(
+        RepositoryRef repository,
+        LocalGitRepositoryStatus? localStatus,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -81,11 +85,12 @@ internal sealed class GitHubRepositoryClient : IDisposable
                 pushedAt,
                 latestRun,
                 latestRelease,
+                localStatus,
                 ErrorMessage: null);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            return RepositoryStatus.Failed(repository, exception.Message);
+            return RepositoryStatus.Failed(repository, localStatus, exception.Message);
         }
     }
 
@@ -250,11 +255,12 @@ internal sealed record RepositoryStatus(
     DateTimeOffset? PushedAt,
     WorkflowRunStatus? LatestRun,
     ReleaseStatus? LatestRelease,
+    LocalGitRepositoryStatus? LocalStatus,
     string? ErrorMessage)
 {
-    public static RepositoryStatus Failed(RepositoryRef repository, string errorMessage)
+    public static RepositoryStatus Failed(RepositoryRef repository, LocalGitRepositoryStatus? localStatus, string errorMessage)
     {
-        return new RepositoryStatus(repository, 0, 0, 0, 0, "", null, null, null, errorMessage);
+        return new RepositoryStatus(repository, 0, 0, 0, 0, "", null, null, null, localStatus, errorMessage);
     }
 
     public TrayHealth Health
