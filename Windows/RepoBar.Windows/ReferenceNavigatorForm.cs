@@ -12,14 +12,15 @@ internal sealed class ReferenceNavigatorForm : Form
     private readonly ComboBox _defaultRepository = new();
     private readonly BindingList<ReferenceRow> _references = [];
     private readonly DataGridView _referenceGrid = new();
+    private readonly WebBrowser _preview = new();
 
     public ReferenceNavigatorForm(WindowsSettings settings)
     {
         _settings = settings;
         Text = "RepoBar Issue Navigator";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(760, 520);
-        MinimumSize = new Size(640, 420);
+        ClientSize = new Size(980, 620);
+        MinimumSize = new Size(760, 480);
 
         BuildControls();
         TrySeedClipboard();
@@ -63,7 +64,16 @@ internal sealed class ReferenceNavigatorForm : Form
 
         root.Controls.Add(new Label { Text = "References", AutoSize = true });
         ConfigureGrid();
-        root.Controls.Add(_referenceGrid);
+        ConfigurePreview();
+        var split = new SplitContainer
+        {
+            Dock = DockStyle.Fill,
+            Orientation = Orientation.Vertical,
+            SplitterDistance = 420,
+        };
+        split.Panel1.Controls.Add(_referenceGrid);
+        split.Panel2.Controls.Add(_preview);
+        root.Controls.Add(split);
 
         var footer = new FlowLayoutPanel
         {
@@ -73,6 +83,8 @@ internal sealed class ReferenceNavigatorForm : Form
         };
         var openSelected = new Button { Text = "Open selected" };
         openSelected.Click += (_, _) => OpenSelected();
+        var copySelected = new Button { Text = "Copy URL" };
+        copySelected.Click += (_, _) => CopySelectedUrl();
         var paste = new Button { Text = "Paste" };
         paste.Click += (_, _) =>
         {
@@ -82,6 +94,7 @@ internal sealed class ReferenceNavigatorForm : Form
             }
         };
         footer.Controls.Add(openSelected);
+        footer.Controls.Add(copySelected);
         footer.Controls.Add(paste);
         root.Controls.Add(footer);
     }
@@ -115,6 +128,14 @@ internal sealed class ReferenceNavigatorForm : Form
             AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill,
         });
         _referenceGrid.CellDoubleClick += (_, _) => OpenSelected();
+        _referenceGrid.SelectionChanged += (_, _) => PreviewSelected();
+    }
+
+    private void ConfigurePreview()
+    {
+        _preview.Dock = DockStyle.Fill;
+        _preview.AllowWebBrowserDrop = false;
+        _preview.ScriptErrorsSuppressed = true;
     }
 
     private void TrySeedClipboard()
@@ -148,17 +169,67 @@ internal sealed class ReferenceNavigatorForm : Form
                 reference.Number,
                 GitHubReferenceNavigator.BuildUri(reference, _settings.GitHubHost).ToString()));
         }
+
+        SelectFirstReference();
     }
 
     private void OpenSelected()
     {
-        foreach (DataGridViewRow selectedRow in _referenceGrid.SelectedRows)
+        foreach (var row in SelectedReferenceRows())
         {
-            if (selectedRow.DataBoundItem is ReferenceRow row)
-            {
-                OpenUrl(row.Url);
-            }
+            OpenUrl(row.Url);
         }
+    }
+
+    private void CopySelectedUrl()
+    {
+        var row = SelectedReferenceRows().FirstOrDefault();
+        if (row != null)
+        {
+            Clipboard.SetText(row.Url);
+        }
+    }
+
+    private void PreviewSelected()
+    {
+        var row = SelectedReferenceRows().FirstOrDefault();
+        try
+        {
+            _preview.Navigate(row?.Url ?? "about:blank");
+        }
+        catch
+        {
+            _preview.Navigate("about:blank");
+        }
+    }
+
+    private void SelectFirstReference()
+    {
+        if (_referenceGrid.Rows.Count == 0)
+        {
+            PreviewSelected();
+            return;
+        }
+
+        _referenceGrid.ClearSelection();
+        _referenceGrid.Rows[0].Selected = true;
+        _referenceGrid.CurrentCell = _referenceGrid.Rows[0].Cells[0];
+        PreviewSelected();
+    }
+
+    private IReadOnlyList<ReferenceRow> SelectedReferenceRows()
+    {
+        var selected = _referenceGrid.SelectedRows
+            .Cast<DataGridViewRow>()
+            .Select(row => row.DataBoundItem)
+            .OfType<ReferenceRow>()
+            .ToArray();
+        if (selected.Length > 0)
+        {
+            return selected;
+        }
+
+        return _referenceGrid.CurrentRow?.DataBoundItem is ReferenceRow current ? [current] : [];
     }
 
     private static void OpenUrl(string url)

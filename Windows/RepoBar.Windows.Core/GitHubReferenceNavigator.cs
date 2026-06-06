@@ -31,7 +31,7 @@ internal static partial class GitHubReferenceNavigator
             matches.Add(new GitHubReferenceMatch(
                 $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
                 int.Parse(match.Groups["number"].Value),
-                "issues",
+                NormalizeKind(match.Groups["kind"].Value),
                 match.Value));
             claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
         }
@@ -64,17 +64,29 @@ internal static partial class GitHubReferenceNavigator
     public static Uri BuildUri(GitHubReferenceMatch reference, string host)
     {
         var normalizedHost = string.IsNullOrWhiteSpace(host) ? "github.com" : host.Trim();
-        var pathKind = string.Equals(reference.Kind, "pull", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(reference.Kind, "pulls", StringComparison.OrdinalIgnoreCase)
+        var pathKind = IsPullRequestKind(reference.Kind)
                 ? "pull"
                 : "issues";
         return new Uri($"https://{normalizedHost}/{reference.RepositoryFullName}/{pathKind}/{reference.Number}");
     }
 
+    private static string NormalizeKind(string value)
+    {
+        return IsPullRequestKind(value) ? "pull" : "issues";
+    }
+
+    private static bool IsPullRequestKind(string value)
+    {
+        return string.Equals(value, "pr", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "pull", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "pulls", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "pull request", StringComparison.OrdinalIgnoreCase);
+    }
+
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?<kind>issues|pull|pulls)/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubUrlRegex();
 
-    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:#|(?:PR|pull request|issue)\s*#?)(?<number>\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:(?<kind>PR|pull request|issue)\s*#?|#)(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoNumberRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)\b")]

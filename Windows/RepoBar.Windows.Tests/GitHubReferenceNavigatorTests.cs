@@ -11,14 +11,16 @@ public sealed class GitHubReferenceNavigatorTests
             """
             https://github.com/steipete/RepoBar/pull/12
             openclaw/openclaw issue #34
+            openclaw/openclaw PR #35
             see #56
             """,
             "github.com",
             "steipete/RepoBar");
 
-        Assert.Equal(3, references.Count);
+        Assert.Equal(4, references.Count);
         Assert.Contains(references, reference => reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 12);
         Assert.Contains(references, reference => reference.RepositoryFullName == "openclaw/openclaw" && reference.Number == 34);
+        Assert.Contains(references, reference => reference.RepositoryFullName == "openclaw/openclaw" && reference.Number == 35 && reference.Kind == "pull");
         Assert.Contains(references, reference => reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 56);
     }
 
