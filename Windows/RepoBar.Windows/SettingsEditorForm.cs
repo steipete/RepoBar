@@ -33,6 +33,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
+    private readonly CheckBox _enableGitHubReferenceMonitor = new();
     private readonly CheckBox _enablePullRequestNotifications = new();
     private readonly CheckBox _enablePullRequestNewNotifications = new();
     private readonly CheckBox _enablePullRequestUpdateNotifications = new();
@@ -105,6 +106,7 @@ internal sealed class SettingsEditorForm : Form
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
+        _enableGitHubReferenceMonitor.Checked = settings.EnableGitHubReferenceMonitor;
         _enablePullRequestNotifications.Checked = settings.EnablePullRequestNotifications;
         _enablePullRequestNewNotifications.Checked = settings.EnablePullRequestNewNotifications;
         _enablePullRequestUpdateNotifications.Checked = settings.EnablePullRequestUpdateNotifications;
@@ -189,6 +191,7 @@ internal sealed class SettingsEditorForm : Form
         _showRateLimits.Text = "Show rate limits";
         _showContributionSummary.Text = "Show contribution summary";
         _showActionsUsage.Text = "Show Actions usage";
+        _enableGitHubReferenceMonitor.Text = "Watch clipboard references";
         _enablePullRequestNotifications.Text = "PR notifications";
         _enablePullRequestNewNotifications.Text = "Notify new PRs";
         _enablePullRequestUpdateNotifications.Text = "Notify PR updates";
@@ -204,6 +207,7 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_showRateLimits);
         settingsGrid.Controls.Add(_showContributionSummary);
         settingsGrid.Controls.Add(_showActionsUsage);
+        settingsGrid.Controls.Add(_enableGitHubReferenceMonitor);
         settingsGrid.Controls.Add(_enablePullRequestNotifications);
         settingsGrid.Controls.Add(_enablePullRequestNewNotifications);
         settingsGrid.Controls.Add(_enablePullRequestUpdateNotifications);
@@ -511,6 +515,7 @@ internal sealed class SettingsEditorForm : Form
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
+        settings.EnableGitHubReferenceMonitor = _enableGitHubReferenceMonitor.Checked;
         settings.EnablePullRequestNotifications = _enablePullRequestNotifications.Checked;
         settings.EnablePullRequestNewNotifications = _enablePullRequestNewNotifications.Checked;
         settings.EnablePullRequestUpdateNotifications = _enablePullRequestUpdateNotifications.Checked;

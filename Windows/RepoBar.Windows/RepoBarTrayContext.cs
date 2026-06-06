@@ -11,7 +11,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private readonly NotifyIcon _notifyIcon;
     private readonly ContextMenuStrip _menu = new();
     private readonly System.Windows.Forms.Timer _refreshTimer = new();
+    private readonly System.Windows.Forms.Timer _referenceMonitorTimer = new();
     private readonly CancellationTokenSource _shutdown = new();
+    private readonly GitHubReferenceClipboardMonitor _referenceClipboardMonitor = new();
     private readonly PullRequestNotificationTracker _pullRequestNotificationTracker = PullRequestNotificationTracker.CreateDefault();
     private GitHubRepositoryClient _githubClient;
     private IReadOnlyList<RepositoryStatus> _statuses = [];
@@ -21,6 +23,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
     private string? _resolvedToken;
     private PullRequestNotificationClickTarget? _lastPullRequestNotificationTarget;
+    private string? _lastReferenceNotificationText;
     private bool _isRefreshing;
     private string? _lastError;
 
@@ -37,11 +40,14 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         };
 
         _notifyIcon.MouseUp += OnNotifyIconMouseUp;
-        _notifyIcon.BalloonTipClicked += (_, _) => OpenLastPullRequestNotification();
+        _notifyIcon.BalloonTipClicked += (_, _) => OpenLastNotification();
 
         _refreshTimer.Interval = Math.Clamp(settingsStore.Settings.RefreshIntervalMinutes, 1, 60) * 60 * 1000;
         _refreshTimer.Tick += (_, _) => BeginRefresh();
         _refreshTimer.Start();
+        _referenceMonitorTimer.Interval = 1000;
+        _referenceMonitorTimer.Tick += (_, _) => CheckClipboardReferences();
+        ConfigureReferenceMonitorTimer();
 
         BuildMenu();
         BeginRefresh();
@@ -53,7 +59,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             _shutdown.Cancel();
             _refreshTimer.Stop();
+            _referenceMonitorTimer.Stop();
             _refreshTimer.Dispose();
+            _referenceMonitorTimer.Dispose();
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
             _githubClient.Dispose();
@@ -812,6 +820,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             foreach (var notification in notifications.Take(3))
             {
                 _lastPullRequestNotificationTarget = PullRequestNotificationClickTarget.From(status.Repository.FullName, notification.Pull);
+                _lastReferenceNotificationText = null;
                 _notifyIcon.ShowBalloonTip(
                     timeout: 8000,
                     tipTitle: $"{status.Repository.FullName} {notification.Kind.DisplayName()}",
@@ -821,8 +830,53 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
     }
 
-    private void OpenLastPullRequestNotification()
+    private void CheckClipboardReferences()
     {
+        try
+        {
+            var text = Clipboard.ContainsText() ? Clipboard.GetText() : null;
+            var notification = _referenceClipboardMonitor.Observe(text, _settingsStore.Settings);
+            if (notification == null)
+            {
+                return;
+            }
+
+            _lastPullRequestNotificationTarget = null;
+            _lastReferenceNotificationText = notification.IssueNavigatorText;
+            _notifyIcon.ShowBalloonTip(
+                timeout: 8000,
+                tipTitle: "RepoBar GitHub reference",
+                tipText: notification.DisplayText,
+                tipIcon: ToolTipIcon.Info);
+        }
+        catch
+        {
+            // Clipboard reads can fail while another process owns the clipboard.
+        }
+    }
+
+    private void ConfigureReferenceMonitorTimer()
+    {
+        _referenceClipboardMonitor.Reset();
+        if (_settingsStore.Settings.EnableGitHubReferenceMonitor)
+        {
+            _referenceMonitorTimer.Start();
+        }
+        else
+        {
+            _referenceMonitorTimer.Stop();
+            _lastReferenceNotificationText = null;
+        }
+    }
+
+    private void OpenLastNotification()
+    {
+        if (!string.IsNullOrWhiteSpace(_lastReferenceNotificationText))
+        {
+            ShowIssueNavigator(_lastReferenceNotificationText);
+            return;
+        }
+
         if (_lastPullRequestNotificationTarget == null)
         {
             return;
@@ -846,6 +900,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         if (form.ShowDialog() == DialogResult.OK)
         {
             _refreshTimer.Interval = Math.Clamp(_settingsStore.Settings.RefreshIntervalMinutes, 1, 60) * 60 * 1000;
+            ConfigureReferenceMonitorTimer();
             _githubClient.Dispose();
             _resolvedToken = null;
             _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());

@@ -26,6 +26,7 @@ internal sealed class WindowsSettings
     public RepositorySortKey RepositorySortKey { get; set; } = RepositorySortKey.Activity;
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
+    public bool EnableGitHubReferenceMonitor { get; set; }
     public bool EnablePullRequestNotifications { get; set; }
     public bool EnablePullRequestNewNotifications { get; set; } = true;
     public bool EnablePullRequestUpdateNotifications { get; set; } = true;
