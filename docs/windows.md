@@ -201,7 +201,7 @@ Run the local Windows build and unit-test gates:
 .\Scripts\build_windows.ps1 test
 ```
 
-The test command writes a TRX result file under `dist\windows\test-results\`, including the combined GitHub/local repository status coverage.
+The test command writes a TRX result file under `dist\windows\test-results\`, including the combined GitHub/local repository status coverage and a stubbed GitHub App OAuth loopback/token-exchange proof.
 
 Run the launch smoke on Windows:
 

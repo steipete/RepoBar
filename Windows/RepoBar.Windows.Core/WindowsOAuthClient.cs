@@ -16,6 +16,7 @@ internal sealed class WindowsOAuthClient : IDisposable
     private readonly HttpClient _httpClient;
     private readonly Action<Uri> _openBrowser;
     private readonly Func<WindowsSettings, WindowsOAuthClientCredentials> _credentialsProvider;
+    private readonly int _loopbackPort;
 
     public WindowsOAuthClient()
         : this(new HttpClient(), OpenBrowser, ResolveCredentials)
@@ -25,11 +26,13 @@ internal sealed class WindowsOAuthClient : IDisposable
     internal WindowsOAuthClient(
         HttpClient httpClient,
         Action<Uri> openBrowser,
-        Func<WindowsSettings, WindowsOAuthClientCredentials>? credentialsProvider = null)
+        Func<WindowsSettings, WindowsOAuthClientCredentials>? credentialsProvider = null,
+        int loopbackPort = DefaultLoopbackPort)
     {
         _httpClient = httpClient;
         _openBrowser = openBrowser;
         _credentialsProvider = credentialsProvider ?? ResolveCredentials;
+        _loopbackPort = loopbackPort;
     }
 
     public void Dispose()
@@ -42,10 +45,10 @@ internal sealed class WindowsOAuthClient : IDisposable
         var account = settings.GetActiveAccount();
         var verifier = CreateCodeVerifier();
         var state = CreateCodeVerifier();
-        var redirect = new Uri($"http://127.0.0.1:{DefaultLoopbackPort}/callback");
+        var redirect = new Uri($"http://127.0.0.1:{_loopbackPort}/callback");
         var credentials = _credentialsProvider(settings);
         using var listener = new HttpListener();
-        listener.Prefixes.Add($"http://127.0.0.1:{DefaultLoopbackPort}/");
+        listener.Prefixes.Add($"http://127.0.0.1:{_loopbackPort}/");
         listener.Start();
 
         _openBrowser(BuildAuthorizeUri(account.GitHubHost, redirect, state, CreateCodeChallenge(verifier), scope: null, credentials.ClientId));

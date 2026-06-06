@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using Xunit;
 
@@ -76,6 +77,67 @@ public sealed class WindowsOAuthClientTests
     }
 
     [Fact]
+    public async Task LoginAsync_round_trips_loopback_callback_and_token_exchange()
+    {
+        var port = FreeTcpPort();
+        Uri? authorizeUri = null;
+        HttpRequestMessage? capturedTokenRequest = null;
+        string? capturedTokenForm = null;
+        using var httpClient = new HttpClient(new StubHandler(request =>
+        {
+            capturedTokenRequest = request;
+            capturedTokenForm = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult();
+            return JsonResponse("""{"access_token":"login-access","refresh_token":"login-refresh","expires_in":3600,"token_type":"bearer"}""");
+        }));
+        using var browserClient = new HttpClient();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var client = new WindowsOAuthClient(
+            httpClient,
+            uri =>
+            {
+                authorizeUri = uri;
+                _ = Task.Run(async () =>
+                {
+                    var state = QueryValue(uri, "state");
+                    await browserClient.GetAsync(
+                        $"http://127.0.0.1:{port}/callback?code=login-code&state={Uri.EscapeDataString(state)}",
+                        timeout.Token);
+                });
+            },
+            _ => new WindowsOAuthClientCredentials("client-id", "client-secret"),
+            port);
+        var settings = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts =
+            [
+                new WindowsAccountProfile
+                {
+                    Id = "work",
+                    Label = "Work",
+                    GitHubHost = "github.example.com",
+                },
+            ],
+        };
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        var tokens = await client.LoginAsync(settings, timeout.Token);
+
+        Assert.Equal("login-access", tokens.AccessToken);
+        Assert.Equal("login-refresh", tokens.RefreshToken);
+        Assert.NotNull(authorizeUri);
+        Assert.Equal("https://github.example.com/login/oauth/authorize", authorizeUri.GetLeftPart(UriPartial.Path));
+        Assert.Equal($"http://127.0.0.1:{port}/callback", QueryValue(authorizeUri, "redirect_uri"));
+        Assert.Equal("S256", QueryValue(authorizeUri, "code_challenge_method"));
+        Assert.Equal("https://github.example.com/login/oauth/access_token", capturedTokenRequest?.RequestUri?.ToString());
+        Assert.NotNull(capturedTokenForm);
+        Assert.Contains("grant_type=authorization_code", capturedTokenForm);
+        Assert.Contains("code=login-code", capturedTokenForm);
+        Assert.Contains($"redirect_uri=http%3A%2F%2F127.0.0.1%3A{port}%2Fcallback", capturedTokenForm);
+        Assert.Contains("code_verifier=", capturedTokenForm);
+    }
+
+    [Fact]
     public void ResolveCredentials_uses_configured_secret_environment_variable()
     {
         var variable = $"REPOBAR_TEST_SECRET_{Guid.NewGuid():N}";
@@ -103,6 +165,33 @@ public sealed class WindowsOAuthClientTests
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
         };
+    }
+
+    private static int FreeTcpPort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
+    }
+
+    private static string QueryValue(Uri uri, string name)
+    {
+        var query = uri.Query.TrimStart('?');
+        foreach (var pair in query.Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var parts = pair.Split('=', 2);
+            var key = Uri.UnescapeDataString(parts[0]);
+            if (!string.Equals(key, name, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return parts.Length == 2 ? Uri.UnescapeDataString(parts[1].Replace('+', ' ')) : "";
+        }
+
+        return "";
     }
 
     private sealed class StubHandler : HttpMessageHandler
