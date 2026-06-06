@@ -131,6 +131,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
       "globalActivity",
       "actionsUsage",
       "rateLimits",
+      "diagnostics",
       "issueNavigator",
       "accountSwitcher",
       "logOut",
@@ -181,7 +182,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 }
 ```
 
-Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Repository scope** to switch the tray menu between all repositories, pinned repositories, local repositories, or the work-focused view that keeps repositories with open issues or pull requests. Use **Owner filter** to limit normal displayed repositories to specific owners, and use **Only repos with issues** or **Only repos with PRs** to show only repositories with matching open work. Pinned repositories stay visible ahead of filtered normal repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name.
+Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Repository scope** to switch the tray menu between all repositories, pinned repositories, local repositories, or the work-focused view that keeps repositories with open issues or pull requests. Use **Owner filter** to limit normal displayed repositories to specific owners, and use **Only repos with issues** or **Only repos with PRs** to show only repositories with matching open work. Pinned repositories stay visible ahead of filtered normal repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name. Repository visibility controls in the tray can pin, hide, restore, or move repositories up and down within their current pinned/visible group.
 
 Use **Activity feed** to choose whether top-level **Commits** and **Activity** show all displayed repository events or only events by the signed-in account when viewer metadata is available. Repository submenus still keep their own per-repository Commit and Activity feeds.
 
@@ -268,7 +269,7 @@ Manual sync runs `git fetch --prune`, rebases clean behind/diverged repositories
 
 Local-only repositories are shown in their own tray section so Windows can still be useful without GitHub authentication.
 
-Repository entries support `visible`, `pinned`, and `hidden` visibility. The tray menu can pin, hide, or restore configured repositories, and writes the updated settings file immediately.
+Repository entries support `visible`, `pinned`, and `hidden` visibility. The tray menu can pin, hide, restore, or move configured repositories within their pinned/visible group, and writes the updated settings file immediately.
 
 ## Design Notes
 

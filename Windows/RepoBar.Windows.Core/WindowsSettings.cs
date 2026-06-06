@@ -288,9 +288,11 @@ internal sealed class WindowsSettingsStore
     public string SettingsPath { get; }
     public WindowsSettings Settings { get; }
     public IReadOnlyList<RepositoryRef> VisibleRepositories => Settings.Repositories
-        .Where(repository => repository.IsVisible)
-        .OrderBy(repository => repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
-        .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+        .Select((repository, index) => new { Repository = repository, Index = index })
+        .Where(item => item.Repository.IsVisible)
+        .OrderBy(item => item.Repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
+        .ThenBy(item => item.Index)
+        .Select(item => item.Repository)
         .ToArray();
 
     public static WindowsSettingsStore LoadOrCreate()
@@ -448,6 +450,25 @@ internal sealed class WindowsSettingsStore
         Save();
     }
 
+    public bool CanMoveRepository(string fullName, int offset)
+    {
+        return FindMoveTarget(fullName, offset) != null;
+    }
+
+    public bool MoveRepository(string fullName, int offset)
+    {
+        var target = FindMoveTarget(fullName, offset);
+        if (target == null)
+        {
+            return false;
+        }
+
+        (Settings.Repositories[target.Value.FromIndex], Settings.Repositories[target.Value.ToIndex]) =
+            (Settings.Repositories[target.Value.ToIndex], Settings.Repositories[target.Value.FromIndex]);
+        Save();
+        return true;
+    }
+
     public void ReplaceRepositories(IEnumerable<RepositoryRef> repositories)
     {
         Settings.Repositories = repositories
@@ -460,10 +481,44 @@ internal sealed class WindowsSettingsStore
             })
             .GroupBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
-            .OrderBy(repository => repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
-            .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
             .ToList();
         Save();
+    }
+
+    private (int FromIndex, int ToIndex)? FindMoveTarget(string fullName, int offset)
+    {
+        if (offset == 0)
+        {
+            return null;
+        }
+
+        var visible = Settings.Repositories
+            .Select((repository, index) => new { Repository = repository, Index = index })
+            .Where(item => item.Repository.IsVisible)
+            .OrderBy(item => item.Repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
+            .ThenBy(item => item.Index)
+            .ToArray();
+        var currentDisplayIndex = Array.FindIndex(visible, item =>
+            string.Equals(item.Repository.FullName, fullName, StringComparison.OrdinalIgnoreCase));
+        if (currentDisplayIndex < 0)
+        {
+            return null;
+        }
+
+        var targetDisplayIndex = currentDisplayIndex + offset;
+        if (targetDisplayIndex < 0 || targetDisplayIndex >= visible.Length)
+        {
+            return null;
+        }
+
+        var current = visible[currentDisplayIndex];
+        var target = visible[targetDisplayIndex];
+        if (current.Repository.Visibility != target.Repository.Visibility)
+        {
+            return null;
+        }
+
+        return (current.Index, target.Index);
     }
 
     public bool SetActiveAccount(string accountId)

@@ -1116,6 +1116,15 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         items.Add(new ToolStripMenuItem("Pin", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Pinned)));
         items.Add(new ToolStripMenuItem("Set Visible", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Visible)));
         items.Add(new ToolStripMenuItem("Hide", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Hidden)));
+        items.Add(new ToolStripSeparator());
+        items.Add(new ToolStripMenuItem("Move up", null, (_, _) => MoveRepository(fullName, -1))
+        {
+            Enabled = _settingsStore.CanMoveRepository(fullName, -1),
+        });
+        items.Add(new ToolStripMenuItem("Move down", null, (_, _) => MoveRepository(fullName, 1))
+        {
+            Enabled = _settingsStore.CanMoveRepository(fullName, 1),
+        });
     }
 
     private string BuildHeaderText()
@@ -1222,6 +1231,14 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         _settingsStore.SetVisibility(fullName, visibility);
         BeginRefresh();
+    }
+
+    private void MoveRepository(string fullName, int offset)
+    {
+        if (_settingsStore.MoveRepository(fullName, offset))
+        {
+            BeginRefresh();
+        }
     }
 
     private void ShowPullRequestNotifications(IReadOnlyList<RepositoryStatus> statuses)
