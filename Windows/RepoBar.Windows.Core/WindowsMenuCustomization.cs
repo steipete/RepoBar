@@ -317,7 +317,7 @@ internal static class WindowsMenuCustomizationLabels
 
     public static bool IsRequired(this WindowsMainMenuItem item)
     {
-        return item is WindowsMainMenuItem.Preferences or WindowsMainMenuItem.Quit;
+        return item is WindowsMainMenuItem.Preferences or WindowsMainMenuItem.About or WindowsMainMenuItem.Quit;
     }
 }
 

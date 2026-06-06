@@ -52,6 +52,7 @@ public sealed class WindowsMenuCustomizationTests
             [
                 WindowsMainMenuItem.RefreshNow,
                 WindowsMainMenuItem.Preferences,
+                WindowsMainMenuItem.About,
                 WindowsMainMenuItem.Quit,
             ],
         };
@@ -60,8 +61,10 @@ public sealed class WindowsMenuCustomizationTests
 
         Assert.DoesNotContain(WindowsMainMenuItem.RefreshNow, customization.VisibleMainMenuItems());
         Assert.Contains(WindowsMainMenuItem.Preferences, customization.VisibleMainMenuItems());
+        Assert.Contains(WindowsMainMenuItem.About, customization.VisibleMainMenuItems());
         Assert.Contains(WindowsMainMenuItem.Quit, customization.VisibleMainMenuItems());
         Assert.DoesNotContain(WindowsMainMenuItem.Preferences, customization.HiddenMainMenuItems);
+        Assert.DoesNotContain(WindowsMainMenuItem.About, customization.HiddenMainMenuItems);
         Assert.DoesNotContain(WindowsMainMenuItem.Quit, customization.HiddenMainMenuItems);
     }
 
