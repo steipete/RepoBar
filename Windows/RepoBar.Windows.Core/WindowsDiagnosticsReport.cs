@@ -14,11 +14,28 @@ internal sealed record WindowsDiagnosticsReport(
     int LoadedRepositoryCount,
     int LocalRepositoryCount,
     string? LastError,
+    int RefreshIntervalMinutes,
+    bool CheckForUpdatesAutomatically,
+    RepositoryMenuScope RepositoryMenuScope,
+    RepositorySortKey RepositorySortKey,
+    int RepositoryDisplayLimit,
+    bool DiscoverLocalProjects,
+    string? LocalProjectsRoot,
+    int LocalProjectsMaxDepth,
+    bool FetchLocalProjectsBeforeStatus,
+    int LocalProjectsFetchIntervalMinutes,
+    bool AutoSyncLocalProjects,
+    bool ShowDirtyFilesInMenu,
     bool DiagnosticsEnabled,
     WindowsLogVerbosity LoggingVerbosity,
     bool FileLoggingEnabled,
     string? LogFilePath,
     bool LogFileExists,
+    bool ShowActionsUsage,
+    IReadOnlyList<string> ActionsMonitoredOwners,
+    bool EnableGitHubReferenceMonitor,
+    bool EnablePullRequestNotifications,
+    PullRequestNotificationClickAction PullRequestNotificationClickAction,
     string CacheDirectory,
     int CacheEntryCount,
     string? ArchiveDatabasePath,
@@ -38,11 +55,28 @@ internal sealed record WindowsDiagnosticsReport(
             $"visible_repositories: {VisibleRepositoryCount.ToString(CultureInfo.InvariantCulture)}",
             $"loaded_repositories: {LoadedRepositoryCount.ToString(CultureInfo.InvariantCulture)}",
             $"local_repositories: {LocalRepositoryCount.ToString(CultureInfo.InvariantCulture)}",
+            $"refresh_interval_minutes: {RefreshIntervalMinutes.ToString(CultureInfo.InvariantCulture)}",
+            $"check_for_updates_automatically: {CheckForUpdatesAutomatically}",
+            $"repository_menu_scope: {RepositoryMenuScope.ToString().ToLowerInvariant()}",
+            $"repository_sort_key: {RepositorySortKey.ToString().ToLowerInvariant()}",
+            $"repository_display_limit: {RepositoryDisplayLimit.ToString(CultureInfo.InvariantCulture)}",
+            $"discover_local_projects: {DiscoverLocalProjects}",
+            $"local_projects_root: {LocalProjectsRoot ?? "(none)"}",
+            $"local_projects_max_depth: {LocalProjectsMaxDepth.ToString(CultureInfo.InvariantCulture)}",
+            $"fetch_local_projects_before_status: {FetchLocalProjectsBeforeStatus}",
+            $"local_projects_fetch_interval_minutes: {LocalProjectsFetchIntervalMinutes.ToString(CultureInfo.InvariantCulture)}",
+            $"auto_sync_local_projects: {AutoSyncLocalProjects}",
+            $"show_dirty_files_in_menu: {ShowDirtyFilesInMenu}",
             $"diagnostics_enabled: {DiagnosticsEnabled}",
             $"logging_verbosity: {LoggingVerbosity.ToString().ToLowerInvariant()}",
             $"file_logging_enabled: {FileLoggingEnabled}",
             $"log_file: {LogFilePath ?? "(disabled)"}",
             $"log_file_exists: {LogFileExists}",
+            $"show_actions_usage: {ShowActionsUsage}",
+            $"actions_monitored_owners: {FormatList(ActionsMonitoredOwners)}",
+            $"watch_clipboard_references: {EnableGitHubReferenceMonitor}",
+            $"pr_notifications_enabled: {EnablePullRequestNotifications}",
+            $"pr_notification_click_action: {PullRequestNotificationClickAction.ToString().ToLowerInvariant()}",
             $"cache_directory: {CacheDirectory}",
             $"cache_entries: {CacheEntryCount.ToString(CultureInfo.InvariantCulture)}",
             $"archive_database: {ArchiveDatabasePath ?? "(none)"}",
@@ -71,6 +105,12 @@ internal sealed record WindowsDiagnosticsReport(
         builder.AppendLine($"GitHub host: {GitHubHost}");
         builder.AppendLine($"Repositories: {LoadedRepositoryCount} loaded / {VisibleRepositoryCount} visible / {ConfiguredRepositoryCount} configured");
         builder.AppendLine($"Local repositories: {LocalRepositoryCount}");
+        builder.AppendLine($"Refresh: every {RefreshIntervalMinutes} minutes, updates {(CheckForUpdatesAutomatically ? "automatic" : "manual")}");
+        builder.AppendLine($"Repository menu: {RepositoryMenuScope.DisplayName()} scope, {RepositorySortKey.DisplayName()} sort, limit {RepositoryDisplayLimit}");
+        builder.AppendLine($"Local projects: {(DiscoverLocalProjects ? "enabled" : "disabled")} at {LocalProjectsRoot ?? "none"}, fetch {(FetchLocalProjectsBeforeStatus ? "enabled" : "disabled")} every {LocalProjectsFetchIntervalMinutes} minutes, auto-sync {(AutoSyncLocalProjects ? "enabled" : "disabled")}");
+        builder.AppendLine($"Clipboard references: {(EnableGitHubReferenceMonitor ? "enabled" : "disabled")}");
+        builder.AppendLine($"PR notifications: {(EnablePullRequestNotifications ? "enabled" : "disabled")}, click opens {PullRequestNotificationClickAction.DisplayName()}");
+        builder.AppendLine($"Actions usage: {(ShowActionsUsage ? "enabled" : "disabled")} ({FormatList(ActionsMonitoredOwners)})");
         builder.AppendLine($"Diagnostics: {(DiagnosticsEnabled ? "enabled" : "disabled")}");
         builder.AppendLine($"Logging: {LoggingVerbosity.DisplayName()}, file {(FileLoggingEnabled ? "enabled" : "disabled")}");
         builder.AppendLine($"Log file: {LogFilePath ?? "disabled"} ({(LogFileExists ? "present" : "missing")})");
@@ -117,15 +157,37 @@ internal sealed record WindowsDiagnosticsReport(
             statuses.Count,
             localGitIndex.Repositories.Count,
             string.IsNullOrWhiteSpace(lastError) ? null : lastError,
+            settings.RefreshIntervalMinutes,
+            settings.CheckForUpdatesAutomatically,
+            settings.RepositoryMenuScope,
+            settings.RepositorySortKey,
+            settings.RepositoryDisplayLimit,
+            settings.DiscoverLocalProjects,
+            settings.LocalProjectsRoot,
+            settings.LocalProjectsMaxDepth,
+            settings.FetchLocalProjectsBeforeStatus,
+            settings.LocalProjectsFetchIntervalMinutes,
+            settings.AutoSyncLocalProjects,
+            settings.ShowDirtyFilesInMenu,
             settings.DiagnosticsEnabled,
             settings.LoggingVerbosity,
             settings.FileLoggingEnabled,
             WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath(),
             File.Exists(WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath()),
+            settings.ShowActionsUsage,
+            settings.ActionsMonitoredOwners.ToArray(),
+            settings.EnableGitHubReferenceMonitor,
+            settings.EnablePullRequestNotifications,
+            settings.PullRequestNotificationClickAction,
             GitHubResponseCache.DirectoryForSettings(settings),
             GitHubResponseCache.EntryCountForSettings(settings),
             archivePath,
             archivePath != null && File.Exists(archivePath),
             rateLimits.ToArray());
+    }
+
+    private static string FormatList(IReadOnlyList<string> values)
+    {
+        return values.Count == 0 ? "(none)" : string.Join(", ", values);
     }
 }

@@ -22,6 +22,23 @@ public sealed class WindowsDiagnosticsReportTests
                 },
             ],
             GitHubArchiveDatabasePath = Path.Combine(Path.GetTempPath(), $"repobar-archive-{Guid.NewGuid():N}.sqlite"),
+            RefreshIntervalMinutes = 7,
+            CheckForUpdatesAutomatically = false,
+            RepositoryMenuScope = RepositoryMenuScope.Local,
+            RepositorySortKey = RepositorySortKey.Name,
+            RepositoryDisplayLimit = 9,
+            DiscoverLocalProjects = true,
+            LocalProjectsRoot = "C:/Projects",
+            LocalProjectsMaxDepth = 4,
+            FetchLocalProjectsBeforeStatus = true,
+            LocalProjectsFetchIntervalMinutes = 3,
+            AutoSyncLocalProjects = true,
+            ShowDirtyFilesInMenu = false,
+            ShowActionsUsage = true,
+            ActionsMonitoredOwners = ["owner", "steipete"],
+            EnableGitHubReferenceMonitor = true,
+            EnablePullRequestNotifications = true,
+            PullRequestNotificationClickAction = PullRequestNotificationClickAction.OpenIssueNavigator,
             DiagnosticsEnabled = true,
             LoggingVerbosity = WindowsLogVerbosity.Debug,
             FileLoggingEnabled = true,
@@ -83,12 +100,34 @@ public sealed class WindowsDiagnosticsReportTests
             Assert.Contains("visible_repositories: 1", text);
             Assert.Contains("loaded_repositories: 1", text);
             Assert.Contains("local_repositories: 1", text);
+            Assert.Contains("refresh_interval_minutes: 7", text);
+            Assert.Contains("check_for_updates_automatically: False", text);
+            Assert.Contains("repository_menu_scope: local", text);
+            Assert.Contains("repository_sort_key: name", text);
+            Assert.Contains("repository_display_limit: 9", text);
+            Assert.Contains("discover_local_projects: True", text);
+            Assert.Contains("local_projects_root: C:/Projects", text);
+            Assert.Contains("local_projects_max_depth: 4", text);
+            Assert.Contains("fetch_local_projects_before_status: True", text);
+            Assert.Contains("local_projects_fetch_interval_minutes: 3", text);
+            Assert.Contains("auto_sync_local_projects: True", text);
+            Assert.Contains("show_dirty_files_in_menu: False", text);
             Assert.Contains("diagnostics_enabled: True", text);
             Assert.Contains("logging_verbosity: debug", text);
             Assert.Contains("file_logging_enabled: True", text);
+            Assert.Contains("show_actions_usage: True", text);
+            Assert.Contains("actions_monitored_owners: owner, steipete", text);
+            Assert.Contains("watch_clipboard_references: True", text);
+            Assert.Contains("pr_notifications_enabled: True", text);
+            Assert.Contains("pr_notification_click_action: openissuenavigator", text);
             Assert.Contains("last_error: rate limited", text);
             Assert.Contains("core: 4999/5000", text);
             Assert.DoesNotContain("super-secret-token", text);
+
+            var summary = report.SummaryText();
+            Assert.Contains("Repository menu: Local scope, Repository name sort, limit 9", summary);
+            Assert.Contains("Local projects: enabled at C:/Projects, fetch enabled every 3 minutes, auto-sync enabled", summary);
+            Assert.Contains("PR notifications: enabled, click opens Issue Navigator", summary);
         }
         finally
         {
