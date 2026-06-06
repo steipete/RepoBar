@@ -1436,7 +1436,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private void ShowPreferences()
     {
-        using var form = new SettingsEditorForm(_settingsStore);
+        using var form = new SettingsEditorForm(_settingsStore, _accountInsight?.Login);
         if (form.ShowDialog() == DialogResult.OK)
         {
             _refreshTimer.Interval = Math.Clamp(_settingsStore.Settings.RefreshIntervalMinutes, 1, 60) * 60 * 1000;

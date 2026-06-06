@@ -36,6 +36,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly ComboBox _repositorySortKey = new();
     private readonly CheckBox _includeForkedRepositories = new();
     private readonly CheckBox _includeArchivedRepositories = new();
+    private readonly CheckBox _showOnlyMyRepositories = new();
     private readonly TextBox _repositoryOwnerFilter = new();
     private readonly CheckBox _showOnlyRepositoriesWithIssues = new();
     private readonly CheckBox _showOnlyRepositoriesWithPullRequests = new();
@@ -60,11 +61,14 @@ internal sealed class SettingsEditorForm : Form
     private readonly TextBox _repositoryFilterTextBox = new();
     private WindowsMenuCustomization _menuCustomization = new();
     private AccountRow? _selectedAccount;
+    private readonly string? _viewerLogin;
     private bool _loadingAccount;
+    private bool _updatingOwnerFilterControls;
 
-    public SettingsEditorForm(WindowsSettingsStore settingsStore)
+    public SettingsEditorForm(WindowsSettingsStore settingsStore, string? viewerLogin = null)
     {
         _settingsStore = settingsStore;
+        _viewerLogin = string.IsNullOrWhiteSpace(viewerLogin) ? null : viewerLogin.Trim();
         Text = "RepoBar Preferences";
         StartPosition = FormStartPosition.CenterScreen;
         MinimizeBox = false;
@@ -140,6 +144,7 @@ internal sealed class SettingsEditorForm : Form
         _includeForkedRepositories.Checked = settings.IncludeForkedRepositories;
         _includeArchivedRepositories.Checked = settings.IncludeArchivedRepositories;
         _repositoryOwnerFilter.Text = FormatRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
+        _showOnlyMyRepositories.Checked = WindowsRepositoryOwnerFilter.IsOnlyViewer(settings.RepositoryOwnerFilter, _viewerLogin);
         _showOnlyRepositoriesWithIssues.Checked = settings.ShowOnlyRepositoriesWithIssues;
         _showOnlyRepositoriesWithPullRequests.Checked = settings.ShowOnlyRepositoriesWithPullRequests;
         _heatmapDisplay.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -269,6 +274,12 @@ internal sealed class SettingsEditorForm : Form
         _enableResponseCache.Text = "Use response cache";
         _includeForkedRepositories.Text = "Include forked repos";
         _includeArchivedRepositories.Text = "Include archived repos";
+        _showOnlyMyRepositories.Text = string.IsNullOrWhiteSpace(_viewerLogin)
+            ? "Show only my repositories"
+            : $"Show only my repositories ({_viewerLogin})";
+        _showOnlyMyRepositories.Enabled = !string.IsNullOrWhiteSpace(_viewerLogin);
+        _showOnlyMyRepositories.CheckedChanged += (_, _) => ToggleOnlyMyRepositoriesFromCheckbox();
+        _repositoryOwnerFilter.TextChanged += (_, _) => SyncOnlyMyRepositoriesFromText();
         _showOnlyRepositoriesWithIssues.Text = "Only repos with issues";
         _showOnlyRepositoriesWithPullRequests.Text = "Only repos with PRs";
         _showRateLimits.Text = "Show rate limits";
@@ -292,6 +303,7 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_enableResponseCache);
         settingsGrid.Controls.Add(_includeForkedRepositories);
         settingsGrid.Controls.Add(_includeArchivedRepositories);
+        settingsGrid.Controls.Add(_showOnlyMyRepositories);
         settingsGrid.Controls.Add(_showOnlyRepositoriesWithIssues);
         settingsGrid.Controls.Add(_showOnlyRepositoriesWithPullRequests);
         settingsGrid.Controls.Add(_showRateLimits);
@@ -471,6 +483,40 @@ internal sealed class SettingsEditorForm : Form
         {
             SaveAccountFields(_selectedAccount);
         }
+    }
+
+    private void ToggleOnlyMyRepositoriesFromCheckbox()
+    {
+        if (_updatingOwnerFilterControls || string.IsNullOrWhiteSpace(_viewerLogin))
+        {
+            return;
+        }
+
+        SetOwnerFilterText(_showOnlyMyRepositories.Checked ? [_viewerLogin] : []);
+    }
+
+    private void SyncOnlyMyRepositoriesFromText()
+    {
+        if (_updatingOwnerFilterControls)
+        {
+            return;
+        }
+
+        _updatingOwnerFilterControls = true;
+        _showOnlyMyRepositories.Checked = WindowsRepositoryOwnerFilter.IsOnlyViewer(
+            ParseRepositoryOwnerFilter(_repositoryOwnerFilter.Text),
+            _viewerLogin);
+        _updatingOwnerFilterControls = false;
+    }
+
+    private void SetOwnerFilterText(IEnumerable<string> owners)
+    {
+        _updatingOwnerFilterControls = true;
+        _repositoryOwnerFilter.Text = FormatRepositoryOwnerFilter(owners);
+        _showOnlyMyRepositories.Checked = WindowsRepositoryOwnerFilter.IsOnlyViewer(
+            ParseRepositoryOwnerFilter(_repositoryOwnerFilter.Text),
+            _viewerLogin);
+        _updatingOwnerFilterControls = false;
     }
 
     private string NextAccountId()
