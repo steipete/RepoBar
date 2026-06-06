@@ -38,6 +38,9 @@ internal sealed class WindowsSettings
     public WindowsActivityScope ActivityScope { get; set; } = WindowsActivityScope.MyActivity;
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
+    public bool DiagnosticsEnabled { get; set; }
+    public WindowsLogVerbosity LoggingVerbosity { get; set; } = WindowsLogVerbosity.Info;
+    public bool FileLoggingEnabled { get; set; }
     public bool EnableGitHubReferenceMonitor { get; set; }
     public WindowsMenuCustomization MenuCustomization { get; set; } = new();
     public bool EnablePullRequestNotifications { get; set; }
@@ -258,6 +261,30 @@ internal enum PullRequestNotificationClickAction
     OpenIssueNavigator,
 }
 
+internal enum WindowsLogVerbosity
+{
+    Error,
+    Warning,
+    Info,
+    Debug,
+    Trace,
+}
+
+internal static class WindowsLogVerbosityLabels
+{
+    public static string DisplayName(this WindowsLogVerbosity verbosity)
+    {
+        return verbosity switch
+        {
+            WindowsLogVerbosity.Error => "Errors only",
+            WindowsLogVerbosity.Warning => "Warnings",
+            WindowsLogVerbosity.Debug => "Debug",
+            WindowsLogVerbosity.Trace => "Trace",
+            _ => "Info",
+        };
+    }
+}
+
 internal static class PullRequestNotificationClickActionLabels
 {
     public static string DisplayName(this PullRequestNotificationClickAction action)
@@ -379,6 +406,7 @@ internal sealed class WindowsSettingsStore
         settings.LocalProjectsFetchIntervalMinutes = Math.Clamp(settings.LocalProjectsFetchIntervalMinutes, 1, 60);
         settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
         settings.RepositoryOwnerFilter = NormalizeRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
+        settings.LoggingVerbosity = Enum.IsDefined(settings.LoggingVerbosity) ? settings.LoggingVerbosity : WindowsLogVerbosity.Info;
         settings.MenuCustomization ??= new WindowsMenuCustomization();
         settings.MenuCustomization.Normalize();
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)

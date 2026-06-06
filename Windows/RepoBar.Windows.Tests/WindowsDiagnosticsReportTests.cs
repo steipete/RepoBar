@@ -22,6 +22,9 @@ public sealed class WindowsDiagnosticsReportTests
                 },
             ],
             GitHubArchiveDatabasePath = Path.Combine(Path.GetTempPath(), $"repobar-archive-{Guid.NewGuid():N}.sqlite"),
+            DiagnosticsEnabled = true,
+            LoggingVerbosity = WindowsLogVerbosity.Debug,
+            FileLoggingEnabled = true,
             Repositories =
             [
                 new RepositoryRef { Owner = "owner", Name = "one", Visibility = RepositoryVisibility.Pinned },
@@ -80,6 +83,9 @@ public sealed class WindowsDiagnosticsReportTests
             Assert.Contains("visible_repositories: 1", text);
             Assert.Contains("loaded_repositories: 1", text);
             Assert.Contains("local_repositories: 1", text);
+            Assert.Contains("diagnostics_enabled: True", text);
+            Assert.Contains("logging_verbosity: debug", text);
+            Assert.Contains("file_logging_enabled: True", text);
             Assert.Contains("last_error: rate limited", text);
             Assert.Contains("core: 4999/5000", text);
             Assert.DoesNotContain("super-secret-token", text);

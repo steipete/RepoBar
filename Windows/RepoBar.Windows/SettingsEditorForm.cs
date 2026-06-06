@@ -45,6 +45,9 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
+    private readonly CheckBox _diagnosticsEnabled = new();
+    private readonly ComboBox _loggingVerbosity = new();
+    private readonly CheckBox _fileLoggingEnabled = new();
     private readonly CheckBox _enableGitHubReferenceMonitor = new();
     private readonly CheckBox _enablePullRequestNotifications = new();
     private readonly CheckBox _enablePullRequestNewNotifications = new();
@@ -163,6 +166,15 @@ internal sealed class SettingsEditorForm : Form
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
+        _diagnosticsEnabled.Checked = settings.DiagnosticsEnabled;
+        _loggingVerbosity.DropDownStyle = ComboBoxStyle.DropDownList;
+        _loggingVerbosity.DataSource = Enum.GetValues<WindowsLogVerbosity>()
+            .Select(LogVerbosityRow.FromVerbosity)
+            .ToArray();
+        _loggingVerbosity.DisplayMember = nameof(LogVerbosityRow.DisplayName);
+        _loggingVerbosity.ValueMember = nameof(LogVerbosityRow.Verbosity);
+        _loggingVerbosity.SelectedValue = settings.LoggingVerbosity;
+        _fileLoggingEnabled.Checked = settings.FileLoggingEnabled;
         _enableGitHubReferenceMonitor.Checked = settings.EnableGitHubReferenceMonitor;
         _enablePullRequestNotifications.Checked = settings.EnablePullRequestNotifications;
         _enablePullRequestNewNotifications.Checked = settings.EnablePullRequestNewNotifications;
@@ -237,6 +249,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Repository heatmap", _heatmapDisplay);
         AddLabeledControl(settingsGrid, "Heatmap window", _heatmapSpan);
         AddLabeledControl(settingsGrid, "Activity feed", _activityScope);
+        AddLabeledControl(settingsGrid, "Log verbosity", _loggingVerbosity);
         AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
         _credentialState.AutoSize = true;
@@ -261,6 +274,8 @@ internal sealed class SettingsEditorForm : Form
         _showRateLimits.Text = "Show rate limits";
         _showContributionSummary.Text = "Show contribution summary";
         _showActionsUsage.Text = "Show Actions usage";
+        _diagnosticsEnabled.Text = "Enable diagnostics capture";
+        _fileLoggingEnabled.Text = "Log to file";
         _enableGitHubReferenceMonitor.Text = "Watch clipboard references";
         _enablePullRequestNotifications.Text = "PR notifications";
         _enablePullRequestNewNotifications.Text = "Notify new PRs";
@@ -282,6 +297,8 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_showRateLimits);
         settingsGrid.Controls.Add(_showContributionSummary);
         settingsGrid.Controls.Add(_showActionsUsage);
+        settingsGrid.Controls.Add(_diagnosticsEnabled);
+        settingsGrid.Controls.Add(_fileLoggingEnabled);
         settingsGrid.Controls.Add(_enableGitHubReferenceMonitor);
         settingsGrid.Controls.Add(_enablePullRequestNotifications);
         settingsGrid.Controls.Add(_enablePullRequestNewNotifications);
@@ -621,6 +638,12 @@ internal sealed class SettingsEditorForm : Form
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
+        settings.DiagnosticsEnabled = _diagnosticsEnabled.Checked;
+        settings.LoggingVerbosity = _loggingVerbosity.SelectedValue is WindowsLogVerbosity verbosity
+            ? verbosity
+            : WindowsLogVerbosity.Info;
+        settings.FileLoggingEnabled = _fileLoggingEnabled.Checked;
+        WindowsDiagnosticsLogger.Configure(settings.LoggingVerbosity, settings.FileLoggingEnabled);
         settings.EnableGitHubReferenceMonitor = _enableGitHubReferenceMonitor.Checked;
         settings.EnablePullRequestNotifications = _enablePullRequestNotifications.Checked;
         settings.EnablePullRequestNewNotifications = _enablePullRequestNewNotifications.Checked;
@@ -886,6 +909,14 @@ internal sealed class SettingsEditorForm : Form
         public static NotificationClickActionRow FromAction(PullRequestNotificationClickAction action)
         {
             return new NotificationClickActionRow(action, action.DisplayName());
+        }
+    }
+
+    private sealed record LogVerbosityRow(WindowsLogVerbosity Verbosity, string DisplayName)
+    {
+        public static LogVerbosityRow FromVerbosity(WindowsLogVerbosity verbosity)
+        {
+            return new LogVerbosityRow(verbosity, verbosity.DisplayName());
         }
     }
 

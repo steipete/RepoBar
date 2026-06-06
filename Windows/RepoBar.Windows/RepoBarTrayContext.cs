@@ -150,6 +150,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
             var displayedStatuses = WindowsRepositoryDisplay.Apply(_statuses, _settingsStore.Settings);
             var activeAccount = _settingsStore.Settings.GetActiveAccount();
+            var logFilePath = WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath();
+            WindowsDiagnosticsLogger.Log(
+                WindowsLogVerbosity.Debug,
+                "smoke",
+                $"runtime summary loaded={_statuses.Count} visible={_settingsStore.VisibleRepositories.Count} local={_localGitIndex.Repositories.Count}");
             var summary = new
             {
                 capturedAt = DateTimeOffset.UtcNow,
@@ -161,6 +166,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 loadedRepositoryCount = _statuses.Count,
                 localRepositoryCount = _localGitIndex.Repositories.Count,
                 lastError = _lastError,
+                diagnosticsEnabled = _settingsStore.Settings.DiagnosticsEnabled,
+                loggingVerbosity = _settingsStore.Settings.LoggingVerbosity.ToString().ToLowerInvariant(),
+                fileLoggingEnabled = _settingsStore.Settings.FileLoggingEnabled,
+                logFilePath,
+                logFileExists = File.Exists(logFilePath),
                 localRepositories = _localGitIndex.Repositories.Select(repository => new
                 {
                     repository.DisplayName,

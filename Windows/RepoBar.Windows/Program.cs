@@ -17,6 +17,10 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         var settingsStore = WindowsSettingsStore.LoadOrCreate();
+        WindowsDiagnosticsLogger.Configure(
+            settingsStore.Settings.LoggingVerbosity,
+            settingsStore.Settings.FileLoggingEnabled);
+        WindowsDiagnosticsLogger.Log(WindowsLogVerbosity.Info, "startup", "RepoBar.Windows starting");
         WindowsGitHubArchiveReader.CreateSmokeFixtureIfRequested(settingsStore.Settings);
         using var context = new RepoBarTrayContext(settingsStore);
         Application.Run(context);

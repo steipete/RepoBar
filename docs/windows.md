@@ -123,6 +123,9 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "activityScope": "myActivity",
   "showRateLimits": true,
   "showContributionSummary": true,
+  "diagnosticsEnabled": false,
+  "loggingVerbosity": "info",
+  "fileLoggingEnabled": false,
   "enableGitHubReferenceMonitor": false,
   "menuCustomization": {
     "hiddenMainMenuItems": [],
@@ -199,6 +202,8 @@ Use **PR notifications** plus the event toggles to choose whether Windows tray b
 
 Use **Diagnostics** from the tray menu to inspect and copy Windows runtime state: settings path, active account, repository counts, local Git inventory, cache directory and entry count, archive database status, last refresh error, and captured rate-limit buckets. The diagnostics window also exposes forced refresh and cache clearing so Windows can recover the same cache/debug states as the macOS debug pane.
 
+Use **Enable diagnostics capture**, **Log verbosity**, and **Log to file** in Preferences to match the macOS debug logging controls. File logging writes `repobar.log` under `%APPDATA%\RepoBar\Logs\`, and diagnostics reports include the current logging state plus whether the log file exists.
+
 ## Validation
 
 Run the local Windows build and unit-test gates:
@@ -216,7 +221,7 @@ Run the launch smoke on Windows:
 .\Scripts\smoke_windows.ps1 -Runtime win-x64
 ```
 
-The smoke publishes the app, creates a local Git fixture for `steipete/RepoBar`, writes a two-account smoke settings file with a smoke archive database, launches `RepoBar.Windows.exe`, verifies the settings file, waits for the app's runtime summary, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, scoped credential targets, sample repository, local Git attachment, archive-backed issue/PR fallback rows, diagnostics menu registration, configured tray menu order, and screenshot status. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary.
+The smoke publishes the app, creates a local Git fixture for `steipete/RepoBar`, writes a two-account smoke settings file with a smoke archive database, launches `RepoBar.Windows.exe`, verifies the settings file, waits for the app's runtime summary, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, scoped credential targets, sample repository, local Git attachment, archive-backed issue/PR fallback rows, diagnostics menu registration, diagnostics logging state and log-file creation, configured tray menu order, and screenshot status. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary.
 
 ![RepoBar Windows tray menu](assets/repobar-windows-tray-menu.png)
 

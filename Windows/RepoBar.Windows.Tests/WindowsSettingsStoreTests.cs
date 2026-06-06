@@ -83,6 +83,19 @@ public sealed class WindowsSettingsStoreTests
         Assert.Equal(expected, settings.LocalProjectsFetchIntervalMinutes);
     }
 
+    [Fact]
+    public void NormalizeSettings_resets_unknown_log_verbosity()
+    {
+        var settings = new WindowsSettings
+        {
+            LoggingVerbosity = (WindowsLogVerbosity)999,
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal(WindowsLogVerbosity.Info, settings.LoggingVerbosity);
+    }
+
     private static WindowsSettingsStore CreateStore(WindowsSettings settings)
     {
         var settingsPath = Path.Combine(Path.GetTempPath(), $"repobar-settings-{Guid.NewGuid():N}.json");

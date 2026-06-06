@@ -19,6 +19,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Issue Navigator | Clipboard/reference resolver window with browser preview and optional clipboard-only monitor | Windows reference resolver window with embedded browser preview, copy, open actions, and optional clipboard watcher balloon click-through | Mostly |
 | Notifications | Optional PR notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments with browser or Issue Navigator click handling | Windows tray notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments with configurable browser or Issue Navigator click-through and persistent duplicate suppression across transient empty refreshes | Mostly |
 | Updates/install | Sparkle/Homebrew/DMG plus copyable update diagnostics | Installer, current-user startup option, manual GitHub release check with Windows installer asset detection, and copyable update diagnostics | Mostly |
+| Debug logging | Optional diagnostics overlay, log verbosity, and file logging | Preferences expose diagnostics capture, log verbosity, and file logging; diagnostics include log state and Crabbox smoke proves log-file creation | Mostly |
 | Tests | Swift tests for parsing, auth, cache, refs, menu signatures | .NET unit tests plus Windows Crabbox build/runtime smoke with screenshot/artifact capture | Mostly |
 
 ## Implementation Order
@@ -42,6 +43,7 @@ Feature parity is not complete until the Windows target has:
 - GitHub App OAuth proof against GitHub.com or a stubbed loopback/token exchange plus refresh coverage.
 - Account-switch proof that separate Windows profiles resolve separate OAuth/PAT credential targets.
 - Archive fallback proof that recent issue and pull request lists survive failed live GitHub endpoints.
+- Diagnostics logging proof that Windows settings can enable debug/file logging and the launched tray writes the configured log file.
 
 ## Current Validation Commands
 

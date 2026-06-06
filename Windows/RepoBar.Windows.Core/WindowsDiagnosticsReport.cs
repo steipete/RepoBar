@@ -14,6 +14,11 @@ internal sealed record WindowsDiagnosticsReport(
     int LoadedRepositoryCount,
     int LocalRepositoryCount,
     string? LastError,
+    bool DiagnosticsEnabled,
+    WindowsLogVerbosity LoggingVerbosity,
+    bool FileLoggingEnabled,
+    string? LogFilePath,
+    bool LogFileExists,
     string CacheDirectory,
     int CacheEntryCount,
     string? ArchiveDatabasePath,
@@ -33,6 +38,11 @@ internal sealed record WindowsDiagnosticsReport(
             $"visible_repositories: {VisibleRepositoryCount.ToString(CultureInfo.InvariantCulture)}",
             $"loaded_repositories: {LoadedRepositoryCount.ToString(CultureInfo.InvariantCulture)}",
             $"local_repositories: {LocalRepositoryCount.ToString(CultureInfo.InvariantCulture)}",
+            $"diagnostics_enabled: {DiagnosticsEnabled}",
+            $"logging_verbosity: {LoggingVerbosity.ToString().ToLowerInvariant()}",
+            $"file_logging_enabled: {FileLoggingEnabled}",
+            $"log_file: {LogFilePath ?? "(disabled)"}",
+            $"log_file_exists: {LogFileExists}",
             $"cache_directory: {CacheDirectory}",
             $"cache_entries: {CacheEntryCount.ToString(CultureInfo.InvariantCulture)}",
             $"archive_database: {ArchiveDatabasePath ?? "(none)"}",
@@ -61,6 +71,9 @@ internal sealed record WindowsDiagnosticsReport(
         builder.AppendLine($"GitHub host: {GitHubHost}");
         builder.AppendLine($"Repositories: {LoadedRepositoryCount} loaded / {VisibleRepositoryCount} visible / {ConfiguredRepositoryCount} configured");
         builder.AppendLine($"Local repositories: {LocalRepositoryCount}");
+        builder.AppendLine($"Diagnostics: {(DiagnosticsEnabled ? "enabled" : "disabled")}");
+        builder.AppendLine($"Logging: {LoggingVerbosity.DisplayName()}, file {(FileLoggingEnabled ? "enabled" : "disabled")}");
+        builder.AppendLine($"Log file: {LogFilePath ?? "disabled"} ({(LogFileExists ? "present" : "missing")})");
         builder.AppendLine($"Cache entries: {CacheEntryCount}");
         builder.AppendLine($"Archive DB: {(ArchiveDatabasePath == null ? "none" : ArchiveDatabaseExists ? "present" : "missing")}");
         builder.AppendLine($"Last error: {LastError ?? "none"}");
@@ -104,6 +117,11 @@ internal sealed record WindowsDiagnosticsReport(
             statuses.Count,
             localGitIndex.Repositories.Count,
             string.IsNullOrWhiteSpace(lastError) ? null : lastError,
+            settings.DiagnosticsEnabled,
+            settings.LoggingVerbosity,
+            settings.FileLoggingEnabled,
+            WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath(),
+            File.Exists(WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath()),
             GitHubResponseCache.DefaultDirectory(),
             GitHubResponseCache.DefaultEntryCount(),
             archivePath,
