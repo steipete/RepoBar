@@ -31,7 +31,7 @@ public sealed class GitHubResponseCacheTests
     }
 
     [Fact]
-    public async Task Repository_client_tracks_rate_limit_headers()
+    public async Task Repository_client_combines_github_and_local_status_with_rate_limit_headers()
     {
         var handler = new StubHandler(request =>
         {

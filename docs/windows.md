@@ -118,6 +118,8 @@ Run the local Windows build and unit-test gates:
 .\Scripts\build_windows.ps1 test
 ```
 
+The test command writes a TRX result file under `dist\windows\test-results\`, including the combined GitHub/local repository status coverage.
+
 Run the launch smoke on Windows:
 
 ```powershell
