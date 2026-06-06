@@ -33,6 +33,7 @@ public sealed class WindowsMenuCustomizationTests
         Assert.Contains(WindowsMainMenuItem.AccountSwitcher, customization.MainMenuOrder);
         Assert.Contains(WindowsMainMenuItem.RepositoryScope, customization.MainMenuOrder);
         Assert.Contains(WindowsMainMenuItem.RepositorySort, customization.MainMenuOrder);
+        Assert.Contains(WindowsMainMenuItem.MyRepositories, customization.MainMenuOrder);
         Assert.Contains(WindowsMainMenuItem.ClearResponseCache, customization.MainMenuOrder);
         Assert.Contains(WindowsMainMenuItem.Diagnostics, customization.MainMenuOrder);
         Assert.Contains(WindowsMainMenuItem.CopyUpdateDiagnostics, customization.MainMenuOrder);

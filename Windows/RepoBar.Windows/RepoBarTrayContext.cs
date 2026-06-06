@@ -310,6 +310,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsMainMenuItem.RepositorySort:
                 AddRepositorySortItem(items);
                 break;
+            case WindowsMainMenuItem.MyRepositories:
+                AddMyRepositoriesItem(items);
+                break;
             case WindowsMainMenuItem.Diagnostics:
                 items.Add(new ToolStripMenuItem("Diagnostics", null, (_, _) => ShowDiagnostics()));
                 break;
@@ -392,6 +395,41 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             BuildMenu();
         }
+    }
+
+    private void AddMyRepositoriesItem(ToolStripItemCollection items)
+    {
+        var login = _accountInsight?.Login;
+        var item = new ToolStripMenuItem(string.IsNullOrWhiteSpace(login)
+            ? "My repositories"
+            : $"My repositories: {login}")
+        {
+            Enabled = !string.IsNullOrWhiteSpace(login),
+            Checked = IsOwnerFilter(login),
+        };
+        item.Click += (_, _) => ToggleMyRepositories(login);
+        items.Add(item);
+    }
+
+    private bool IsOwnerFilter(string? login)
+    {
+        return WindowsRepositoryOwnerFilter.IsOnlyViewer(_settingsStore.Settings.RepositoryOwnerFilter, login);
+    }
+
+    private void ToggleMyRepositories(string? login)
+    {
+        if (string.IsNullOrWhiteSpace(login))
+        {
+            return;
+        }
+
+        var owners = WindowsRepositoryOwnerFilter.ToggleOnlyViewer(_settingsStore.Settings.RepositoryOwnerFilter, login);
+        if (_settingsStore.SetRepositoryOwnerFilter(owners))
+        {
+            BeginRefresh();
+        }
+
+        BuildMenu();
     }
 
     private void AddAccountSwitcherItem(ToolStripItemCollection items)

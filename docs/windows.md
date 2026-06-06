@@ -18,7 +18,7 @@ The Windows app currently provides:
 - global Commits and Activity menus that combine recent commits and activity across displayed repositories
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus, including Mine and label filters for issues plus Mine/commented/reviewed filters for pull requests when viewer metadata is available
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, fork/archive inclusion, repository visibility, owner/status display filters, display limit, and sort order
+- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, fork/archive inclusion, repository visibility, owner/status display filters with a tray-level My repositories toggle, display limit, and sort order
 - native menu customization for hiding and reordering main tray actions and repository submenu entries
 - filtered repository discovery from GitHub's accessible repository list
 - repository checkout from the tray into the configured local projects folder

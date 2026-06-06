@@ -118,6 +118,21 @@ public sealed class WindowsSettingsStoreTests
         Assert.False(store.SetRepositorySortKey((RepositorySortKey)999));
     }
 
+    [Fact]
+    public void SetRepositoryOwnerFilter_normalizes_and_persists_owner_changes()
+    {
+        var store = CreateStore(new WindowsSettings
+        {
+            RepositoryOwnerFilter = ["other"],
+        });
+
+        Assert.True(store.SetRepositoryOwnerFilter([" OctoCat ", "octocat", "RepoBar"]));
+        Assert.Equal(["octocat", "repobar"], store.Settings.RepositoryOwnerFilter);
+        Assert.False(store.SetRepositoryOwnerFilter(["repobar", "octocat"]));
+        Assert.True(store.SetRepositoryOwnerFilter([]));
+        Assert.Empty(store.Settings.RepositoryOwnerFilter);
+    }
+
     private static WindowsSettingsStore CreateStore(WindowsSettings settings)
     {
         var settingsPath = Path.Combine(Path.GetTempPath(), $"repobar-settings-{Guid.NewGuid():N}.json");

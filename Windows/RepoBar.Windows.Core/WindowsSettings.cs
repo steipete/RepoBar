@@ -596,6 +596,19 @@ internal sealed class WindowsSettingsStore
         return true;
     }
 
+    public bool SetRepositoryOwnerFilter(IEnumerable<string> owners)
+    {
+        var normalized = NormalizeRepositoryOwnerFilter(owners);
+        if (Settings.RepositoryOwnerFilter.SequenceEqual(normalized, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        Settings.RepositoryOwnerFilter = normalized;
+        Save();
+        return true;
+    }
+
     public void Save()
     {
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(Settings, JsonOptions));
