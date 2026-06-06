@@ -18,10 +18,10 @@ public sealed class GitHubReferenceNavigatorTests
             "steipete/RepoBar");
 
         Assert.Equal(4, references.Count);
-        Assert.Contains(references, reference => reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 12);
-        Assert.Contains(references, reference => reference.RepositoryFullName == "openclaw/openclaw" && reference.Number == 34);
-        Assert.Contains(references, reference => reference.RepositoryFullName == "openclaw/openclaw" && reference.Number == 35 && reference.Kind == "pull");
-        Assert.Contains(references, reference => reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 56);
+        Assert.Contains(references, reference => reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 12L);
+        Assert.Contains(references, reference => reference.RepositoryFullName == "openclaw/openclaw" && reference.Number == 34L);
+        Assert.Contains(references, reference => reference.RepositoryFullName == "openclaw/openclaw" && reference.Number == 35L && reference.Kind == "pull");
+        Assert.Contains(references, reference => reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 56L);
     }
 
     [Fact]
@@ -57,6 +57,41 @@ public sealed class GitHubReferenceNavigatorTests
         var uri = GitHubReferenceNavigator.BuildUri(reference, "github.com");
 
         Assert.Equal("https://github.enterprise.test/owner/repo/pull/42", uri.ToString());
+    }
+
+    [Fact]
+    public void Workflow_run_url_references_preserve_source_host_and_kind()
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            "https://GitHub.Enterprise.test/owner/repo/actions/runs/25620622163",
+            "github.com",
+            null));
+
+        Assert.Equal("github.enterprise.test", reference.Host);
+        Assert.Equal("owner/repo", reference.RepositoryFullName);
+        Assert.Equal(25620622163L, reference.Number);
+        Assert.Equal("actions", reference.Kind);
+
+        var uri = GitHubReferenceNavigator.BuildUri(reference, "github.com");
+
+        Assert.Equal("https://github.enterprise.test/owner/repo/actions/runs/25620622163", uri.ToString());
+    }
+
+    [Fact]
+    public void Workflow_run_references_do_not_dedupe_issue_references_with_same_number()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            https://github.com/owner/repo/actions/runs/42
+            https://github.com/owner/repo/issues/42
+            """,
+            "github.com",
+            null);
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("owner/repo", 42L, "actions"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("owner/repo", 42L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]
@@ -105,10 +140,10 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("zed/project", 30), (reference.RepositoryFullName, reference.Number)),
-            reference => Assert.Equal(("steipete/RepoBar", 4), (reference.RepositoryFullName, reference.Number)),
-            reference => Assert.Equal(("acme/tools", 2), (reference.RepositoryFullName, reference.Number)),
-            reference => Assert.Equal(("alpha/repo", 99), (reference.RepositoryFullName, reference.Number)));
+            reference => Assert.Equal(("zed/project", 30L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("steipete/RepoBar", 4L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("acme/tools", 2L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("alpha/repo", 99L), (reference.RepositoryFullName, reference.Number)));
     }
 
     [Fact]
@@ -128,14 +163,14 @@ public sealed class GitHubReferenceNavigatorTests
             reference =>
             {
                 Assert.Equal("owner/repo", reference.RepositoryFullName);
-                Assert.Equal(9, reference.Number);
+                Assert.Equal(9L, reference.Number);
                 Assert.Equal("issues", reference.Kind);
                 Assert.Equal("owner/repo issue #9", reference.RawText);
             },
             reference =>
             {
                 Assert.Equal("owner/repo", reference.RepositoryFullName);
-                Assert.Equal(10, reference.Number);
+                Assert.Equal(10L, reference.Number);
                 Assert.Equal("pull", reference.Kind);
             });
     }
@@ -150,9 +185,9 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("steipete/RepoBar", 123, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("steipete/RepoBar", 456, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("steipete/RepoBar", 789, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+            reference => Assert.Equal(("steipete/RepoBar", 123L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 456L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 789L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]
@@ -165,8 +200,8 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("openclaw/crabbox", 70, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("openclaw/crabbox", 71, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+            reference => Assert.Equal(("openclaw/crabbox", 70L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 71L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]
@@ -179,10 +214,10 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("openclaw/crabbox", 66, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("openclaw/crabbox", 67, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("openclaw/crabbox", 68, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("openclaw/crabbox", 69, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+            reference => Assert.Equal(("openclaw/crabbox", 66L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 67L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 68L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 69L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]
@@ -195,10 +230,10 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("openclaw/crabbox", 66), (reference.RepositoryFullName, reference.Number)),
-            reference => Assert.Equal(("openclaw/crabbox", 67), (reference.RepositoryFullName, reference.Number)),
-            reference => Assert.Equal(("openclaw/crabbox", 68), (reference.RepositoryFullName, reference.Number)),
-            reference => Assert.Equal(("openclaw/crabbox", 69), (reference.RepositoryFullName, reference.Number)));
+            reference => Assert.Equal(("openclaw/crabbox", 66L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/crabbox", 67L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/crabbox", 68L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/crabbox", 69L), (reference.RepositoryFullName, reference.Number)));
     }
 
     [Fact]
@@ -211,8 +246,8 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("openclaw/crabbox", 7, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("openclaw/crabbox", 8, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+            reference => Assert.Equal(("openclaw/crabbox", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 8L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]
@@ -226,7 +261,7 @@ public sealed class GitHubReferenceNavigatorTests
 
         var reference = Assert.Single(references);
         Assert.Equal("openclaw/discrawl", reference.RepositoryFullName);
-        Assert.Equal(64, reference.Number);
+        Assert.Equal(64L, reference.Number);
         Assert.Equal("issues", reference.Kind);
     }
 
@@ -240,7 +275,7 @@ public sealed class GitHubReferenceNavigatorTests
 
         var reference = Assert.Single(references);
         Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
-        Assert.Equal(66, reference.Number);
+        Assert.Equal(66L, reference.Number);
     }
 
     [Fact]
@@ -277,9 +312,9 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("steipete/RepoBar", 12, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("steipete/RepoBar", 13, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("steipete/RepoBar", 14, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+            reference => Assert.Equal(("steipete/RepoBar", 12L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 13L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 14L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]
@@ -295,8 +330,8 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Collection(
             references,
-            reference => Assert.Equal(("openclaw/openclaw", 42, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
-            reference => Assert.Equal(("steipete/RepoBar", 99, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+            reference => Assert.Equal(("openclaw/openclaw", 42L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 99L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]

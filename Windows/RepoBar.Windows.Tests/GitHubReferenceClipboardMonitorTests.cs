@@ -46,7 +46,7 @@ public sealed class GitHubReferenceClipboardMonitorTests
 
         Assert.NotNull(notification);
         Assert.Contains(notification.References, reference =>
-            reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 42);
+            reference.RepositoryFullName == "steipete/RepoBar" && reference.Number == 42L);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public sealed class GitHubReferenceClipboardMonitorTests
         Assert.NotNull(notification);
         Assert.Equal("openclaw/discrawl #64", notification.DisplayText);
         Assert.Contains(notification.References, reference =>
-            reference.RepositoryFullName == "openclaw/discrawl" && reference.Number == 64);
+            reference.RepositoryFullName == "openclaw/discrawl" && reference.Number == 64L);
     }
 
     [Fact]

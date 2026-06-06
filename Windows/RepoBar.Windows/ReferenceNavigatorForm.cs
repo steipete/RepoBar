@@ -251,5 +251,5 @@ internal sealed class ReferenceNavigatorForm : Form
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
-    private sealed record ReferenceRow(string Repository, int Number, string Url);
+    private sealed record ReferenceRow(string Repository, long Number, string Url);
 }
