@@ -6,7 +6,9 @@ internal static class WindowsGlobalActivity
 
     public static IReadOnlyList<WindowsGlobalActivityItem> FromStatuses(
         IReadOnlyList<RepositoryStatus> statuses,
-        int limit = DefaultLimit)
+        int limit = DefaultLimit,
+        WindowsActivityScope scope = WindowsActivityScope.AllActivity,
+        string? viewerLogin = null)
     {
         return statuses
             .SelectMany((status, statusIndex) => status.RecentLists.Activity.Select((activity, activityIndex) => new
@@ -16,12 +18,20 @@ internal static class WindowsGlobalActivity
                 StatusIndex = statusIndex,
                 ActivityIndex = activityIndex,
             }))
+            .Where(item => MatchesScope(item.Activity, scope, viewerLogin))
             .OrderByDescending(item => item.Activity.UpdatedAt ?? DateTimeOffset.MinValue)
             .ThenBy(item => item.StatusIndex)
             .ThenBy(item => item.ActivityIndex)
             .Take(Math.Clamp(limit, 1, 100))
             .Select(item => new WindowsGlobalActivityItem(item.Repository, item.Activity))
             .ToArray();
+    }
+
+    internal static bool MatchesScope(GitHubListItem item, WindowsActivityScope scope, string? viewerLogin)
+    {
+        return scope == WindowsActivityScope.AllActivity ||
+            string.IsNullOrWhiteSpace(viewerLogin) ||
+            string.Equals(item.AuthorLogin?.Trim(), viewerLogin.Trim(), StringComparison.OrdinalIgnoreCase);
     }
 }
 
@@ -38,7 +48,9 @@ internal static class WindowsGlobalCommits
 
     public static IReadOnlyList<WindowsGlobalCommitItem> FromStatuses(
         IReadOnlyList<RepositoryStatus> statuses,
-        int limit = DefaultLimit)
+        int limit = DefaultLimit,
+        WindowsActivityScope scope = WindowsActivityScope.AllActivity,
+        string? viewerLogin = null)
     {
         return statuses
             .SelectMany((status, statusIndex) => status.RecentLists.Commits.Select((commit, commitIndex) => new
@@ -48,6 +60,7 @@ internal static class WindowsGlobalCommits
                 StatusIndex = statusIndex,
                 CommitIndex = commitIndex,
             }))
+            .Where(item => WindowsGlobalActivity.MatchesScope(item.Commit, scope, viewerLogin))
             .OrderByDescending(item => item.Commit.UpdatedAt ?? DateTimeOffset.MinValue)
             .ThenBy(item => item.StatusIndex)
             .ThenBy(item => item.CommitIndex)

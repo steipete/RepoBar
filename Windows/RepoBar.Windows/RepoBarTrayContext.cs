@@ -277,7 +277,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             return;
         }
 
-        var commits = WindowsGlobalCommits.FromStatuses(_statuses);
+        var commits = WindowsGlobalCommits.FromStatuses(
+            _statuses,
+            scope: _settingsStore.Settings.ActivityScope,
+            viewerLogin: _accountInsight?.Login);
         if (commits.Count == 0)
         {
             return;
@@ -309,7 +312,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             return;
         }
 
-        var activity = WindowsGlobalActivity.FromStatuses(_statuses);
+        var activity = WindowsGlobalActivity.FromStatuses(
+            _statuses,
+            scope: _settingsStore.Settings.ActivityScope,
+            viewerLogin: _accountInsight?.Login);
         if (activity.Count == 0)
         {
             return;

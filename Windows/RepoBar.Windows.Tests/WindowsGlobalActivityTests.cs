@@ -30,6 +30,28 @@ public sealed class WindowsGlobalActivityTests
     }
 
     [Fact]
+    public void FromStatuses_filters_commits_to_viewer_when_scope_is_my_activity()
+    {
+        var timestamp = DateTimeOffset.Parse("2026-06-01T12:00:00Z");
+        var statuses = new[]
+        {
+            Status("owner/one", commits:
+            [
+                new GitHubListItem("aaaa111 Mine", "https://example.com/mine", "me", AuthorLogin: "octocat", UpdatedAt: timestamp),
+                new GitHubListItem("bbbb222 Other", "https://example.com/other", "bot", AuthorLogin: "hubot", UpdatedAt: timestamp.AddMinutes(-1)),
+            ]),
+        };
+
+        var commits = WindowsGlobalCommits.FromStatuses(
+            statuses,
+            scope: WindowsActivityScope.MyActivity,
+            viewerLogin: "octocat");
+
+        var commit = Assert.Single(commits);
+        Assert.Equal("owner/one: aaaa111 Mine", commit.Title);
+    }
+
+    [Fact]
     public void FromStatuses_sorts_activity_across_repositories_and_prefixes_titles()
     {
         var older = DateTimeOffset.Parse("2026-06-01T10:00:00Z");
@@ -56,6 +78,47 @@ public sealed class WindowsGlobalActivityTests
         Assert.Equal(["owner/two: opened Issue #2", "owner/one: Pushed 1 commit"], activity.Select(item => item.Title));
         Assert.Equal("https://example.com/two", activity[0].Url);
         Assert.Equal("bob", activity[0].Subtitle);
+    }
+
+    [Fact]
+    public void FromStatuses_filters_activity_to_viewer_when_scope_is_my_activity()
+    {
+        var timestamp = DateTimeOffset.Parse("2026-06-01T12:00:00Z");
+        var statuses = new[]
+        {
+            Status("owner/one", activity:
+            [
+                new GitHubListItem("opened Issue #1", "https://example.com/mine", "me", AuthorLogin: "octocat", UpdatedAt: timestamp),
+                new GitHubListItem("opened Issue #2", "https://example.com/other", "bot", AuthorLogin: "hubot", UpdatedAt: timestamp.AddMinutes(-1)),
+            ]),
+        };
+
+        var activity = WindowsGlobalActivity.FromStatuses(
+            statuses,
+            scope: WindowsActivityScope.MyActivity,
+            viewerLogin: "octocat");
+
+        var item = Assert.Single(activity);
+        Assert.Equal("owner/one: opened Issue #1", item.Title);
+    }
+
+    [Fact]
+    public void FromStatuses_keeps_items_when_my_activity_scope_has_no_viewer_login()
+    {
+        var statuses = new[]
+        {
+            Status("owner/one", activity:
+            [
+                new GitHubListItem("opened Issue #1", "https://example.com/one", "me", AuthorLogin: "octocat"),
+            ]),
+        };
+
+        var activity = WindowsGlobalActivity.FromStatuses(
+            statuses,
+            scope: WindowsActivityScope.MyActivity,
+            viewerLogin: null);
+
+        Assert.Single(activity);
     }
 
     private static RepositoryStatus Status(

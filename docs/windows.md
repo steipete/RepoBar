@@ -114,6 +114,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "showOnlyRepositoriesWithPullRequests": false,
   "heatmapDisplay": "rowAndSubmenu",
   "heatmapSpan": "twelveMonths",
+  "activityScope": "myActivity",
   "showRateLimits": true,
   "showContributionSummary": true,
   "enableGitHubReferenceMonitor": false,
@@ -175,7 +176,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 
 Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Owner filter** to limit normal displayed repositories to specific owners, and use **Only repos with issues** or **Only repos with PRs** to show only repositories with matching open work. Pinned repositories stay visible ahead of filtered normal repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name.
 
-Use **Commits** and **Activity** from the tray menu to scan recent commits and activity across displayed repositories. Repository submenus still keep their own per-repository Commit and Activity feeds.
+Use **Activity feed** to choose whether top-level **Commits** and **Activity** show all displayed repository events or only events by the signed-in account when viewer metadata is available. Repository submenus still keep their own per-repository Commit and Activity feeds.
 
 Use **Repository heatmap** to hide heatmap summaries or show them in the tray row, repository submenu, or both. Use **Heatmap window** to choose the GitHub commit-activity window used for repository heatmap totals: 1, 3, 6, or 12 months. Hidden heatmaps skip the GitHub commit-activity request.
 

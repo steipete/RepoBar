@@ -31,6 +31,7 @@ internal sealed class WindowsSettings
     public bool ShowOnlyRepositoriesWithPullRequests { get; set; }
     public WindowsHeatmapDisplay HeatmapDisplay { get; set; } = WindowsHeatmapDisplay.RowAndSubmenu;
     public WindowsHeatmapSpan HeatmapSpan { get; set; } = WindowsHeatmapSpan.TwelveMonths;
+    public WindowsActivityScope ActivityScope { get; set; } = WindowsActivityScope.MyActivity;
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public bool EnableGitHubReferenceMonitor { get; set; }
@@ -124,6 +125,12 @@ internal enum WindowsHeatmapSpan
     TwelveMonths,
 }
 
+internal enum WindowsActivityScope
+{
+    AllActivity,
+    MyActivity,
+}
+
 internal static class WindowsHeatmapSettingsLabels
 {
     public static string DisplayName(this WindowsHeatmapDisplay display)
@@ -167,6 +174,18 @@ internal static class WindowsHeatmapSettingsLabels
     public static bool ShowsSubmenu(this WindowsHeatmapDisplay display)
     {
         return display is WindowsHeatmapDisplay.Submenu or WindowsHeatmapDisplay.RowAndSubmenu;
+    }
+}
+
+internal static class WindowsActivityScopeLabels
+{
+    public static string DisplayName(this WindowsActivityScope scope)
+    {
+        return scope switch
+        {
+            WindowsActivityScope.AllActivity => "All activity",
+            _ => "My activity",
+        };
     }
 }
 

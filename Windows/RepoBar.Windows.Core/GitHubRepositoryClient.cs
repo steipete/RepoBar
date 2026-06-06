@@ -423,6 +423,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
                     $"{ShortSha(TryGetString(commit, "sha"))} {firstLine}",
                     TryGetString(commit, "html_url"),
                     Metadata(TryGetNestedString(commit, "commit", "author", "name"), committedAt),
+                    AuthorLogin: TryGetNestedString(commit, "author", "login"),
                     UpdatedAt: committedAt);
             })
             .ToArray();
@@ -567,11 +568,13 @@ internal sealed class GitHubRepositoryClient : IDisposable
                 $"Created {TryGetPayloadString(payload, "ref_type") ?? "ref"} {TryGetPayloadString(payload, "ref") ?? ""}".Trim(),
                 BuildWebUri(repository).ToString(),
                 Metadata(actor, createdAt),
+                AuthorLogin: actor,
                 UpdatedAt: createdAt),
             _ => new GitHubListItem(
                 type.EndsWith("Event", StringComparison.Ordinal) ? type[..^5] : type,
                 BuildWebUri(repository).ToString(),
                 Metadata(actor, createdAt),
+                AuthorLogin: actor,
                 UpdatedAt: createdAt),
         };
     }
@@ -593,6 +596,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
             $"Pushed {commitCount} commit{(commitCount == 1 ? "" : "s")} to {branch}",
             head == null ? BuildWebUri(repository).ToString() : BuildWebUri(repository, $"commit/{head}").ToString(),
             Metadata(actor, createdAt),
+            AuthorLogin: actor,
             UpdatedAt: createdAt);
     }
 
@@ -621,6 +625,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
             $"{action} {subject}{(string.IsNullOrWhiteSpace(title) ? "" : $": {title}")}",
             url,
             Metadata(actor, createdAt),
+            AuthorLogin: actor,
             UpdatedAt: createdAt);
     }
 
@@ -639,6 +644,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
             $"{action} release {name}",
             TryGetString(release, "html_url"),
             Metadata(actor, createdAt),
+            AuthorLogin: actor,
             UpdatedAt: createdAt);
     }
 

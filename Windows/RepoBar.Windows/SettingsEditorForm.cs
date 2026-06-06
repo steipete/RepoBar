@@ -37,6 +37,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _showOnlyRepositoriesWithPullRequests = new();
     private readonly ComboBox _heatmapDisplay = new();
     private readonly ComboBox _heatmapSpan = new();
+    private readonly ComboBox _activityScope = new();
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
@@ -62,7 +63,7 @@ internal sealed class SettingsEditorForm : Form
         MinimizeBox = false;
         MaximizeBox = false;
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        ClientSize = new Size(820, 620);
+        ClientSize = new Size(820, 660);
 
         LoadSettings();
         BuildControls();
@@ -130,6 +131,13 @@ internal sealed class SettingsEditorForm : Form
         _heatmapSpan.DisplayMember = nameof(HeatmapSpanRow.DisplayName);
         _heatmapSpan.ValueMember = nameof(HeatmapSpanRow.Span);
         _heatmapSpan.SelectedValue = settings.HeatmapSpan;
+        _activityScope.DropDownStyle = ComboBoxStyle.DropDownList;
+        _activityScope.DataSource = Enum.GetValues<WindowsActivityScope>()
+            .Select(ActivityScopeRow.FromScope)
+            .ToArray();
+        _activityScope.DisplayMember = nameof(ActivityScopeRow.DisplayName);
+        _activityScope.ValueMember = nameof(ActivityScopeRow.Scope);
+        _activityScope.SelectedValue = settings.ActivityScope;
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
@@ -203,6 +211,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Owner filter", _repositoryOwnerFilter);
         AddLabeledControl(settingsGrid, "Repository heatmap", _heatmapDisplay);
         AddLabeledControl(settingsGrid, "Heatmap window", _heatmapSpan);
+        AddLabeledControl(settingsGrid, "Activity feed", _activityScope);
         AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
         _credentialState.AutoSize = true;
@@ -571,6 +580,9 @@ internal sealed class SettingsEditorForm : Form
         settings.HeatmapSpan = _heatmapSpan.SelectedValue is WindowsHeatmapSpan heatmapSpan
             ? heatmapSpan
             : WindowsHeatmapSpan.TwelveMonths;
+        settings.ActivityScope = _activityScope.SelectedValue is WindowsActivityScope activityScope
+            ? activityScope
+            : WindowsActivityScope.MyActivity;
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
@@ -617,6 +629,9 @@ internal sealed class SettingsEditorForm : Form
             RepositoryOwnerFilter = ParseRepositoryOwnerFilter(_repositoryOwnerFilter.Text),
             ShowOnlyRepositoriesWithIssues = _showOnlyRepositoriesWithIssues.Checked,
             ShowOnlyRepositoriesWithPullRequests = _showOnlyRepositoriesWithPullRequests.Checked,
+            ActivityScope = _activityScope.SelectedValue is WindowsActivityScope activityScope
+                ? activityScope
+                : WindowsActivityScope.MyActivity,
             Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
         };
     }
@@ -857,6 +872,14 @@ internal sealed class SettingsEditorForm : Form
         public static HeatmapSpanRow FromSpan(WindowsHeatmapSpan span)
         {
             return new HeatmapSpanRow(span, span.DisplayName());
+        }
+    }
+
+    private sealed record ActivityScopeRow(WindowsActivityScope Scope, string DisplayName)
+    {
+        public static ActivityScopeRow FromScope(WindowsActivityScope scope)
+        {
+            return new ActivityScopeRow(scope, scope.DisplayName());
         }
     }
 }

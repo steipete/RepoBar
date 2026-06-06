@@ -245,6 +245,7 @@
 - Windows: add owner and issue/PR status filters for displayed repositories.
 - Windows: add a global Activity tray menu across displayed repositories.
 - Windows: add a global Commits tray menu across displayed repositories.
+- Windows: add an Activity feed scope setting for top-level Commits and Activity.
 
 ## 0.1.0 - 2025-12-31
 
