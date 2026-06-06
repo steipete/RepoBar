@@ -144,6 +144,35 @@ public sealed class WindowsSettingsStoreTests
     }
 
     [Fact]
+    public void NormalizeSettings_ignores_null_accounts_and_repositories_from_scriptable_json()
+    {
+        var settings = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts =
+            [
+                null!,
+                Account("work", "Work"),
+            ],
+            Repositories =
+            [
+                null!,
+                Repo("owner/legacy", RepositoryVisibility.Pinned),
+            ],
+            RepositoriesByAccount = new Dictionary<string, List<RepositoryRef>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["work"] = [null!, Repo("work/project", RepositoryVisibility.Pinned)],
+            },
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal(["work"], settings.Accounts.Select(account => account.Id));
+        Assert.Equal(["work/project"], settings.Repositories.Select(repository => repository.FullName));
+        Assert.Equal(["work/project"], settings.RepositoriesByAccount["work"].Select(repository => repository.FullName));
+    }
+
+    [Fact]
     public void ReplaceRepositories_updates_active_account_only()
     {
         var store = CreateStore(new WindowsSettings

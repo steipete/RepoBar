@@ -452,8 +452,8 @@ internal sealed class WindowsSettingsStore
         }
 
         settings.Accounts = settings.Accounts
-            .Where(account => account.IsValid)
-            .Select(NormalizeAccount)
+            .Where(account => account?.IsValid == true)
+            .Select(account => NormalizeAccount(account!))
             .GroupBy(account => account.Id, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToList();
@@ -519,10 +519,10 @@ internal sealed class WindowsSettingsStore
     internal static List<RepositoryRef> NormalizeRepositoryList(IEnumerable<RepositoryRef>? repositories)
     {
         return (repositories ?? Enumerable.Empty<RepositoryRef>())
-            .Where(repository => repository.IsValid)
+            .Where(repository => repository?.IsValid == true)
             .Select(repository => new RepositoryRef
             {
-                Owner = repository.Owner.Trim(),
+                Owner = repository!.Owner.Trim(),
                 Name = repository.Name.Trim(),
                 Visibility = repository.Visibility,
             })
