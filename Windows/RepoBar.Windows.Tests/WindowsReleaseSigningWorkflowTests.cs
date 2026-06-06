@@ -67,6 +67,8 @@ public sealed class WindowsReleaseSigningWorkflowTests
         Assert.Contains("if-no-files-found: warn", workflow);
         Assert.Contains("name: Smoke tray", workflow);
         Assert.Contains("run: ./Scripts/smoke_windows.ps1 -Runtime win-x64 -LaunchSeconds 5", workflow);
+        Assert.Contains("name: Validate Windows proof artifacts", workflow);
+        Assert.Contains("run: ./Scripts/Test-WindowsValidationArtifacts.ps1", workflow);
         Assert.Contains("name: Upload Windows smoke artifacts", workflow);
         Assert.Contains("name: repobar-windows-smoke", workflow);
         Assert.Contains("path: dist/windows/smoke", workflow);
@@ -77,6 +79,12 @@ public sealed class WindowsReleaseSigningWorkflowTests
         Assert.True(
             workflow.IndexOf("name: Upload Windows test results", StringComparison.Ordinal) <
             workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal));
+        Assert.True(
+            workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Validate Windows proof artifacts", StringComparison.Ordinal));
+        Assert.True(
+            workflow.IndexOf("name: Validate Windows proof artifacts", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Upload Windows smoke artifacts", StringComparison.Ordinal));
         Assert.True(
             workflow.IndexOf("name: Upload Windows smoke artifacts", StringComparison.Ordinal) <
             workflow.IndexOf("name: Package tray layout", StringComparison.Ordinal));

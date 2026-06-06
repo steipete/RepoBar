@@ -96,6 +96,10 @@ jobs:
         shell: pwsh
         run: ./Scripts/smoke_windows.ps1 -Runtime win-x64 -LaunchSeconds 5
 
+      - name: Validate Windows proof artifacts
+        shell: pwsh
+        run: ./Scripts/Test-WindowsValidationArtifacts.ps1
+
       - name: Upload Windows smoke artifacts
         if: always()
         uses: actions/upload-artifact@v7
