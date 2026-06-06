@@ -20,6 +20,7 @@ internal sealed class WindowsSettings
     public string LocalWorktreeFolderName { get; set; } = ".work";
     public bool FetchLocalProjectsBeforeStatus { get; set; } = true;
     public bool AutoSyncLocalProjects { get; set; }
+    public bool ShowDirtyFilesInMenu { get; set; } = true;
     public bool EnableResponseCache { get; set; } = true;
     public string? GitHubArchiveDatabasePath { get; set; }
     public int RepositoryDisplayLimit { get; set; } = 6;

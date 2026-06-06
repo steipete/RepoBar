@@ -689,10 +689,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             items.Add(new ToolStripMenuItem($"Upstream: {local.UpstreamBranch}") { Enabled = false });
         }
         items.Add(new ToolStripMenuItem(local.SyncDetail) { Enabled = false });
-        if (local.DirtyFiles.Count > 0)
+        var dirtyFiles = local.DirtyFilesForMenu(_settingsStore.Settings);
+        if (dirtyFiles.Count > 0)
         {
             items.Add(new ToolStripMenuItem("Dirty files") { Enabled = false });
-            foreach (var file in local.DirtyFiles)
+            foreach (var file in dirtyFiles)
             {
                 items.Add(new ToolStripMenuItem(file) { Enabled = false });
             }

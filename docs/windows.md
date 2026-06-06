@@ -103,6 +103,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "localWorktreeFolderName": ".work",
   "fetchLocalProjectsBeforeStatus": true,
   "autoSyncLocalProjects": false,
+  "showDirtyFilesInMenu": true,
   "enableResponseCache": true,
   "gitHubArchiveDatabasePath": "%APPDATA%\\RepoBar\\Archives\\example.sqlite",
   "repositoryDisplayLimit": 6,
@@ -254,7 +255,7 @@ Set `gitHubArchiveDatabasePath` to a RepoBar-owned archive SQLite database produ
 
 ## Local Projects
 
-When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, local branch switching, worktree creation/navigation, fetch, sync, and folder/terminal actions to the tray menu. Repositories without a local match can be checked out into `localProjectsRoot` from the tray.
+When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, local branch switching, worktree creation/navigation, fetch, sync, and folder/terminal actions to the tray menu. When `showDirtyFilesInMenu` is true, the dirty-file section shows up to three changed file names. Repositories without a local match can be checked out into `localProjectsRoot` from the tray.
 
 Sync is intentionally conservative: manual and automatic sync use `git pull --ff-only`, and auto-sync only runs for clean repositories that are behind their upstream.
 

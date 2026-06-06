@@ -26,6 +26,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly TextBox _localWorktreeFolderName = new();
     private readonly CheckBox _fetchLocalProjectsBeforeStatus = new();
     private readonly CheckBox _autoSyncLocalProjects = new();
+    private readonly CheckBox _showDirtyFilesInMenu = new();
     private readonly CheckBox _enableResponseCache = new();
     private readonly TextBox _gitHubArchiveDatabasePath = new();
     private readonly NumericUpDown _repositoryDisplayLimit = new();
@@ -101,6 +102,7 @@ internal sealed class SettingsEditorForm : Form
         _localWorktreeFolderName.Text = settings.LocalWorktreeFolderName;
         _fetchLocalProjectsBeforeStatus.Checked = settings.FetchLocalProjectsBeforeStatus;
         _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
+        _showDirtyFilesInMenu.Checked = settings.ShowDirtyFilesInMenu;
         _enableResponseCache.Checked = settings.EnableResponseCache;
         _gitHubArchiveDatabasePath.Text = settings.GitHubArchiveDatabasePath ?? "";
         _repositoryDisplayLimit.Minimum = 1;
@@ -236,6 +238,7 @@ internal sealed class SettingsEditorForm : Form
         _discoverLocalProjects.Text = "Discover local projects";
         _fetchLocalProjectsBeforeStatus.Text = "Fetch before status";
         _autoSyncLocalProjects.Text = "Auto-sync clean behind repos";
+        _showDirtyFilesInMenu.Text = "Show dirty files in menu";
         _enableResponseCache.Text = "Use response cache";
         _includeForkedRepositories.Text = "Include forked repos";
         _includeArchivedRepositories.Text = "Include archived repos";
@@ -256,6 +259,7 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_discoverLocalProjects);
         settingsGrid.Controls.Add(_fetchLocalProjectsBeforeStatus);
         settingsGrid.Controls.Add(_autoSyncLocalProjects);
+        settingsGrid.Controls.Add(_showDirtyFilesInMenu);
         settingsGrid.Controls.Add(_enableResponseCache);
         settingsGrid.Controls.Add(_includeForkedRepositories);
         settingsGrid.Controls.Add(_includeArchivedRepositories);
@@ -570,6 +574,7 @@ internal sealed class SettingsEditorForm : Form
         settings.LocalWorktreeFolderName = string.IsNullOrWhiteSpace(_localWorktreeFolderName.Text) ? ".work" : _localWorktreeFolderName.Text.Trim();
         settings.FetchLocalProjectsBeforeStatus = _fetchLocalProjectsBeforeStatus.Checked;
         settings.AutoSyncLocalProjects = _autoSyncLocalProjects.Checked;
+        settings.ShowDirtyFilesInMenu = _showDirtyFilesInMenu.Checked;
         settings.EnableResponseCache = _enableResponseCache.Checked;
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(_gitHubArchiveDatabasePath.Text)
             ? null

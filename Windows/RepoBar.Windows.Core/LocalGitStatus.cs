@@ -26,6 +26,11 @@ internal sealed record LocalGitRepositoryStatus(
         LocalSyncState.Dirty => DirtyCounts.IsEmpty ? "Dirty" : $"Dirty ({DirtyCounts.Summary})",
         _ => "No upstream",
     };
+
+    public IReadOnlyList<string> DirtyFilesForMenu(WindowsSettings settings)
+    {
+        return settings.ShowDirtyFilesInMenu ? DirtyFiles.Take(3).ToArray() : [];
+    }
 }
 
 internal sealed record LocalDirtyCounts(int Added, int Modified, int Deleted)

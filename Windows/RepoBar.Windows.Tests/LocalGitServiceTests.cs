@@ -127,4 +127,25 @@ public sealed class LocalGitServiceTests
         Assert.True(cleanBehind.CanFastForward);
         Assert.False(dirtyBehind.CanFastForward);
     }
+
+    [Fact]
+    public void Local_status_dirty_files_menu_respects_visibility_setting_and_caps_list()
+    {
+        var status = new LocalGitRepositoryStatus(
+            Path: "repo",
+            Name: "repo",
+            FullName: "owner/repo",
+            Branch: "main",
+            IsClean: false,
+            AheadCount: 0,
+            BehindCount: 0,
+            SyncState: LocalSyncState.Dirty,
+            DirtyCounts: new LocalDirtyCounts(0, 4, 0),
+            DirtyFiles: ["one.cs", "two.cs", "three.cs", "four.cs"],
+            WorktreeName: null,
+            UpstreamBranch: "origin/main");
+
+        Assert.Equal(["one.cs", "two.cs", "three.cs"], status.DirtyFilesForMenu(new WindowsSettings()));
+        Assert.Empty(status.DirtyFilesForMenu(new WindowsSettings { ShowDirtyFilesInMenu = false }));
+    }
 }
