@@ -101,6 +101,28 @@ internal sealed record GitHubRateLimitSnapshot(
         }
     }
 
+    public int? PercentRemaining => Remaining != null && Limit is > 0
+        ? Math.Clamp((int)Math.Round((double)Remaining.Value / Limit.Value * 100), 0, 100)
+        : null;
+
+    public bool IsBlocked(DateTimeOffset now)
+    {
+        return Remaining == 0 && ResetAt is { } resetAt && resetAt > now;
+    }
+
+    public string CompactText(DateTimeOffset now)
+    {
+        var resource = string.IsNullOrWhiteSpace(Resource) ? "core" : Resource;
+        if (IsBlocked(now))
+        {
+            return $"{resource} blocked until {ResetAt!.Value.LocalDateTime:g}";
+        }
+
+        var quota = Remaining == null || Limit == null ? "?/?" : $"{Remaining}/{Limit}";
+        var percent = PercentRemaining == null ? "" : $" ({PercentRemaining}%)";
+        return $"{resource}: {quota}{percent}";
+    }
+
     private static int? TryReadInt(HttpResponseMessage response, string name)
     {
         return response.Headers.TryGetValues(name, out var values) &&

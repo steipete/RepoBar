@@ -14,7 +14,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with accessible repo discovery and visibility controls | Partial |
 | Cache/offline | SQLite cache, ETags, archive fallback | Shared cache schema or Windows-owned equivalent with ETags/offline reads | Partial |
 | Contribution header | Signed-in account contribution heatmap | Signed-in account contribution totals in the tray menu; heatmap later | Partial |
-| Rate limits | REST/GraphQL resource meter and blocker banner | Tray tooltip/menu rate-limit state and blocker row | Partial |
+| Rate limits | REST/GraphQL resource meter and blocker banner | Tray rate-limit state with quota, reset, blocker, and shared-budget details | Partial |
 | Actions usage | Optional Actions/runners billing menu | Optional workflow summary plus queue, billing usage, and self-hosted runner state | Partial |
 | Issue Navigator | Clipboard/reference resolver window with browser preview | Windows reference resolver/flyout or window | Partial |
 | Notifications | Optional PR notifications | Windows tray notifications | Partial |

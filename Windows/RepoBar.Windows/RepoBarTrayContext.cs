@@ -160,13 +160,38 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
         if (_settingsStore.Settings.ShowRateLimits && _githubClient.LastRateLimit != null)
         {
-            _menu.Items.Add(new ToolStripMenuItem($"GitHub API: {_githubClient.LastRateLimit.DisplayText}") { Enabled = false });
+            AddRateLimitItems(_menu.Items, _githubClient.LastRateLimit);
         }
         _menu.Items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
         _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
         _menu.Items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
         _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
         _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
+    }
+
+    private static void AddRateLimitItems(ToolStripItemCollection items, GitHubRateLimitSnapshot snapshot)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var rateItem = new ToolStripMenuItem($"GitHub API: {snapshot.CompactText(now)}");
+        rateItem.DropDownItems.Add(new ToolStripMenuItem($"Resource: {snapshot.Resource ?? "core"}") { Enabled = false });
+        rateItem.DropDownItems.Add(new ToolStripMenuItem($"Remaining: {snapshot.Remaining?.ToString("n0") ?? "unknown"}") { Enabled = false });
+        rateItem.DropDownItems.Add(new ToolStripMenuItem($"Limit: {snapshot.Limit?.ToString("n0") ?? "unknown"}") { Enabled = false });
+        if (snapshot.PercentRemaining != null)
+        {
+            rateItem.DropDownItems.Add(new ToolStripMenuItem($"Percent remaining: {snapshot.PercentRemaining}%") { Enabled = false });
+        }
+        if (snapshot.ResetAt != null)
+        {
+            rateItem.DropDownItems.Add(new ToolStripMenuItem($"Reset: {snapshot.ResetAt.Value.LocalDateTime:g}") { Enabled = false });
+        }
+        if (snapshot.IsBlocked(now))
+        {
+            rateItem.DropDownItems.Add(new ToolStripSeparator());
+            rateItem.DropDownItems.Add(new ToolStripMenuItem("Current blocker: GitHub API quota exhausted") { Enabled = false });
+        }
+        rateItem.DropDownItems.Add(new ToolStripSeparator());
+        rateItem.DropDownItems.Add(new ToolStripMenuItem("Budget is shared by the GitHub user or token actor, not by each token string.") { Enabled = false });
+        items.Add(rateItem);
     }
 
     private void AddAccountInsightItems(ToolStripItemCollection items, GitHubAccountInsight account)

@@ -129,6 +129,18 @@ public sealed class GitHubResponseCacheTests
         Assert.NotNull(client.LastRateLimit);
         Assert.Equal(4999, client.LastRateLimit.Remaining);
         Assert.Contains("4999/5000", client.LastRateLimit.DisplayText);
+        Assert.Equal(100, client.LastRateLimit.PercentRemaining);
+        Assert.Contains("100%", client.LastRateLimit.CompactText(DateTimeOffset.UtcNow));
+    }
+
+    [Fact]
+    public void Rate_limit_snapshot_detects_active_blockers()
+    {
+        var reset = DateTimeOffset.UtcNow.AddMinutes(20);
+        var snapshot = new GitHubRateLimitSnapshot(5000, 0, reset, "core");
+
+        Assert.True(snapshot.IsBlocked(DateTimeOffset.UtcNow));
+        Assert.Contains("blocked", snapshot.CompactText(DateTimeOffset.UtcNow));
     }
 
     private static HttpResponseMessage JsonResponse(string json)
