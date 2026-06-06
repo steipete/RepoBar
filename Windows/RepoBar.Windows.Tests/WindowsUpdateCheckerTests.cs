@@ -131,6 +131,40 @@ public sealed class WindowsUpdateCheckerTests
             WindowsUpdateChecker.FindWindowsInstallerUrl(document.RootElement, Architecture.X64));
     }
 
+    [Fact]
+    public void FindWindowsInstallerUrl_prefers_architecture_match_before_extension()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "assets": [
+                {"name":"RepoBar-Windows.msi","browser_download_url":"https://example.com/repobar-generic.msi"},
+                {"name":"RepoBar-Windows-x64.zip","browser_download_url":"https://example.com/repobar-x64.zip"}
+              ]
+            }
+            """);
+
+        Assert.Equal(
+            "https://example.com/repobar-x64.zip",
+            WindowsUpdateChecker.FindWindowsInstallerUrl(document.RootElement, Architecture.X64));
+    }
+
+    [Fact]
+    public void FindWindowsInstallerUrl_prefers_generic_asset_before_wrong_architecture()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "assets": [
+                {"name":"RepoBar-Windows-arm64.msi","browser_download_url":"https://example.com/repobar-arm64.msi"},
+                {"name":"RepoBar-Windows.exe","browser_download_url":"https://example.com/repobar-generic.exe"}
+              ]
+            }
+            """);
+
+        Assert.Equal(
+            "https://example.com/repobar-generic.exe",
+            WindowsUpdateChecker.FindWindowsInstallerUrl(document.RootElement, Architecture.X64));
+    }
+
     private static HttpResponseMessage JsonResponse(string json)
     {
         return new HttpResponseMessage(HttpStatusCode.OK)

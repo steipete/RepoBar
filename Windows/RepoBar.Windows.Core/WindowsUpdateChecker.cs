@@ -133,7 +133,7 @@ internal sealed record ReleaseAsset(string Name, string? Url)
             return 0;
         }
 
-        var score = 10 + ArchitectureScore(lower, architecture);
+        var score = ArchitectureScore(lower, architecture);
         if (lower.EndsWith(".msi", StringComparison.Ordinal))
         {
             return score + 400;
@@ -161,13 +161,13 @@ internal sealed record ReleaseAsset(string Name, string? Url)
 
         return architecture switch
         {
-            Architecture.Arm64 when isArm64 => 80,
-            Architecture.Arm64 when isX64 || isX86 => -80,
-            Architecture.X64 when isX64 => 80,
-            Architecture.X64 when isArm64 || isX86 => -80,
-            Architecture.X86 when isX86 => 80,
-            Architecture.X86 when isArm64 || isX64 => -80,
-            _ when !isArm64 && !isX64 && !isX86 => 10,
+            Architecture.Arm64 when isArm64 => 1000,
+            Architecture.Arm64 when isX64 || isX86 => -1000,
+            Architecture.X64 when isX64 => 1000,
+            Architecture.X64 when isArm64 || isX86 => -1000,
+            Architecture.X86 when isX86 => 1000,
+            Architecture.X86 when isArm64 || isX64 => -1000,
+            _ when !isArm64 && !isX64 && !isX86 => 100,
             _ => 0,
         };
     }
