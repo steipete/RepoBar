@@ -64,7 +64,7 @@ jobs:
   windows:
     name: Windows tray
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     permissions:
       contents: read
     steps:
@@ -83,6 +83,26 @@ jobs:
       - name: Test tray
         shell: pwsh
         run: ./Scripts/build_windows.ps1 test
+
+      - name: Upload Windows test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: repobar-windows-test-results
+          path: dist/windows/test-results
+          if-no-files-found: warn
+
+      - name: Smoke tray
+        shell: pwsh
+        run: ./Scripts/smoke_windows.ps1 -Runtime win-x64 -LaunchSeconds 5
+
+      - name: Upload Windows smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: repobar-windows-smoke
+          path: dist/windows/smoke
+          if-no-files-found: warn
 
       - name: Package tray layout
         shell: pwsh
