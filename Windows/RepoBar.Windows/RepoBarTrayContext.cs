@@ -294,6 +294,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                     AddRateLimitItems(items, _rateLimits);
                 }
                 break;
+            case WindowsMainMenuItem.Diagnostics:
+                items.Add(new ToolStripMenuItem("Diagnostics", null, (_, _) => ShowDiagnostics()));
+                break;
             case WindowsMainMenuItem.IssueNavigator:
                 items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
                 break;
@@ -1392,6 +1395,15 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             MessageBox.Show(exception.Message, "RepoBar Cache", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private void ShowDiagnostics()
+    {
+        using var form = new DiagnosticsForm(
+            () => WindowsDiagnosticsReport.Capture(_settingsStore, _statuses, _localGitIndex, _rateLimits, _lastError),
+            GitHubResponseCache.ClearDefault,
+            BeginRefresh);
+        form.ShowDialog();
     }
 
     private static async Task CheckForUpdatesAsync()

@@ -26,6 +26,7 @@ The Windows app currently provides:
 - optional RepoBar archive SQLite fallback for recent issue and pull request submenus
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
+- copyable Windows diagnostics with cache/archive state, active account, local repository inventory, rate-limit snapshots, cache clearing, and forced refresh
 - optional Actions summary with latest workflow state, active queue counts, billing usage, cache usage, and self-hosted runner state per configured repository
 - optional pull request notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
@@ -192,6 +193,8 @@ Use **Watch clipboard references** to enable the clipboard-only GitHub reference
 
 Use **PR notifications** plus the event toggles to choose whether Windows tray balloons are sent for new pull requests, pull request updates, closed/reopened/merged state changes, review requests, and new comments. Windows reads the recent all-state pull request feed so closed and merged pull requests can still update the notification baseline. The first refresh records a baseline without notifying, matching the macOS behavior.
 
+Use **Diagnostics** from the tray menu to inspect and copy Windows runtime state: settings path, active account, repository counts, local Git inventory, cache directory and entry count, archive database status, last refresh error, and captured rate-limit buckets. The diagnostics window also exposes forced refresh and cache clearing so Windows can recover the same cache/debug states as the macOS debug pane.
+
 ## Validation
 
 Run the local Windows build and unit-test gates:
@@ -209,7 +212,7 @@ Run the launch smoke on Windows:
 .\Scripts\smoke_windows.ps1 -Runtime win-x64
 ```
 
-The smoke publishes the app, creates a local Git fixture for `steipete/RepoBar`, writes a two-account smoke settings file with a smoke archive database, launches `RepoBar.Windows.exe`, verifies the settings file, waits for the app's runtime summary, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, scoped credential targets, sample repository, local Git attachment, archive-backed issue/PR fallback rows, configured tray menu order, and screenshot status. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary.
+The smoke publishes the app, creates a local Git fixture for `steipete/RepoBar`, writes a two-account smoke settings file with a smoke archive database, launches `RepoBar.Windows.exe`, verifies the settings file, waits for the app's runtime summary, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, scoped credential targets, sample repository, local Git attachment, archive-backed issue/PR fallback rows, diagnostics menu registration, configured tray menu order, and screenshot status. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary.
 
 ![RepoBar Windows tray menu](assets/repobar-windows-tray-menu.png)
 

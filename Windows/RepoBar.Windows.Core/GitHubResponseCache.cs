@@ -22,12 +22,24 @@ internal sealed class GitHubResponseCache
 
     public static GitHubResponseCache CreateDefault()
     {
-        var directory = Path.Combine(
+        return new GitHubResponseCache(DefaultDirectory());
+    }
+
+    public static string DefaultDirectory()
+    {
+        return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "RepoBar",
             "cache",
             "github");
-        return new GitHubResponseCache(directory);
+    }
+
+    public static int DefaultEntryCount()
+    {
+        var directory = DefaultDirectory();
+        return Directory.Exists(directory)
+            ? Directory.EnumerateFiles(directory, "*.json").Count()
+            : 0;
     }
 
     public static int ClearDefault()
