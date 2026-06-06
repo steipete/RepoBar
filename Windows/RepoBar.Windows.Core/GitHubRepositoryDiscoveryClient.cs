@@ -6,6 +6,7 @@ namespace RepoBar.Windows;
 internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
 {
     private readonly HttpClient _httpClient;
+    private readonly WindowsSettings _settings;
 
     public GitHubRepositoryDiscoveryClient(WindowsSettings settings, string? token)
         : this(settings, token, new HttpClientHandler())
@@ -14,6 +15,7 @@ internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
 
     internal GitHubRepositoryDiscoveryClient(WindowsSettings settings, string? token, HttpMessageHandler handler)
     {
+        _settings = settings;
         var host = GitHubHost.Normalize(settings.GitHubHost);
         var apiRoot = string.Equals(host, "github.com", StringComparison.OrdinalIgnoreCase)
             ? "https://api.github.com/"
@@ -65,6 +67,8 @@ internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
         return results
             .GroupBy(repository => repository!.FullName, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First()!)
+            .Where(repository => !repository.IsFork || _settings.IncludeForkedRepositories)
+            .Where(repository => !repository.IsArchived || _settings.IncludeArchivedRepositories)
             .Where(repository => repository.Matches(query))
             .OrderByDescending(repository => repository.PushedAt ?? DateTimeOffset.MinValue)
             .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
@@ -89,7 +93,9 @@ internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
             parts[0],
             parts[1],
             TryGetString(repository, "description"),
-            TryGetDateTimeOffset(repository, "pushed_at"));
+            TryGetDateTimeOffset(repository, "pushed_at"),
+            TryGetBool(repository, "fork"),
+            TryGetBool(repository, "archived"));
     }
 
     private static string? TryGetString(JsonElement element, string propertyName)
@@ -108,13 +114,26 @@ internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
                 : null;
     }
 
+    private static bool TryGetBool(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) &&
+            property.ValueKind is JsonValueKind.True or JsonValueKind.False &&
+            property.GetBoolean();
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();
     }
 }
 
-internal sealed record RepositorySearchResult(string Owner, string Name, string? Description, DateTimeOffset? PushedAt)
+internal sealed record RepositorySearchResult(
+    string Owner,
+    string Name,
+    string? Description,
+    DateTimeOffset? PushedAt,
+    bool IsFork = false,
+    bool IsArchived = false)
 {
     public string FullName => $"{Owner}/{Name}";
 

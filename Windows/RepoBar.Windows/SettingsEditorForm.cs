@@ -30,6 +30,8 @@ internal sealed class SettingsEditorForm : Form
     private readonly TextBox _gitHubArchiveDatabasePath = new();
     private readonly NumericUpDown _repositoryDisplayLimit = new();
     private readonly ComboBox _repositorySortKey = new();
+    private readonly CheckBox _includeForkedRepositories = new();
+    private readonly CheckBox _includeArchivedRepositories = new();
     private readonly ComboBox _heatmapDisplay = new();
     private readonly ComboBox _heatmapSpan = new();
     private readonly CheckBox _showRateLimits = new();
@@ -106,6 +108,8 @@ internal sealed class SettingsEditorForm : Form
         _repositorySortKey.DisplayMember = nameof(RepositorySortKeyRow.DisplayName);
         _repositorySortKey.ValueMember = nameof(RepositorySortKeyRow.SortKey);
         _repositorySortKey.SelectedValue = settings.RepositorySortKey;
+        _includeForkedRepositories.Checked = settings.IncludeForkedRepositories;
+        _includeArchivedRepositories.Checked = settings.IncludeArchivedRepositories;
         _heatmapDisplay.DropDownStyle = ComboBoxStyle.DropDownList;
         _heatmapDisplay.DataSource = Enum.GetValues<WindowsHeatmapDisplay>()
             .Select(HeatmapDisplayRow.FromDisplay)
@@ -208,6 +212,8 @@ internal sealed class SettingsEditorForm : Form
         _fetchLocalProjectsBeforeStatus.Text = "Fetch before status";
         _autoSyncLocalProjects.Text = "Auto-sync clean behind repos";
         _enableResponseCache.Text = "Use response cache";
+        _includeForkedRepositories.Text = "Include forked repos";
+        _includeArchivedRepositories.Text = "Include archived repos";
         _showRateLimits.Text = "Show rate limits";
         _showContributionSummary.Text = "Show contribution summary";
         _showActionsUsage.Text = "Show Actions usage";
@@ -224,6 +230,8 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_fetchLocalProjectsBeforeStatus);
         settingsGrid.Controls.Add(_autoSyncLocalProjects);
         settingsGrid.Controls.Add(_enableResponseCache);
+        settingsGrid.Controls.Add(_includeForkedRepositories);
+        settingsGrid.Controls.Add(_includeArchivedRepositories);
         settingsGrid.Controls.Add(_showRateLimits);
         settingsGrid.Controls.Add(_showContributionSummary);
         settingsGrid.Controls.Add(_showActionsUsage);
@@ -541,6 +549,8 @@ internal sealed class SettingsEditorForm : Form
         settings.RepositorySortKey = _repositorySortKey.SelectedValue is RepositorySortKey sortKey
             ? sortKey
             : RepositorySortKey.Activity;
+        settings.IncludeForkedRepositories = _includeForkedRepositories.Checked;
+        settings.IncludeArchivedRepositories = _includeArchivedRepositories.Checked;
         settings.HeatmapDisplay = _heatmapDisplay.SelectedValue is WindowsHeatmapDisplay heatmapDisplay
             ? heatmapDisplay
             : WindowsHeatmapDisplay.RowAndSubmenu;
@@ -588,6 +598,8 @@ internal sealed class SettingsEditorForm : Form
             GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(_gitHubArchiveDatabasePath.Text)
                 ? null
                 : _gitHubArchiveDatabasePath.Text.Trim(),
+            IncludeForkedRepositories = _includeForkedRepositories.Checked,
+            IncludeArchivedRepositories = _includeArchivedRepositories.Checked,
             Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
         };
     }

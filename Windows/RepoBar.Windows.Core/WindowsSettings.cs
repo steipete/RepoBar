@@ -24,6 +24,8 @@ internal sealed class WindowsSettings
     public string? GitHubArchiveDatabasePath { get; set; }
     public int RepositoryDisplayLimit { get; set; } = 6;
     public RepositorySortKey RepositorySortKey { get; set; } = RepositorySortKey.Activity;
+    public bool IncludeForkedRepositories { get; set; }
+    public bool IncludeArchivedRepositories { get; set; }
     public WindowsHeatmapDisplay HeatmapDisplay { get; set; } = WindowsHeatmapDisplay.RowAndSubmenu;
     public WindowsHeatmapSpan HeatmapSpan { get; set; } = WindowsHeatmapSpan.TwelveMonths;
     public bool ShowRateLimits { get; set; } = true;

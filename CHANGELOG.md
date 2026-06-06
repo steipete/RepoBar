@@ -241,6 +241,7 @@
 - Limit "More Activity/Commits" submenus to 20 entries.
 - Include organization and collaborator repositories in repo lists.
 - CLI: add `--owner`/`--mine` filters for repos list.
+- Windows: filter repository discovery by forked and archived repository settings.
 
 ## 0.1.0 - 2025-12-31
 
