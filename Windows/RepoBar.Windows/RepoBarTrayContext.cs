@@ -458,10 +458,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 }
                 break;
             case WindowsRepositoryMenuItem.RecentIssues:
-                AddRecentItemsSubmenu(items, "Issues", status.RecentLists.Issues);
+                AddRecentIssueItemsSubmenu(items, status.RecentLists.Issues, _accountInsight?.Login);
                 break;
             case WindowsRepositoryMenuItem.RecentPullRequests:
-                AddRecentItemsSubmenu(items, "Pull Requests", status.RecentLists.Pulls);
+                AddRecentPullRequestItemsSubmenu(items, status.RecentLists.Pulls, _accountInsight?.Login);
                 break;
             case WindowsRepositoryMenuItem.Releases:
                 AddRecentItemsSubmenu(items, "Releases", status.RecentLists.Releases);
@@ -706,6 +706,71 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         BeginRefresh();
     }
 
+    private static void AddRecentIssueItemsSubmenu(ToolStripItemCollection items, IReadOnlyList<GitHubListItem> recentItems, string? viewerLogin)
+    {
+        if (recentItems.Count == 0)
+        {
+            return;
+        }
+
+        var submenu = new ToolStripMenuItem("Issues");
+        AddRecentItems(submenu.DropDownItems, recentItems, "No issues");
+        if (!string.IsNullOrWhiteSpace(viewerLogin))
+        {
+            submenu.DropDownItems.Add(new ToolStripSeparator());
+            AddFilteredRecentItemsSubmenu(
+                submenu.DropDownItems,
+                "Mine",
+                RecentGitHubListFilters.Issues(recentItems, RecentIssueListFilter.Mine, viewerLogin),
+                "No matching issues");
+        }
+
+        items.Add(submenu);
+    }
+
+    private static void AddRecentPullRequestItemsSubmenu(ToolStripItemCollection items, IReadOnlyList<GitHubListItem> recentItems, string? viewerLogin)
+    {
+        if (recentItems.Count == 0)
+        {
+            return;
+        }
+
+        var submenu = new ToolStripMenuItem("Pull Requests");
+        AddRecentItems(submenu.DropDownItems, recentItems, "No pull requests");
+        submenu.DropDownItems.Add(new ToolStripSeparator());
+        if (!string.IsNullOrWhiteSpace(viewerLogin))
+        {
+            AddFilteredRecentItemsSubmenu(
+                submenu.DropDownItems,
+                "Mine",
+                RecentGitHubListFilters.PullRequests(recentItems, RecentPullRequestListFilter.Mine, viewerLogin),
+                "No matching pull requests");
+        }
+        AddFilteredRecentItemsSubmenu(
+            submenu.DropDownItems,
+            "Commented",
+            RecentGitHubListFilters.PullRequests(recentItems, RecentPullRequestListFilter.Commented, viewerLogin),
+            "No commented pull requests");
+        AddFilteredRecentItemsSubmenu(
+            submenu.DropDownItems,
+            "Reviewed",
+            RecentGitHubListFilters.PullRequests(recentItems, RecentPullRequestListFilter.Reviewed, viewerLogin),
+            "No reviewed pull requests");
+
+        items.Add(submenu);
+    }
+
+    private static void AddFilteredRecentItemsSubmenu(
+        ToolStripItemCollection items,
+        string title,
+        IReadOnlyList<GitHubListItem> recentItems,
+        string emptyText)
+    {
+        var submenu = new ToolStripMenuItem(title);
+        AddRecentItems(submenu.DropDownItems, recentItems, emptyText);
+        items.Add(submenu);
+    }
+
     private static void AddRecentItemsSubmenu(ToolStripItemCollection items, string title, IReadOnlyList<GitHubListItem> recentItems)
     {
         if (recentItems.Count == 0)
@@ -714,6 +779,18 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
 
         var submenu = new ToolStripMenuItem(title);
+        AddRecentItems(submenu.DropDownItems, recentItems, $"No {title.ToLowerInvariant()}");
+        items.Add(submenu);
+    }
+
+    private static void AddRecentItems(ToolStripItemCollection items, IReadOnlyList<GitHubListItem> recentItems, string emptyText)
+    {
+        if (recentItems.Count == 0)
+        {
+            items.Add(new ToolStripMenuItem(emptyText) { Enabled = false });
+            return;
+        }
+
         foreach (var recent in recentItems)
         {
             var item = new ToolStripMenuItem(recent.Title, null, (_, _) =>
@@ -727,10 +804,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 Enabled = !string.IsNullOrWhiteSpace(recent.Url),
                 ToolTipText = recent.Subtitle ?? recent.Title,
             };
-            submenu.DropDownItems.Add(item);
+            items.Add(item);
         }
-
-        items.Add(submenu);
     }
 
     private static string? PromptForText(string title, string prompt, string defaultValue = "")

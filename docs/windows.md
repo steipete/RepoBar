@@ -15,7 +15,7 @@ The Windows app currently provides:
 - latest default-branch Actions run status
 - latest release link
 - optional traffic views/clones, commit activity summary, and changelog headline
-- recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
+- recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus, including Mine filters for issues and Mine/commented/reviewed filters for pull requests when viewer metadata is available
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
 - native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, repository visibility, display limit, and sort order
 - native menu customization for hiding and reordering main tray actions and repository submenu entries

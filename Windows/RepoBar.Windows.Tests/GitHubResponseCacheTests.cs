@@ -163,6 +163,20 @@ public sealed class GitHubResponseCacheTests
             requestedPaths.Add(path);
             return path switch
             {
+                "/repos/owner/name/issues?state=open&sort=updated&direction=desc&per_page=10" => JsonResponse("""
+                    [
+                      {
+                        "number": 7,
+                        "title": "Track Windows filters",
+                        "html_url": "https://github.com/owner/name/issues/7",
+                        "user": { "login": "octocat" },
+                        "updated_at": "2026-06-06T09:05:00Z",
+                        "comments": 4,
+                        "assignees": [{ "login": "alice" }],
+                        "labels": [{ "name": "windows" }]
+                      }
+                    ]
+                    """),
                 "/repos/owner/name/pulls?state=all&sort=updated&direction=desc&per_page=5" => JsonResponse("""
                     [
                       {
@@ -201,10 +215,19 @@ public sealed class GitHubResponseCacheTests
             CancellationToken.None);
 
         var status = Assert.Single(statuses);
+        var issue = Assert.Single(status.RecentLists.Issues);
+        Assert.Contains("/repos/owner/name/issues?state=open&sort=updated&direction=desc&per_page=10", requestedPaths);
+        Assert.Equal("octocat", issue.AuthorLogin);
+        Assert.Equal(4, issue.CommentCount);
+        Assert.Equal(["alice"], issue.AssigneeLogins ?? []);
+        Assert.Equal(["windows"], issue.LabelNames ?? []);
+
         var pull = Assert.Single(status.RecentLists.Pulls);
         Assert.NotNull(pull.PullRequestSnapshot);
         var snapshot = pull.PullRequestSnapshot!;
         Assert.Contains("/repos/owner/name/pulls?state=all&sort=updated&direction=desc&per_page=5", requestedPaths);
+        Assert.Equal("alice", pull.AuthorLogin);
+        Assert.Equal(2, pull.CommentCount);
         Assert.Equal("closed", snapshot.State);
         Assert.Equal(DateTimeOffset.Parse("2026-06-06T10:10:00Z"), snapshot.MergedAt);
         Assert.Equal(2, snapshot.CommentCount);

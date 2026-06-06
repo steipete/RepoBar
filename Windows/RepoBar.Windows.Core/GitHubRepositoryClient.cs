@@ -248,10 +248,18 @@ internal sealed class GitHubRepositoryClient : IDisposable
             return document.RootElement.EnumerateArray()
                 .Where(issue => !issue.TryGetProperty("pull_request", out _))
                 .Take(5)
-                .Select(issue => new GitHubListItem(
-                    $"#{issue.GetProperty("number").GetInt32()} {TryGetString(issue, "title") ?? "Untitled issue"}",
-                    TryGetString(issue, "html_url"),
-                    Metadata(TryGetNestedString(issue, "user", "login"), TryGetDateTimeOffset(issue, "updated_at"))))
+                .Select(issue =>
+                {
+                    var author = TryGetNestedString(issue, "user", "login");
+                    return new GitHubListItem(
+                        $"#{issue.GetProperty("number").GetInt32()} {TryGetString(issue, "title") ?? "Untitled issue"}",
+                        TryGetString(issue, "html_url"),
+                        Metadata(author, TryGetDateTimeOffset(issue, "updated_at")),
+                        AuthorLogin: author,
+                        AssigneeLogins: TryGetStringArray(issue, "assignees", "login"),
+                        LabelNames: TryGetStringArray(issue, "labels", "name"),
+                        CommentCount: TryGetInt32(issue, "comments") ?? 0);
+                })
                 .ToArray();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -274,11 +282,18 @@ internal sealed class GitHubRepositoryClient : IDisposable
         {
             using var document = JsonDocument.Parse(json);
             return document.RootElement.EnumerateArray()
-                .Select(pull => new GitHubListItem(
-                    $"#{pull.GetProperty("number").GetInt32()} {TryGetString(pull, "title") ?? "Untitled pull request"}",
-                    TryGetString(pull, "html_url"),
-                    Metadata(TryGetNestedString(pull, "user", "login"), TryGetDateTimeOffset(pull, "updated_at")),
-                    PullRequestSnapshotFor(pull)))
+                .Select(pull =>
+                {
+                    var author = TryGetNestedString(pull, "user", "login");
+                    var snapshot = PullRequestSnapshotFor(pull);
+                    return new GitHubListItem(
+                        $"#{pull.GetProperty("number").GetInt32()} {TryGetString(pull, "title") ?? "Untitled pull request"}",
+                        TryGetString(pull, "html_url"),
+                        Metadata(author, TryGetDateTimeOffset(pull, "updated_at")),
+                        snapshot,
+                        AuthorLogin: author,
+                        CommentCount: snapshot.CommentCount);
+                })
                 .ToArray();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -1082,7 +1097,11 @@ internal sealed record GitHubListItem(
     string Title,
     string? Url,
     string? Subtitle,
-    PullRequestNotificationSnapshot? PullRequestSnapshot = null);
+    PullRequestNotificationSnapshot? PullRequestSnapshot = null,
+    string? AuthorLogin = null,
+    string[]? AssigneeLogins = null,
+    string[]? LabelNames = null,
+    int? CommentCount = null);
 
 internal sealed record RecentRepositoryLists(
     IReadOnlyList<GitHubListItem> Issues,

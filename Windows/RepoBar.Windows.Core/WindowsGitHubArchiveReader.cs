@@ -344,7 +344,7 @@ internal sealed class WindowsGitHubArchiveReader
     {
         public GitHubListItem ToListItem()
         {
-            return new GitHubListItem($"#{Number} {Title}", Url, Metadata(Author, UpdatedAt));
+            return new GitHubListItem($"#{Number} {Title}", Url, Metadata(Author, UpdatedAt), AuthorLogin: Author);
         }
     }
 }
