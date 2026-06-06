@@ -24,6 +24,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly TextBox _localProjectsRoot = new();
     private readonly NumericUpDown _localProjectsDepth = new();
     private readonly TextBox _localWorktreeFolderName = new();
+    private readonly ComboBox _terminalPreference = new();
     private readonly CheckBox _fetchLocalProjectsBeforeStatus = new();
     private readonly CheckBox _autoSyncLocalProjects = new();
     private readonly CheckBox _showDirtyFilesInMenu = new();
@@ -65,7 +66,7 @@ internal sealed class SettingsEditorForm : Form
         MinimizeBox = false;
         MaximizeBox = false;
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        ClientSize = new Size(820, 700);
+        ClientSize = new Size(820, 740);
 
         LoadSettings();
         BuildControls();
@@ -100,6 +101,13 @@ internal sealed class SettingsEditorForm : Form
         _localProjectsDepth.Maximum = 8;
         _localProjectsDepth.Value = Math.Clamp(settings.LocalProjectsMaxDepth, 0, 8);
         _localWorktreeFolderName.Text = settings.LocalWorktreeFolderName;
+        _terminalPreference.DropDownStyle = ComboBoxStyle.DropDownList;
+        _terminalPreference.DataSource = Enum.GetValues<WindowsTerminalPreference>()
+            .Select(TerminalPreferenceRow.FromPreference)
+            .ToArray();
+        _terminalPreference.DisplayMember = nameof(TerminalPreferenceRow.DisplayName);
+        _terminalPreference.ValueMember = nameof(TerminalPreferenceRow.Preference);
+        _terminalPreference.SelectedValue = settings.TerminalPreference;
         _fetchLocalProjectsBeforeStatus.Checked = settings.FetchLocalProjectsBeforeStatus;
         _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
         _showDirtyFilesInMenu.Checked = settings.ShowDirtyFilesInMenu;
@@ -215,6 +223,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Refresh minutes", _refreshMinutes);
         AddLabeledControl(settingsGrid, "Local scan depth", _localProjectsDepth);
         AddLabeledControl(settingsGrid, "Worktree folder", _localWorktreeFolderName);
+        AddLabeledControl(settingsGrid, "Terminal", _terminalPreference);
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
         AddLabeledControl(settingsGrid, "Repository limit", _repositoryDisplayLimit);
         AddLabeledControl(settingsGrid, "Repository scope", _repositoryMenuScope);
@@ -572,6 +581,9 @@ internal sealed class SettingsEditorForm : Form
         settings.LocalProjectsRoot = string.IsNullOrWhiteSpace(_localProjectsRoot.Text) ? null : _localProjectsRoot.Text.Trim();
         settings.LocalProjectsMaxDepth = (int)_localProjectsDepth.Value;
         settings.LocalWorktreeFolderName = string.IsNullOrWhiteSpace(_localWorktreeFolderName.Text) ? ".work" : _localWorktreeFolderName.Text.Trim();
+        settings.TerminalPreference = _terminalPreference.SelectedValue is WindowsTerminalPreference terminalPreference
+            ? terminalPreference
+            : WindowsTerminalPreference.Auto;
         settings.FetchLocalProjectsBeforeStatus = _fetchLocalProjectsBeforeStatus.Checked;
         settings.AutoSyncLocalProjects = _autoSyncLocalProjects.Checked;
         settings.ShowDirtyFilesInMenu = _showDirtyFilesInMenu.Checked;
@@ -908,6 +920,14 @@ internal sealed class SettingsEditorForm : Form
         public static ActivityScopeRow FromScope(WindowsActivityScope scope)
         {
             return new ActivityScopeRow(scope, scope.DisplayName());
+        }
+    }
+
+    private sealed record TerminalPreferenceRow(WindowsTerminalPreference Preference, string DisplayName)
+    {
+        public static TerminalPreferenceRow FromPreference(WindowsTerminalPreference preference)
+        {
+            return new TerminalPreferenceRow(preference, preference.DisplayName());
         }
     }
 }

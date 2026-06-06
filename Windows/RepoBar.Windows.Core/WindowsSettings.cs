@@ -18,6 +18,7 @@ internal sealed class WindowsSettings
     public string? LocalProjectsRoot { get; set; }
     public int LocalProjectsMaxDepth { get; set; } = 3;
     public string LocalWorktreeFolderName { get; set; } = ".work";
+    public WindowsTerminalPreference TerminalPreference { get; set; } = WindowsTerminalPreference.Auto;
     public bool FetchLocalProjectsBeforeStatus { get; set; } = true;
     public bool AutoSyncLocalProjects { get; set; }
     public bool ShowDirtyFilesInMenu { get; set; } = true;
@@ -141,6 +142,14 @@ internal enum WindowsActivityScope
     MyActivity,
 }
 
+internal enum WindowsTerminalPreference
+{
+    Auto,
+    WindowsTerminal,
+    PowerShell,
+    CommandPrompt,
+}
+
 internal static class WindowsHeatmapSettingsLabels
 {
     public static string DisplayName(this WindowsHeatmapDisplay display)
@@ -195,6 +204,20 @@ internal static class WindowsActivityScopeLabels
         {
             WindowsActivityScope.AllActivity => "All activity",
             _ => "My activity",
+        };
+    }
+}
+
+internal static class WindowsTerminalPreferenceLabels
+{
+    public static string DisplayName(this WindowsTerminalPreference preference)
+    {
+        return preference switch
+        {
+            WindowsTerminalPreference.WindowsTerminal => "Windows Terminal",
+            WindowsTerminalPreference.PowerShell => "PowerShell",
+            WindowsTerminalPreference.CommandPrompt => "Command Prompt",
+            _ => "Auto",
         };
     }
 }

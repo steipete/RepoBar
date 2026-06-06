@@ -1259,23 +1259,25 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         StartShell(path);
     }
 
-    private static void OpenTerminal(string path)
+    private void OpenTerminal(string path)
     {
-        try
+        Exception? lastException = null;
+        foreach (var startInfo in WindowsTerminalLauncher.Candidates(path, _settingsStore.Settings.TerminalPreference))
         {
-            Process.Start(new ProcessStartInfo("wt.exe")
+            try
             {
-                UseShellExecute = true,
-                Arguments = $"-d \"{path}\"",
-            });
+                Process.Start(startInfo);
+                return;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                lastException = exception;
+            }
         }
-        catch
+
+        if (lastException != null)
         {
-            Process.Start(new ProcessStartInfo("cmd.exe")
-            {
-                UseShellExecute = true,
-                Arguments = $"/K cd /d \"{path}\"",
-            });
+            MessageBox.Show(lastException.Message, "RepoBar Terminal", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
