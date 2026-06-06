@@ -8,15 +8,20 @@ namespace RepoBar.Windows;
 internal sealed class ReferenceNavigatorForm : Form
 {
     private readonly WindowsSettings _settings;
+    private readonly LocalGitIndex _localGitIndex;
     private readonly TextBox _input = new();
     private readonly ComboBox _defaultRepository = new();
     private readonly BindingList<ReferenceRow> _references = [];
     private readonly DataGridView _referenceGrid = new();
     private readonly WebBrowser _preview = new();
 
-    public ReferenceNavigatorForm(WindowsSettings settings, string? initialText = null)
+    public ReferenceNavigatorForm(
+        WindowsSettings settings,
+        string? initialText = null,
+        LocalGitIndex? localGitIndex = null)
     {
         _settings = settings;
+        _localGitIndex = localGitIndex ?? LocalGitIndex.Empty;
         Text = "RepoBar Issue Navigator";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = new Size(980, 620);
@@ -162,18 +167,14 @@ internal sealed class ReferenceNavigatorForm : Form
 
     private void RefreshReferences()
     {
-        var defaultRepository = _defaultRepository.SelectedItem as string;
-        var knownRepositories = _defaultRepository.Items
-            .Cast<object>()
-            .Select(item => item.ToString())
-            .Where(item => !string.IsNullOrWhiteSpace(item))
-            .Select(item => item!)
-            .ToArray();
+        var defaultRepository =
+            GitHubReferenceLocalContext.RepositoryContext(_input.Text, _localGitIndex, _settings.GitHubHost) ??
+            (_defaultRepository.SelectedItem as string);
         var references = GitHubReferenceNavigator.FindReferences(
             _input.Text,
             _settings.GitHubHost,
             defaultRepository,
-            knownRepositories);
+            GitHubReferenceLocalContext.KnownRepositories(_settings, _localGitIndex));
 
         _references.Clear();
         foreach (var reference in references)

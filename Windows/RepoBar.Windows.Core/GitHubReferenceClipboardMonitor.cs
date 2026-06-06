@@ -6,7 +6,10 @@ internal sealed class GitHubReferenceClipboardMonitor
     private string? _lastReferenceKey;
     private bool _hasBaseline;
 
-    public GitHubReferenceClipboardNotification? Observe(string? clipboardText, WindowsSettings settings)
+    public GitHubReferenceClipboardNotification? Observe(
+        string? clipboardText,
+        WindowsSettings settings,
+        LocalGitIndex? localGitIndex = null)
     {
         if (!settings.EnableGitHubReferenceMonitor)
         {
@@ -35,8 +38,8 @@ internal sealed class GitHubReferenceClipboardMonitor
         var references = GitHubReferenceNavigator.FindReferences(
             clipboardText,
             settings.GitHubHost,
-            DefaultRepository(settings),
-            KnownRepositories(settings));
+            DefaultRepository(clipboardText, settings, localGitIndex ?? LocalGitIndex.Empty),
+            GitHubReferenceLocalContext.KnownRepositories(settings, localGitIndex ?? LocalGitIndex.Empty));
         if (references.Count == 0)
         {
             _lastReferenceKey = null;
@@ -69,23 +72,20 @@ internal sealed class GitHubReferenceClipboardMonitor
         _hasBaseline = false;
     }
 
-    private static string? DefaultRepository(WindowsSettings settings)
+    private static string? DefaultRepository(string text, WindowsSettings settings, LocalGitIndex localGitIndex)
     {
+        var localContext = GitHubReferenceLocalContext.RepositoryContext(text, localGitIndex, settings.GitHubHost);
+        if (!string.IsNullOrWhiteSpace(localContext))
+        {
+            return localContext;
+        }
+
         return settings.GetActiveRepositories()
             .Where(repository => repository.IsVisible)
             .OrderBy(repository => repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
             .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
             .Select(repository => repository.FullName)
             .FirstOrDefault();
-    }
-
-    private static IReadOnlyList<string> KnownRepositories(WindowsSettings settings)
-    {
-        return settings.GetActiveRepositories()
-            .Where(repository => repository.IsVisible)
-            .Select(repository => repository.FullName)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
     }
 
     private static string DisplayText(IReadOnlyList<GitHubReferenceMatch> references)

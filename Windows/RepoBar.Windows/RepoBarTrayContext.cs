@@ -1620,7 +1620,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         try
         {
             var text = Clipboard.ContainsText() ? Clipboard.GetText() : null;
-            var notification = _referenceClipboardMonitor.Observe(text, _settingsStore.Settings);
+            var notification = _referenceClipboardMonitor.Observe(text, _settingsStore.Settings, _localGitIndex);
             if (notification == null)
             {
                 return;
@@ -1756,7 +1756,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private void ShowIssueNavigator(string? initialText = null)
     {
-        using var form = new ReferenceNavigatorForm(_settingsStore.Settings, initialText);
+        using var form = new ReferenceNavigatorForm(_settingsStore.Settings, initialText, _localGitIndex);
         form.ShowDialog();
     }
 

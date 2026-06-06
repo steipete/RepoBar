@@ -50,6 +50,65 @@ public sealed class GitHubReferenceClipboardMonitorTests
     }
 
     [Fact]
+    public void Observe_prefers_local_repository_context_from_copied_path()
+    {
+        var monitor = new GitHubReferenceClipboardMonitor();
+        var settings = Settings();
+        var localGitIndex = LocalIndex(LocalRepository(@"C:\Projects\clawhub", "openclaw/clawhub"));
+
+        Assert.Null(monitor.Observe("baseline", settings, localGitIndex));
+
+        var notification = monitor.Observe(@"PS C:\Projects\clawhub> #908", settings, localGitIndex);
+
+        Assert.NotNull(notification);
+        Assert.Equal("openclaw/clawhub #908", notification.DisplayText);
+        Assert.Contains(notification.References, reference =>
+            reference.RepositoryFullName == "openclaw/clawhub" && reference.Number == 908L);
+    }
+
+    [Fact]
+    public void Observe_resolves_local_repository_name_shorthand()
+    {
+        var monitor = new GitHubReferenceClipboardMonitor();
+        var settings = Settings();
+        var localGitIndex = LocalIndex(LocalRepository(@"C:\Projects\clawhub", "openclaw/clawhub"));
+
+        Assert.Null(monitor.Observe("baseline", settings, localGitIndex));
+
+        var notification = monitor.Observe("clawhub#908", settings, localGitIndex);
+
+        Assert.NotNull(notification);
+        Assert.Equal("openclaw/clawhub #908", notification.DisplayText);
+    }
+
+    [Fact]
+    public void Observe_ignores_local_repository_context_from_other_host()
+    {
+        var monitor = new GitHubReferenceClipboardMonitor();
+        var settings = Settings();
+        var localGitIndex = LocalIndex(LocalRepository(@"C:\Projects\clawhub", "openclaw/clawhub", "github.enterprise.test"));
+
+        Assert.Null(monitor.Observe("baseline", settings, localGitIndex));
+
+        var notification = monitor.Observe(@"PS C:\Projects\clawhub> #908", settings, localGitIndex);
+
+        Assert.NotNull(notification);
+        Assert.Equal("steipete/RepoBar #908", notification.DisplayText);
+    }
+
+    [Fact]
+    public void Observe_ignores_local_repository_name_shorthand_from_other_host()
+    {
+        var monitor = new GitHubReferenceClipboardMonitor();
+        var settings = Settings();
+        var localGitIndex = LocalIndex(LocalRepository(@"C:\Projects\clawhub", "openclaw/clawhub", "github.enterprise.test"));
+
+        Assert.Null(monitor.Observe("baseline", settings, localGitIndex));
+
+        Assert.Null(monitor.Observe("clawhub#908", settings, localGitIndex));
+    }
+
+    [Fact]
     public void Observe_suppresses_duplicate_reference_sets_until_non_reference_text()
     {
         var monitor = new GitHubReferenceClipboardMonitor();
@@ -142,5 +201,31 @@ public sealed class GitHubReferenceClipboardMonitorTests
                 new RepositoryRef { Owner = "steipete", Name = "RepoBar", Visibility = RepositoryVisibility.Pinned },
             ],
         };
+    }
+
+    private static LocalGitIndex LocalIndex(params LocalGitRepositoryStatus[] repositories)
+    {
+        return new LocalGitIndex(repositories, [], "github.com");
+    }
+
+    private static LocalGitRepositoryStatus LocalRepository(
+        string path,
+        string fullName,
+        string host = "github.com")
+    {
+        return new LocalGitRepositoryStatus(
+            path,
+            fullName.Split('/').Last(),
+            fullName,
+            "main",
+            true,
+            null,
+            null,
+            LocalSyncState.Synced,
+            LocalDirtyCounts.Empty,
+            [],
+            null,
+            "origin/main",
+            host);
     }
 }
