@@ -223,9 +223,11 @@ internal static partial class GitHubReferenceNavigator
     private static bool IsPullRequestKind(string value)
     {
         return string.Equals(value, "pr", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "prs", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(value, "pull", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(value, "pulls", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(value, "pull request", StringComparison.OrdinalIgnoreCase);
+            string.Equals(value, "pull request", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(value, "pull requests", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsWorkflowRunKind(string value)
@@ -269,7 +271,7 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"(?<separator>-|/|,|and)\s*#?(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesTokenRegex();
 
-    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PR|pull request|issue)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]
     private static partial Regex KindedBareNumberRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)\b")]

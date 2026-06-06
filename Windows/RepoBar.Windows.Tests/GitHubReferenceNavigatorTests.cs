@@ -191,6 +191,34 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_plural_pr_prose_lists_against_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "please review PRs 123 and 456 before release",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("steipete/RepoBar", 123L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 456L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_resolves_plural_pull_request_prose_lists_against_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "please review pull requests 123 and 456",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("steipete/RepoBar", 123L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 456L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
     public void FindReferences_resolves_chained_owner_repository_references()
     {
         var references = GitHubReferenceNavigator.FindReferences(
@@ -315,6 +343,20 @@ public sealed class GitHubReferenceNavigatorTests
             reference => Assert.Equal(("steipete/RepoBar", 12L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
             reference => Assert.Equal(("steipete/RepoBar", 13L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
             reference => Assert.Equal(("steipete/RepoBar", 14L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_resolves_plural_issue_prose_lists_against_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "closed issues 12 and 13 delete stale state",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("steipete/RepoBar", 12L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 13L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
     }
 
     [Fact]
