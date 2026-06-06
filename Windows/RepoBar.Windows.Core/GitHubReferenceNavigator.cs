@@ -47,8 +47,40 @@ internal static partial class GitHubReferenceNavigator
             claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
         }
 
+        foreach (Match match in OwnerRepoKindedSeriesRegex().Matches(text))
+        {
+            var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+            var kind = NormalizeKind(match.Groups["kind"].Value);
+            var startNumber = long.Parse(match.Groups["number"].Value);
+            matches.Add(new GitHubReferenceCandidate(
+                match.Groups["number"].Index,
+                new GitHubReferenceMatch(
+                    repositoryFullName,
+                    startNumber,
+                    kind,
+                    match.Groups["number"].Value)));
+
+            foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    number.Index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        number.Value,
+                        kind,
+                        number.Value.ToString())));
+            }
+
+            claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
+        }
+
         foreach (Match match in OwnerRepoSeriesRegex().Matches(text))
         {
+            if (claimedSpans.Any(span => span.Contains(match.Index)))
+            {
+                continue;
+            }
+
             var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
             var kind = NormalizeKind(match.Groups["kind"].Value);
             var startNumber = long.Parse(match.Groups["number"].Value);
@@ -656,6 +688,9 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?<kind>issues|pull|pulls)/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubUrlRegex();
+
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s+(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?<tail>(?:\s*(?:,|and)\s*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex OwnerRepoKindedSeriesRegex();
 
     [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:(?<kind>PR|pull request|issue)\s*)?#(?<number>\d+)(?<tail>(?:\s*(?:-|/|,|and)\s*#?\d+)+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoSeriesRegex();

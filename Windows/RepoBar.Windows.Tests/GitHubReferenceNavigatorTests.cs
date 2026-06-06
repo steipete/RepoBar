@@ -613,6 +613,45 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_preserves_repository_heading_child_explicit_repository_issue_prose()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              other/repo PR #7
+              other/repo PR 10
+              other/repo issues #8 and #9
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 10L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 8L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 9L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_repository_heading_child_explicit_repository_issue_series()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 depends on other/repo PR 7 and 8
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 8L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
     public void FindReferences_carries_repository_heading_issue_context_across_child_lines()
     {
         var references = GitHubReferenceNavigator.FindReferences(
