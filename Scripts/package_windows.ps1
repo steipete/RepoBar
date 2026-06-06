@@ -11,6 +11,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-Native {
+    $command = $args[0]
+    $nativeArgs = @()
+    if ($args.Count -gt 1) {
+        $nativeArgs = $args[1..($args.Count - 1)]
+    }
+    & $command @nativeArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "$command exited with code $LASTEXITCODE"
+    }
+}
+
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $project = Join-Path $root "Windows/RepoBar.Windows/RepoBar.Windows.csproj"
 $installerScript = Join-Path $root "Windows/installer.iss"
@@ -34,7 +46,7 @@ if (Test-Path $publishRoot) {
 }
 New-Item -ItemType Directory -Force -Path $publishRoot | Out-Null
 
-dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
+Invoke-Native dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:PublishReadyToRun=true `
@@ -59,4 +71,4 @@ if (-not $iscc) {
 
 $env:REPOBAR_WINDOWS_VERSION = $Version
 $env:REPOBAR_WINDOWS_PUBLISH_DIR = $publishRoot
-& $iscc $installerScript
+Invoke-Native $iscc $installerScript

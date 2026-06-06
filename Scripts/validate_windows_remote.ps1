@@ -5,6 +5,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-Native {
+    $command = $args[0]
+    $nativeArgs = @()
+    if ($args.Count -gt 1) {
+        $nativeArgs = $args[1..($args.Count - 1)]
+    }
+    & $command @nativeArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "$command exited with code $LASTEXITCODE"
+    }
+}
+
 if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     $installRoot = Join-Path $env:TEMP "repobar-dotnet"
     $installScript = Join-Path $env:TEMP "dotnet-install.ps1"
@@ -17,7 +29,7 @@ if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
     $env:PATH = "$installRoot;$env:PATH"
 }
 
-dotnet --info
+Invoke-Native dotnet --info
 ./Scripts/build_windows.ps1 build -Runtime $Runtime
 ./Scripts/build_windows.ps1 test
 ./Scripts/smoke_windows.ps1 -Runtime $Runtime

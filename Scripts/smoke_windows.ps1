@@ -9,6 +9,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-Native {
+    $command = $args[0]
+    $nativeArgs = @()
+    if ($args.Count -gt 1) {
+        $nativeArgs = $args[1..($args.Count - 1)]
+    }
+    & $command @nativeArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "$command exited with code $LASTEXITCODE"
+    }
+}
+
 $isWindowsHost = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $env:OS -eq "Windows_NT" }
 if (-not $isWindowsHost) {
     throw "Windows tray smoke must run on Windows."
@@ -19,7 +31,7 @@ $project = Join-Path $root "Windows/RepoBar.Windows/RepoBar.Windows.csproj"
 $appData = Join-Path $env:APPDATA "RepoBar"
 $settingsPath = Join-Path $appData "windows-settings.json"
 
-dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
+Invoke-Native dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
     -p:PublishSingleFile=true `
     -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:PublishReadyToRun=true

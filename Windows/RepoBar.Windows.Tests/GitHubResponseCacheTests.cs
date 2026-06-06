@@ -114,15 +114,35 @@ public sealed class GitHubResponseCacheTests
                 }
                 """)), cache: null);
 
+        var localStatus = new LocalGitRepositoryStatus(
+            Path: @"C:\Projects\name",
+            Name: "name",
+            FullName: "owner/name",
+            Branch: "feature/windows",
+            IsClean: false,
+            AheadCount: 1,
+            BehindCount: 2,
+            SyncState: LocalSyncState.Diverged,
+            DirtyCounts: new LocalDirtyCounts(1, 1, 0),
+            DirtyFiles: ["README.md", "Windows/RepoBar.Windows/Program.cs"],
+            WorktreeName: "feature/windows",
+            UpstreamBranch: "origin/main");
+
         var statuses = await client.LoadRepositoriesAsync(
             [new RepositoryRef { Owner = "owner", Name = "name" }],
-            LocalGitIndex.Empty,
+            new LocalGitIndex([localStatus]),
             CancellationToken.None);
 
         Assert.Single(statuses);
         Assert.Equal(42, statuses[0].Traffic?.Views);
         Assert.Equal(7, statuses[0].Heatmap?.TotalCommits);
         Assert.Equal("1.2.3", statuses[0].Changelog?.Headline);
+        Assert.NotNull(statuses[0].LocalStatus);
+        Assert.Equal("feature/windows", statuses[0].LocalStatus?.Branch);
+        Assert.Equal(LocalSyncState.Diverged, statuses[0].LocalStatus?.SyncState);
+        Assert.Equal("+1 ~1", statuses[0].LocalStatus?.DirtyCounts.Summary);
+        Assert.Equal("Diverged +1/-2", statuses[0].LocalStatus?.SyncDetail);
+        Assert.False(statuses[0].LocalStatus?.CanFastForward);
         Assert.Contains(statuses[0].RecentLists.Activity, item => item.Title == "Pushed 1 commit to main");
         Assert.Contains(statuses[0].RecentLists.Activity, item => item.Title.Contains("opened Issue #42", StringComparison.Ordinal));
         Assert.Contains(statuses[0].RecentLists.Discussions, item => item.Title == "Roadmap");
