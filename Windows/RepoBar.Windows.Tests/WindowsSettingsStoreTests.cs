@@ -118,6 +118,32 @@ public sealed class WindowsSettingsStoreTests
     }
 
     [Fact]
+    public void NormalizeSettings_sanitizes_active_account_id_before_matching_profiles()
+    {
+        var settings = new WindowsSettings
+        {
+            ActiveAccountId = "Work Account",
+            Accounts =
+            [
+                Account("default", "Default"),
+                Account("Work Account", "Work"),
+            ],
+            RepositoriesByAccount = new Dictionary<string, List<RepositoryRef>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [Repo("personal/project", RepositoryVisibility.Pinned)],
+                ["Work Account"] = [Repo("work/project", RepositoryVisibility.Pinned)],
+            },
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal("work-account", settings.ActiveAccountId);
+        Assert.Equal("Work", settings.GetActiveAccount().Label);
+        Assert.Equal(["work/project"], settings.Repositories.Select(repository => repository.FullName));
+        Assert.Equal(["work/project"], settings.RepositoriesByAccount["work-account"].Select(repository => repository.FullName));
+    }
+
+    [Fact]
     public void ReplaceRepositories_updates_active_account_only()
     {
         var store = CreateStore(new WindowsSettings

@@ -461,6 +461,7 @@ internal sealed class WindowsSettingsStore
         {
             settings.Accounts.Add(WindowsAccountProfile.FromLegacy(settings));
         }
+        settings.ActiveAccountId = SanitizeAccountId(settings.ActiveAccountId);
         if (settings.Accounts.All(account => !string.Equals(account.Id, settings.ActiveAccountId, StringComparison.OrdinalIgnoreCase)))
         {
             settings.ActiveAccountId = settings.Accounts[0].Id;
