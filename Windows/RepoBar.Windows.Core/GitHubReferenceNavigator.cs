@@ -22,7 +22,8 @@ internal static partial class GitHubReferenceNavigator
                 $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
                 int.Parse(match.Groups["number"].Value),
                 match.Groups["kind"].Value,
-                match.Value));
+                match.Value,
+                GitHubHost.Normalize(match.Groups["host"].Value)));
             claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
         }
 
@@ -54,7 +55,7 @@ internal static partial class GitHubReferenceNavigator
         }
 
         return matches
-            .GroupBy(reference => $"{reference.RepositoryFullName}#{reference.Number}", StringComparer.OrdinalIgnoreCase)
+            .GroupBy(reference => $"{reference.Host ?? GitHubHost.Normalize(host)}:{reference.RepositoryFullName}#{reference.Number}", StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .OrderBy(reference => reference.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
             .ThenBy(reference => reference.Number)
@@ -63,7 +64,7 @@ internal static partial class GitHubReferenceNavigator
 
     public static Uri BuildUri(GitHubReferenceMatch reference, string host)
     {
-        var normalizedHost = GitHubHost.Normalize(host);
+        var normalizedHost = GitHubHost.Normalize(reference.Host ?? host);
         var pathKind = IsPullRequestKind(reference.Kind)
                 ? "pull"
                 : "issues";
@@ -101,7 +102,7 @@ internal static partial class GitHubReferenceNavigator
     }
 }
 
-internal sealed record GitHubReferenceMatch(string RepositoryFullName, int Number, string Kind, string RawText)
+internal sealed record GitHubReferenceMatch(string RepositoryFullName, int Number, string Kind, string RawText, string? Host = null)
 {
     public string DisplayText => $"{RepositoryFullName} #{Number}";
 }

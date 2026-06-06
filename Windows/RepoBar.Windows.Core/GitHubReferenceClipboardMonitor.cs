@@ -43,7 +43,12 @@ internal sealed class GitHubReferenceClipboardMonitor
         }
 
         var referenceKey = string.Join("|", references.Select(reference =>
-            $"{reference.RepositoryFullName.ToLowerInvariant()}:{reference.Kind.ToLowerInvariant()}:{reference.Number}"));
+            string.Join(
+                ":",
+                reference.Host?.ToLowerInvariant() ?? GitHubHost.Normalize(settings.GitHubHost),
+                reference.RepositoryFullName.ToLowerInvariant(),
+                reference.Kind.ToLowerInvariant(),
+                reference.Number)));
         if (string.Equals(referenceKey, _lastReferenceKey, StringComparison.Ordinal))
         {
             return null;

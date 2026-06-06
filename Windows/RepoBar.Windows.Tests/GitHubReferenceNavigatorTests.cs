@@ -43,4 +43,50 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Equal("https://github.enterprise.test/owner/repo/issues/42", uri.ToString());
     }
+
+    [Fact]
+    public void Full_url_references_preserve_their_source_host()
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            "https://GitHub.Enterprise.test/owner/repo/pull/42",
+            "github.com",
+            null));
+
+        Assert.Equal("github.enterprise.test", reference.Host);
+
+        var uri = GitHubReferenceNavigator.BuildUri(reference, "github.com");
+
+        Assert.Equal("https://github.enterprise.test/owner/repo/pull/42", uri.ToString());
+    }
+
+    [Fact]
+    public void Bare_references_use_the_active_host()
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            "see #42",
+            "github.enterprise.test",
+            "owner/repo"));
+
+        Assert.Null(reference.Host);
+
+        var uri = GitHubReferenceNavigator.BuildUri(reference, "github.enterprise.test");
+
+        Assert.Equal("https://github.enterprise.test/owner/repo/issues/42", uri.ToString());
+    }
+
+    [Fact]
+    public void FindReferences_keeps_same_reference_number_on_different_hosts()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            https://github.com/owner/repo/issues/9
+            https://github.enterprise.test/owner/repo/issues/9
+            """,
+            "github.com",
+            null);
+
+        Assert.Equal(2, references.Count);
+        Assert.Contains(references, reference => reference.Host == "github.com");
+        Assert.Contains(references, reference => reference.Host == "github.enterprise.test");
+    }
 }

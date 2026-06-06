@@ -78,6 +78,21 @@ public sealed class GitHubReferenceClipboardMonitorTests
         Assert.Equal(2, notification.References.Count);
     }
 
+    [Fact]
+    public void Observe_treats_same_reference_on_different_hosts_as_distinct()
+    {
+        var monitor = new GitHubReferenceClipboardMonitor();
+        var settings = Settings();
+
+        Assert.Null(monitor.Observe("baseline", settings));
+        Assert.NotNull(monitor.Observe("https://github.com/owner/repo/issues/9", settings));
+
+        var notification = monitor.Observe("https://github.enterprise.test/owner/repo/issues/9", settings);
+
+        Assert.NotNull(notification);
+        Assert.Contains(notification.References, reference => reference.Host == "github.enterprise.test");
+    }
+
     private static WindowsSettings Settings(bool enableMonitor = true)
     {
         return new WindowsSettings
