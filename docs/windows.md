@@ -10,7 +10,7 @@ The Windows app currently provides:
 - configurable repository heatmap placement and activity window
 - optional local project discovery
 - local branch, upstream, ahead/behind, dirty-file, and worktree state
-- local fetch, fast-forward sync, branch switching, worktree creation, and worktree navigation actions
+- local fetch, sync/rebase/reset, branch switching, worktree creation, and worktree navigation actions
 - issue and pull request counts
 - latest default-branch Actions run status
 - latest release link
@@ -259,9 +259,9 @@ Set `gitHubArchiveDatabasePath` to a RepoBar-owned archive SQLite database produ
 
 ## Local Projects
 
-When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, local branch switching, worktree creation/navigation, fetch, sync, and folder/terminal actions to the tray menu. `terminalPreference` can be `auto`, `windowsTerminal`, `powerShell`, or `commandPrompt`; auto tries Windows Terminal, then PowerShell, then Command Prompt. When `showDirtyFilesInMenu` is true, the dirty-file section shows up to three changed file names. Repositories without a local match can be checked out into `localProjectsRoot` from the tray.
+When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, local branch switching, worktree creation/navigation, fetch, sync, rebase, reset, and folder/terminal actions to the tray menu. `terminalPreference` can be `auto`, `windowsTerminal`, `powerShell`, or `commandPrompt`; auto tries Windows Terminal, then PowerShell, then Command Prompt. When `showDirtyFilesInMenu` is true, the dirty-file section shows up to three changed file names. Repositories without a local match can be checked out into `localProjectsRoot` from the tray.
 
-Sync is intentionally conservative: manual and automatic sync use `git pull --ff-only`, and auto-sync only runs for clean repositories that are behind their upstream.
+Manual sync runs `git fetch --prune`, rebases clean behind/diverged repositories with `git pull --rebase --autostash`, and pushes clean ahead repositories. Auto-sync is intentionally more conservative: it still uses `git pull --ff-only` and only runs for clean repositories that are behind their upstream. Reset to upstream asks for confirmation before running `git reset --hard @{u}`.
 
 Local-only repositories are shown in their own tray section so Windows can still be useful without GitHub authentication.
 

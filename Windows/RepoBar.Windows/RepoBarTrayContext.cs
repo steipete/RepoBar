@@ -797,11 +797,21 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         items.Add(new ToolStripMenuItem("Fetch", null, async (_, _) => await RunLocalGitActionAsync(
             "Fetch",
             token => _localGitService.FetchAsync(local.Path, token))));
-        items.Add(new ToolStripMenuItem("Sync fast-forward", null, async (_, _) => await RunLocalGitActionAsync(
+        items.Add(new ToolStripMenuItem("Sync", null, async (_, _) => await RunLocalGitActionAsync(
             "Sync",
-            token => _localGitService.FastForwardAsync(local.Path, token)))
+            token => _localGitService.SyncAsync(local.Path, token)))
         {
-            Enabled = local.CanFastForward,
+            Enabled = local.CanSync,
+        });
+        items.Add(new ToolStripMenuItem("Rebase onto upstream", null, async (_, _) => await RunLocalGitActionAsync(
+            "Rebase",
+            token => _localGitService.RebaseAsync(local.Path, token)))
+        {
+            Enabled = local.CanRebase,
+        });
+        items.Add(new ToolStripMenuItem("Reset to upstream...", null, async (_, _) => await ResetLocalGitToUpstreamAsync(local))
+        {
+            Enabled = local.CanResetToUpstream,
         });
         AddBranchesSubmenu(items, local);
         AddWorktreesSubmenu(items, local);
@@ -907,6 +917,24 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _lastPullRequestNotificationTarget = null;
         _notifyIcon.ShowBalloonTip(5000, $"RepoBar {actionName}", result.DisplayText, ToolTipIcon.Info);
         BeginRefresh();
+    }
+
+    private async Task ResetLocalGitToUpstreamAsync(LocalGitRepositoryStatus local)
+    {
+        var result = MessageBox.Show(
+            $"Reset {local.DisplayName} to {local.UpstreamBranch}? This discards local commits and uncommitted changes.",
+            "RepoBar Reset Local Repository",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Warning,
+            MessageBoxDefaultButton.Button2);
+        if (result != DialogResult.Yes)
+        {
+            return;
+        }
+
+        await RunLocalGitActionAsync(
+            "Reset",
+            token => _localGitService.HardResetToUpstreamAsync(local.Path, token)).ConfigureAwait(true);
     }
 
     private static void AddRecentIssueItemsSubmenu(ToolStripItemCollection items, IReadOnlyList<GitHubListItem> recentItems, string? viewerLogin)

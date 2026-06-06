@@ -129,6 +129,50 @@ public sealed class LocalGitServiceTests
     }
 
     [Fact]
+    public void Local_status_exposes_safe_sync_rebase_and_reset_capabilities()
+    {
+        var cleanBehind = new LocalGitRepositoryStatus(
+            Path: "repo",
+            Name: "repo",
+            FullName: "owner/repo",
+            Branch: "main",
+            IsClean: true,
+            AheadCount: 0,
+            BehindCount: 2,
+            SyncState: LocalSyncState.Behind,
+            DirtyCounts: LocalDirtyCounts.Empty,
+            DirtyFiles: [],
+            WorktreeName: null,
+            UpstreamBranch: "origin/main");
+        var cleanAhead = cleanBehind with
+        {
+            AheadCount = 1,
+            BehindCount = 0,
+            SyncState = LocalSyncState.Ahead,
+        };
+        var dirtyBehind = cleanBehind with
+        {
+            IsClean = false,
+            SyncState = LocalSyncState.Dirty,
+            DirtyCounts = new LocalDirtyCounts(0, 1, 0),
+        };
+        var noUpstream = cleanBehind with { UpstreamBranch = null };
+
+        Assert.True(cleanBehind.CanSync);
+        Assert.True(cleanBehind.CanRebase);
+        Assert.True(cleanBehind.CanResetToUpstream);
+        Assert.True(cleanAhead.CanSync);
+        Assert.False(cleanAhead.CanRebase);
+        Assert.True(cleanAhead.CanResetToUpstream);
+        Assert.False(dirtyBehind.CanSync);
+        Assert.False(dirtyBehind.CanRebase);
+        Assert.True(dirtyBehind.CanResetToUpstream);
+        Assert.False(noUpstream.CanSync);
+        Assert.False(noUpstream.CanRebase);
+        Assert.False(noUpstream.CanResetToUpstream);
+    }
+
+    [Fact]
     public void Local_status_dirty_files_menu_respects_visibility_setting_and_caps_list()
     {
         var status = new LocalGitRepositoryStatus(

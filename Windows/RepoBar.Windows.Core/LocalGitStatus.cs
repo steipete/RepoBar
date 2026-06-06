@@ -16,6 +16,13 @@ internal sealed record LocalGitRepositoryStatus(
 {
     public string DisplayName => FullName ?? Name;
     public bool CanFastForward => IsClean && SyncState == LocalSyncState.Behind;
+    public bool HasUpstream => !string.IsNullOrWhiteSpace(UpstreamBranch);
+    public bool CanSync => IsClean && HasUpstream && SyncState is
+        LocalSyncState.Behind or LocalSyncState.Ahead or LocalSyncState.Diverged;
+    public bool CanRebase => IsClean && HasUpstream && SyncState is
+        LocalSyncState.Behind or LocalSyncState.Diverged;
+    public bool CanResetToUpstream => HasUpstream && SyncState is
+        not LocalSyncState.Synced and not LocalSyncState.Unknown;
 
     public string SyncDetail => SyncState switch
     {

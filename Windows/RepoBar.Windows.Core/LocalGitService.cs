@@ -135,6 +135,68 @@ internal sealed class LocalGitService
         return await RunGitAsync(repoRoot, ["pull", "--ff-only"], cancellationToken).ConfigureAwait(false);
     }
 
+    internal async Task<LocalGitActionResult> SyncAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        var fetch = await FetchAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+        if (!fetch.Success)
+        {
+            return fetch;
+        }
+
+        var status = await LoadStatusAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+        if (status == null)
+        {
+            return new LocalGitActionResult(false, "", "Could not read local git status after fetch.");
+        }
+        if (!status.IsClean)
+        {
+            return new LocalGitActionResult(false, "", "Repository has local changes. Commit, stash, or reset before syncing.");
+        }
+
+        if (status.SyncState is LocalSyncState.Behind or LocalSyncState.Diverged)
+        {
+            var rebase = await RunGitAsync(repoRoot, ["pull", "--rebase", "--autostash"], cancellationToken).ConfigureAwait(false);
+            if (!rebase.Success)
+            {
+                return rebase;
+            }
+        }
+
+        status = await LoadStatusAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+        if (status?.SyncState == LocalSyncState.Ahead)
+        {
+            var push = await RunGitAsync(repoRoot, ["push"], cancellationToken).ConfigureAwait(false);
+            if (!push.Success)
+            {
+                return push;
+            }
+        }
+
+        return new LocalGitActionResult(true, "Synced local repository.", "");
+    }
+
+    internal async Task<LocalGitActionResult> RebaseAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        var fetch = await FetchAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+        if (!fetch.Success)
+        {
+            return fetch;
+        }
+
+        return await RunGitAsync(repoRoot, ["rebase", "--autostash", "@{u}"], cancellationToken).ConfigureAwait(false);
+    }
+
+    internal async Task<LocalGitActionResult> HardResetToUpstreamAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        var fetch = await FetchAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+        if (!fetch.Success)
+        {
+            return fetch;
+        }
+
+        return await RunGitAsync(repoRoot, ["reset", "--hard", "@{u}"], cancellationToken).ConfigureAwait(false);
+    }
+
     internal async Task<IReadOnlyList<LocalGitWorktree>> ListWorktreesAsync(string repoRoot, CancellationToken cancellationToken)
     {
         var output = await TryGitAsync(repoRoot, ["worktree", "list", "--porcelain"], cancellationToken).ConfigureAwait(false);
