@@ -9,7 +9,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-if (-not $IsWindows) {
+$isWindowsHost = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $env:OS -eq "Windows_NT" }
+if (-not $isWindowsHost) {
     throw "Windows tray smoke must run on Windows."
 }
 
