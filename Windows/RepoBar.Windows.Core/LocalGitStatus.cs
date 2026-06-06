@@ -108,6 +108,8 @@ internal sealed class LocalGitIndex
 
 internal sealed record LocalGitWorktree(string Path, string? Branch, string? Head, bool IsBare);
 
+internal sealed record LocalGitBranch(string Name, bool IsCurrent);
+
 internal sealed record LocalGitActionResult(bool Success, string Output, string Error)
 {
     public string DisplayText

@@ -477,10 +477,40 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             Enabled = local.CanFastForward,
         });
+        AddBranchesSubmenu(items, local);
         AddWorktreesSubmenu(items, local);
         items.Add(new ToolStripSeparator());
         items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
         items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+    }
+
+    private void AddBranchesSubmenu(ToolStripItemCollection items, LocalGitRepositoryStatus local)
+    {
+        var submenu = new ToolStripMenuItem("Branches");
+        submenu.DropDownOpening += async (_, _) =>
+        {
+            submenu.DropDownItems.Clear();
+            submenu.DropDownItems.Add(new ToolStripMenuItem("Loading...") { Enabled = false });
+            var branches = await _localGitService.ListBranchesAsync(local.Path, _shutdown.Token).ConfigureAwait(true);
+            submenu.DropDownItems.Clear();
+            if (branches.Count == 0)
+            {
+                submenu.DropDownItems.Add(new ToolStripMenuItem("No branches") { Enabled = false });
+                return;
+            }
+
+            foreach (var branch in branches)
+            {
+                var label = branch.IsCurrent ? $"[current] {branch.Name}" : branch.Name;
+                submenu.DropDownItems.Add(new ToolStripMenuItem(label, null, async (_, _) => await RunLocalGitActionAsync(
+                    $"Switch branch to {branch.Name}",
+                    token => _localGitService.SwitchBranchAsync(local.Path, branch.Name, token)))
+                {
+                    Enabled = !branch.IsCurrent,
+                });
+            }
+        };
+        items.Add(submenu);
     }
 
     private void AddWorktreesSubmenu(ToolStripItemCollection items, LocalGitRepositoryStatus local)

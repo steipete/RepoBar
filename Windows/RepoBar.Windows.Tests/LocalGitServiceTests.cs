@@ -65,6 +65,25 @@ public sealed class LocalGitServiceTests
     }
 
     [Fact]
+    public void ParseBranches_marks_current_branch_and_sorts_it_first()
+    {
+        var branches = LocalGitService.ParseBranches("""
+            feature/login
+            main
+            feature/login
+            release
+
+            """, "main");
+
+        Assert.Equal(3, branches.Count);
+        Assert.Equal("main", branches[0].Name);
+        Assert.True(branches[0].IsCurrent);
+        Assert.Equal("feature/login", branches[1].Name);
+        Assert.False(branches[1].IsCurrent);
+        Assert.Equal("release", branches[2].Name);
+    }
+
+    [Fact]
     public void Local_status_can_fast_forward_only_when_clean_and_behind()
     {
         var cleanBehind = new LocalGitRepositoryStatus(

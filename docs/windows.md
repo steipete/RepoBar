@@ -9,7 +9,7 @@ The Windows app currently provides:
 - configured repository status rows with issue/PR counts, CI, release, stars/forks, local sync, traffic, activity, and heatmap signals
 - optional local project discovery
 - local branch, upstream, ahead/behind, dirty-file, and worktree state
-- local fetch and fast-forward sync actions
+- local fetch, fast-forward sync, branch switching, and worktree navigation actions
 - issue and pull request counts
 - latest default-branch Actions run status
 - latest release link
@@ -174,7 +174,7 @@ Set `gitHubArchiveDatabasePath` to a RepoBar-owned archive SQLite database produ
 
 ## Local Projects
 
-When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, worktree, fetch, sync, and folder/terminal actions to the tray menu.
+When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, local branch switching, worktree, fetch, sync, and folder/terminal actions to the tray menu.
 
 Sync is intentionally conservative: manual and automatic sync use `git pull --ff-only`, and auto-sync only runs for clean repositories that are behind their upstream.
 

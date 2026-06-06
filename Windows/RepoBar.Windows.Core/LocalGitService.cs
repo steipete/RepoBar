@@ -141,6 +141,23 @@ internal sealed class LocalGitService
         return output == null ? [] : ParseWorktrees(output);
     }
 
+    internal async Task<IReadOnlyList<LocalGitBranch>> ListBranchesAsync(string repoRoot, CancellationToken cancellationToken)
+    {
+        var output = await TryGitAsync(repoRoot, ["branch", "--format=%(refname:short)"], cancellationToken).ConfigureAwait(false);
+        if (output == null)
+        {
+            return [];
+        }
+
+        var current = await TryGitAsync(repoRoot, ["branch", "--show-current"], cancellationToken).ConfigureAwait(false);
+        return ParseBranches(output, current);
+    }
+
+    internal async Task<LocalGitActionResult> SwitchBranchAsync(string repoRoot, string branch, CancellationToken cancellationToken)
+    {
+        return await RunGitAsync(repoRoot, ["switch", branch], cancellationToken).ConfigureAwait(false);
+    }
+
     private static async Task<string?> TryGitAsync(string workingDirectory, string[] arguments, CancellationToken cancellationToken)
     {
         var result = await RunGitAsync(workingDirectory, arguments, cancellationToken).ConfigureAwait(false);
@@ -231,6 +248,19 @@ internal sealed class LocalGitService
             head = null;
             isBare = false;
         }
+    }
+
+    internal static IReadOnlyList<LocalGitBranch> ParseBranches(string output, string? currentBranch)
+    {
+        var current = currentBranch?.Trim();
+        return output.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries)
+            .Select(branch => branch.Trim())
+            .Where(branch => branch.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(branch => new LocalGitBranch(branch, string.Equals(branch, current, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(branch => branch.IsCurrent)
+            .ThenBy(branch => branch.Name, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     internal static string? TryParseGitHubFullName(string remote)
