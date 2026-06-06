@@ -562,9 +562,9 @@ internal sealed class WindowsSettingsStore
         };
     }
 
-    internal static string SanitizeAccountId(string value)
+    internal static string SanitizeAccountId(string? value)
     {
-        var candidate = string.Concat(value.Trim().ToLowerInvariant().Select(character =>
+        var candidate = string.Concat((value ?? "").Trim().ToLowerInvariant().Select(character =>
             char.IsAsciiLetterOrDigit(character) || character is '-' or '_' ? character : '-')).Trim('-');
         return string.IsNullOrWhiteSpace(candidate) ? WindowsAccountProfile.DefaultId : candidate;
     }
