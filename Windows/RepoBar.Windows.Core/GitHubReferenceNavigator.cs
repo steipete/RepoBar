@@ -67,7 +67,7 @@ internal static partial class GitHubReferenceNavigator
                     new GitHubReferenceMatch(
                         repositoryFullName,
                         number.Value,
-                        kind,
+                        number.Kind ?? kind,
                         number.Value.ToString())));
             }
 
@@ -99,7 +99,7 @@ internal static partial class GitHubReferenceNavigator
                     new GitHubReferenceMatch(
                         repositoryFullName,
                         number.Value,
-                        kind,
+                        number.Kind ?? kind,
                         number.Value.ToString())));
             }
 
@@ -131,7 +131,7 @@ internal static partial class GitHubReferenceNavigator
                     new GitHubReferenceMatch(
                         repositoryFullName,
                         number.Value,
-                        kind,
+                        number.Kind ?? kind,
                         number.Value.ToString())));
             }
 
@@ -419,7 +419,7 @@ internal static partial class GitHubReferenceNavigator
                             new GitHubReferenceMatch(
                                 headingRepository,
                                 number.Value,
-                                "issues",
+                                number.Kind ?? "issues",
                                 number.Value.ToString())));
                     }
 
@@ -452,7 +452,7 @@ internal static partial class GitHubReferenceNavigator
                                 new GitHubReferenceMatch(
                                     headingRepository,
                                     number.Value,
-                                    "issues",
+                                    number.Kind ?? "issues",
                                     number.Value.ToString())));
                         }
 
@@ -548,7 +548,7 @@ internal static partial class GitHubReferenceNavigator
                     new GitHubReferenceMatch(
                         repositoryFullName,
                         number.Value,
-                        kind,
+                        number.Kind ?? kind,
                         number.Value.ToString())));
             }
 
@@ -580,7 +580,7 @@ internal static partial class GitHubReferenceNavigator
                     new GitHubReferenceMatch(
                         repositoryFullName,
                         number.Value,
-                        kind,
+                        number.Kind ?? kind,
                         number.Value.ToString())));
             }
 
@@ -683,16 +683,17 @@ internal static partial class GitHubReferenceNavigator
             var separator = token.Groups["separator"].Value;
             var next = long.Parse(token.Groups["number"].Value);
             var index = tail.Index + token.Groups["number"].Index;
+            var kind = token.Groups["kind"].Success ? NormalizeKind(token.Groups["kind"].Value) : null;
             if (separator == "-" && next > previous)
             {
                 for (var number = previous + 1; number <= next; number++)
                 {
-                    yield return new SeriesNumber(number, index);
+                    yield return new SeriesNumber(number, index, kind);
                 }
             }
             else
             {
-                yield return new SeriesNumber(next, index);
+                yield return new SeriesNumber(next, index, kind);
             }
 
             previous = next;
@@ -811,22 +812,22 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?<kind>issues|pull|pulls)/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubUrlRegex();
 
-    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):[ \t]*(?<kind>PRs?|pull requests?|issues?)[ \t]+#?(?<number>\d+)(?<tail>(?:[ \t]*(?:,|and)[ \t]*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):[ \t]*(?<kind>PRs?|pull requests?|issues?)[ \t]+#?(?<number>\d+)(?<tail>(?:[ \t]*(?:,|and)[ \t]*(?:(?:PRs?|pull requests?|issues?)[ \t]+)?#?\d+)*)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RepositoryColonKindedSeriesRegex();
 
-    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]+(?<kind>PRs?|pull requests?|issues?)[ \t]+#?(?<number>\d+)(?<tail>(?:[ \t]*(?:,|and)[ \t]*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]+(?<kind>PRs?|pull requests?|issues?)[ \t]+#?(?<number>\d+)(?<tail>(?:[ \t]*(?:,|and)[ \t]*(?:(?:PRs?|pull requests?|issues?)[ \t]+)?#?\d+)*)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoKindedSeriesRegex();
 
-    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]*(?:(?<kind>PR|pull request|issue)[ \t]*)?#(?<number>\d+)(?<tail>(?:[ \t]*(?:-|/|,|and)[ \t]*#?\d+)+)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]*(?:(?<kind>PR|pull request|issue)[ \t]*)?#(?<number>\d+)(?<tail>(?:[ \t]*(?:-|/|,|and)[ \t]*(?:(?:PR|pull request|issue)[ \t]+)?#?\d+)+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoSeriesRegex();
 
-    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]*(?:(?<kind>PR|pull request|issue)[ \t]*#?|#)(?<number>\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]*(?:(?<kind>PR|pull request|issue)[ \t]*#?|gh-|#)(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoNumberRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<repo>[A-Za-z0-9_.-]+)#(?<number>\d+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RepositoryNameNumberRegex();
 
-    [GeneratedRegex(@"(?<separator>-|/|,|and)[ \t]*#?(?<number>\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<separator>-|/|,|and)[ \t]*(?:(?<kind>PRs?|pull requests?|issues?)[ \t]+)?#?(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesTokenRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]
@@ -863,7 +864,7 @@ internal static partial class GitHubReferenceNavigator
 
     private readonly record struct GitHubReferenceCandidate(int Index, GitHubReferenceMatch Reference);
 
-    private readonly record struct SeriesNumber(long Value, int Index);
+    private readonly record struct SeriesNumber(long Value, int Index, string? Kind);
 }
 
 internal sealed record GitHubReferenceMatch(string RepositoryFullName, long Number, string Kind, string RawText, string? Host = null, string? Identifier = null)

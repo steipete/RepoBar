@@ -782,6 +782,75 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_keeps_repeated_explicit_repository_kind_in_series()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "other/repo PR #7 and PR #8",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 8L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_mixed_explicit_repository_kinds_in_series()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "other/repo issue #7 and PR #8",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 8L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_resolves_repository_scoped_gh_prefixed_issue_number()
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            "other/repo gh-42",
+            "github.com",
+            "steipete/RepoBar"));
+
+        Assert.Equal("other/repo", reference.RepositoryFullName);
+        Assert.Equal(42L, reference.Number);
+        Assert.Equal("issues", reference.Kind);
+    }
+
+    [Fact]
+    public void FindReferences_stops_explicit_repository_repeated_kind_at_sentence_boundary()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "other/repo PR #7. PR #7 belongs to the current repo",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_stops_explicit_repository_series_at_semicolon_boundary()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "other/repo PR #7; #8 belongs to the current repo",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 8L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
     public void FindReferences_does_not_continue_explicit_repository_series_across_pasted_lines()
     {
         var references = GitHubReferenceNavigator.FindReferences(
