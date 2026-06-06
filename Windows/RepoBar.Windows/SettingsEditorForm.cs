@@ -22,6 +22,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly NumericUpDown _refreshMinutes = new();
     private readonly CheckBox _openMenuOnLeftClick = new();
     private readonly CheckBox _launchAtLogin = new();
+    private readonly CheckBox _checkForUpdatesAutomatically = new();
     private readonly CheckBox _discoverLocalProjects = new();
     private readonly TextBox _localProjectsRoot = new();
     private readonly NumericUpDown _localProjectsDepth = new();
@@ -107,6 +108,7 @@ internal sealed class SettingsEditorForm : Form
         _refreshMinutes.Value = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
         _openMenuOnLeftClick.Checked = settings.OpenMenuOnLeftClick;
         _launchAtLogin.Checked = settings.LaunchAtLogin;
+        _checkForUpdatesAutomatically.Checked = settings.CheckForUpdatesAutomatically;
         _discoverLocalProjects.Checked = settings.DiscoverLocalProjects;
         _localProjectsRoot.Text = settings.LocalProjectsRoot ?? "";
         _localProjectsDepth.Minimum = 0;
@@ -285,6 +287,7 @@ internal sealed class SettingsEditorForm : Form
 
         _openMenuOnLeftClick.Text = "Open menu on left click";
         _launchAtLogin.Text = "Launch at login";
+        _checkForUpdatesAutomatically.Text = "Check for updates automatically";
         _discoverLocalProjects.Text = "Discover local projects";
         _fetchLocalProjectsBeforeStatus.Text = "Fetch before status";
         _autoSyncLocalProjects.Text = "Auto-sync clean behind repos";
@@ -315,6 +318,7 @@ internal sealed class SettingsEditorForm : Form
 
         settingsGrid.Controls.Add(_openMenuOnLeftClick);
         settingsGrid.Controls.Add(_launchAtLogin);
+        settingsGrid.Controls.Add(_checkForUpdatesAutomatically);
         settingsGrid.Controls.Add(_discoverLocalProjects);
         settingsGrid.Controls.Add(_fetchLocalProjectsBeforeStatus);
         settingsGrid.Controls.Add(_autoSyncLocalProjects);
@@ -675,6 +679,7 @@ internal sealed class SettingsEditorForm : Form
         settings.RefreshIntervalMinutes = (int)_refreshMinutes.Value;
         settings.OpenMenuOnLeftClick = _openMenuOnLeftClick.Checked;
         settings.LaunchAtLogin = _launchAtLogin.Checked;
+        settings.CheckForUpdatesAutomatically = _checkForUpdatesAutomatically.Checked;
         new WindowsLaunchAtLogin().SetEnabled(settings.LaunchAtLogin, Application.ExecutablePath);
         settings.DiscoverLocalProjects = _discoverLocalProjects.Checked;
         settings.LocalProjectsRoot = string.IsNullOrWhiteSpace(_localProjectsRoot.Text) ? null : _localProjectsRoot.Text.Trim();

@@ -25,6 +25,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private string? _resolvedToken;
     private PullRequestNotificationClickTarget? _lastPullRequestNotificationTarget;
     private string? _lastReferenceNotificationText;
+    private string? _lastUpdateNotificationUrl;
     private bool _isRefreshing;
     private string? _lastError;
 
@@ -52,6 +53,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         BuildMenu();
         BeginRefresh();
+        if (_settingsStore.Settings.CheckForUpdatesAutomatically)
+        {
+            _ = CheckForUpdatesInBackgroundAsync();
+        }
     }
 
     protected override void Dispose(bool disposing)
@@ -1373,6 +1378,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             {
                 _lastPullRequestNotificationTarget = PullRequestNotificationClickTarget.From(status.Repository.FullName, notification.Pull);
                 _lastReferenceNotificationText = null;
+                _lastUpdateNotificationUrl = null;
                 _notifyIcon.ShowBalloonTip(
                     timeout: 8000,
                     tipTitle: $"{status.Repository.FullName} {notification.Kind.DisplayName()}",
@@ -1395,6 +1401,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
             _lastPullRequestNotificationTarget = null;
             _lastReferenceNotificationText = notification.IssueNavigatorText;
+            _lastUpdateNotificationUrl = null;
             _notifyIcon.ShowBalloonTip(
                 timeout: 8000,
                 tipTitle: "RepoBar GitHub reference",
@@ -1429,6 +1436,13 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             return;
         }
 
+        if (!string.IsNullOrWhiteSpace(_lastUpdateNotificationUrl))
+        {
+            OpenUrl(_lastUpdateNotificationUrl);
+            _lastUpdateNotificationUrl = null;
+            return;
+        }
+
         if (_lastPullRequestNotificationTarget == null)
         {
             return;
@@ -1456,6 +1470,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             _githubClient.Dispose();
             _resolvedToken = null;
             _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+            if (_settingsStore.Settings.CheckForUpdatesAutomatically)
+            {
+                _ = CheckForUpdatesInBackgroundAsync();
+            }
             BeginRefresh();
         }
     }
@@ -1565,6 +1583,29 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         catch (Exception exception)
         {
             MessageBox.Show(exception.Message, "RepoBar Updates", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task CheckForUpdatesInBackgroundAsync()
+    {
+        try
+        {
+            using var checker = new WindowsUpdateChecker();
+            var status = await checker.CheckLatestAsync(WindowsUpdateChecker.CurrentVersion(), _shutdown.Token).ConfigureAwait(true);
+            if (!status.IsNewer || string.IsNullOrWhiteSpace(status.PreferredUpdateUrl) || _shutdown.IsCancellationRequested)
+            {
+                return;
+            }
+
+            _lastReferenceNotificationText = null;
+            _lastPullRequestNotificationTarget = null;
+            _lastUpdateNotificationUrl = status.PreferredUpdateUrl;
+            var target = status.InstallerUrl == null ? "release" : "Windows installer";
+            _notifyIcon.ShowBalloonTip(8000, "RepoBar update available", $"{status.DisplayText}. Click to open the {target}.", ToolTipIcon.Info);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            WindowsDiagnosticsLogger.Log(WindowsLogVerbosity.Debug, "Updates", $"Automatic update check failed: {exception.Message}");
         }
     }
 

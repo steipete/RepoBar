@@ -33,7 +33,7 @@ The Windows app currently provides:
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
 - About window with project, website, issue tracker, email, update check, and copyable update diagnostics actions
 - optional launch-at-login registration for the current Windows user
-- manual update check against the latest GitHub release with Windows installer asset detection
+- manual and automatic update checks against the latest GitHub release with Windows installer asset detection
 
 ## Build
 
@@ -63,7 +63,7 @@ Use `-SkipInstaller` to validate the publish layout without requiring the Inno c
 
 The installer can optionally create a desktop shortcut and a current-user startup entry.
 
-Use **Launch at login** in Preferences to add or remove the current executable from the current user's Windows `Run` registry key. Use **Check for updates** from the tray menu to compare the running app version with the latest RepoBar GitHub release and open the Windows installer asset when one is attached. Use **Copy update diagnostics** to copy the current executable path, install directory, app version, OS, process architecture, release API, and Windows installer asset preference for troubleshooting update/install issues.
+Use **Launch at login** in Preferences to add or remove the current executable from the current user's Windows `Run` registry key. Use **Check for updates automatically** to run a silent startup update check and show a tray balloon when a newer Windows installer or release page is available. Use **Check for updates** from the tray menu to compare the running app version with the latest RepoBar GitHub release and open the Windows installer asset when one is attached. Use **Copy update diagnostics** to copy the current executable path, install directory, app version, OS, process architecture, release API, and Windows installer asset preference for troubleshooting update/install issues.
 
 ## Run
 
@@ -99,6 +99,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "refreshIntervalMinutes": 5,
   "openMenuOnLeftClick": true,
   "launchAtLogin": false,
+  "checkForUpdatesAutomatically": true,
   "discoverLocalProjects": true,
   "localProjectsRoot": "%USERPROFILE%\\Projects",
   "localProjectsMaxDepth": 3,

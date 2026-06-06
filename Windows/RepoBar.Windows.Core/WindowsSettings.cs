@@ -14,6 +14,7 @@ internal sealed class WindowsSettings
     public int RefreshIntervalMinutes { get; set; } = 5;
     public bool OpenMenuOnLeftClick { get; set; } = true;
     public bool LaunchAtLogin { get; set; }
+    public bool CheckForUpdatesAutomatically { get; set; } = true;
     public bool DiscoverLocalProjects { get; set; } = true;
     public string? LocalProjectsRoot { get; set; }
     public int LocalProjectsMaxDepth { get; set; } = 3;

@@ -137,6 +137,7 @@ function Initialize-SmokeSettings {
         )
         refreshIntervalMinutes = 5
         openMenuOnLeftClick = $true
+        checkForUpdatesAutomatically = $true
         discoverLocalProjects = $true
         localProjectsRoot = $ProjectsRoot
         localProjectsMaxDepth = 3
@@ -359,6 +360,7 @@ try {
             localFetchIntervalConfigured = $settings.localProjectsFetchIntervalMinutes -eq 5
             actionsMonitoredOwnersConfigured = @($settings.actionsMonitoredOwners) -contains "steipete"
             actionsPlanTierConfigured = $settings.actionsPlanTier -eq "team"
+            autoUpdateCheckConfigured = $settings.checkForUpdatesAutomatically -eq $true
             updateDiagnosticsConfigured = $menuOrder -contains "copyUpdateDiagnostics"
         }
         screenshotAvailable = $null -ne $capturedScreenshot
@@ -369,7 +371,7 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), autoUpdateCheck=$($summary.proof.autoUpdateCheckConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }

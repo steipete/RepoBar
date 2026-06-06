@@ -103,6 +103,7 @@ public sealed class WindowsCredentialStoreTests
         var settings = new WindowsSettings();
 
         Assert.Equal(PullRequestNotificationClickAction.OpenInBrowser, settings.PullRequestNotificationClickAction);
+        Assert.True(settings.CheckForUpdatesAutomatically);
         Assert.Equal("Default browser", PullRequestNotificationClickAction.OpenInBrowser.DisplayName());
         Assert.Equal("Issue Navigator", PullRequestNotificationClickAction.OpenIssueNavigator.DisplayName());
     }
