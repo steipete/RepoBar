@@ -163,10 +163,17 @@ internal sealed class ReferenceNavigatorForm : Form
     private void RefreshReferences()
     {
         var defaultRepository = _defaultRepository.SelectedItem as string;
+        var knownRepositories = _defaultRepository.Items
+            .Cast<object>()
+            .Select(item => item.ToString())
+            .Where(item => !string.IsNullOrWhiteSpace(item))
+            .Select(item => item!)
+            .ToArray();
         var references = GitHubReferenceNavigator.FindReferences(
             _input.Text,
             _settings.GitHubHost,
-            defaultRepository);
+            defaultRepository,
+            knownRepositories);
 
         _references.Clear();
         foreach (var reference in references)

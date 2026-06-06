@@ -79,6 +79,27 @@ public sealed class GitHubReferenceClipboardMonitorTests
     }
 
     [Fact]
+    public void Observe_resolves_unique_repository_name_shorthand()
+    {
+        var monitor = new GitHubReferenceClipboardMonitor();
+        var settings = Settings();
+        settings.Repositories =
+        [
+            new RepositoryRef { Owner = "openclaw", Name = "discrawl", Visibility = RepositoryVisibility.Visible },
+            new RepositoryRef { Owner = "steipete", Name = "RepoBar", Visibility = RepositoryVisibility.Pinned },
+        ];
+
+        Assert.Null(monitor.Observe("baseline", settings));
+
+        var notification = monitor.Observe("discrawl#64", settings);
+
+        Assert.NotNull(notification);
+        Assert.Equal("openclaw/discrawl #64", notification.DisplayText);
+        Assert.Contains(notification.References, reference =>
+            reference.RepositoryFullName == "openclaw/discrawl" && reference.Number == 64);
+    }
+
+    [Fact]
     public void Observe_treats_same_reference_on_different_hosts_as_distinct()
     {
         var monitor = new GitHubReferenceClipboardMonitor();

@@ -7,7 +7,8 @@ internal static partial class GitHubReferenceNavigator
     public static IReadOnlyList<GitHubReferenceMatch> FindReferences(
         string text,
         string host,
-        string? defaultRepositoryFullName)
+        string? defaultRepositoryFullName,
+        IEnumerable<string>? knownRepositoryFullNames = null)
     {
         if (string.IsNullOrWhiteSpace(text))
         {
@@ -16,6 +17,7 @@ internal static partial class GitHubReferenceNavigator
 
         var matches = new List<GitHubReferenceCandidate>();
         var claimedSpans = new List<RangeSpan>();
+        var uniqueRepositoriesByName = UniqueRepositoriesByName(defaultRepositoryFullName, knownRepositoryFullNames);
         foreach (Match match in OwnerRepoSeriesRegex().Matches(text))
         {
             var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
@@ -65,6 +67,28 @@ internal static partial class GitHubReferenceNavigator
                     int.Parse(match.Groups["number"].Value),
                     NormalizeKind(match.Groups["kind"].Value),
                     match.Value)));
+            claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
+        }
+
+        foreach (Match match in RepositoryNameNumberRegex().Matches(text))
+        {
+            if (claimedSpans.Any(span => span.Contains(match.Index)))
+            {
+                continue;
+            }
+
+            var repositoryName = match.Groups["repo"].Value;
+            if (uniqueRepositoriesByName.TryGetValue(repositoryName, out var repositoryFullName))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    match.Index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        int.Parse(match.Groups["number"].Value),
+                        "issues",
+                        match.Value)));
+            }
+
             claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
         }
 
@@ -130,6 +154,37 @@ internal static partial class GitHubReferenceNavigator
         return IsPullRequestKind(value) ? "pull" : "issues";
     }
 
+    private static Dictionary<string, string> UniqueRepositoriesByName(
+        string? defaultRepositoryFullName,
+        IEnumerable<string>? knownRepositoryFullNames)
+    {
+        var repositories = (knownRepositoryFullNames ?? [])
+            .Append(defaultRepositoryFullName)
+            .Where(repository => !string.IsNullOrWhiteSpace(repository))
+            .Select(repository => repository!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(repository => new
+            {
+                FullName = repository,
+                Name = RepositoryName(repository),
+            })
+            .Where(repository => !string.IsNullOrWhiteSpace(repository.Name))
+            .GroupBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase);
+
+        return repositories
+            .Where(group => group.Count() == 1)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Single().FullName,
+                StringComparer.OrdinalIgnoreCase);
+    }
+
+    private static string? RepositoryName(string repositoryFullName)
+    {
+        var parts = repositoryFullName.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts.Length == 2 ? parts[1] : null;
+    }
+
     private static IEnumerable<SeriesNumber> ExpandSeriesNumbers(Group tail, int startNumber)
     {
         var previous = startNumber;
@@ -175,6 +230,9 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:(?<kind>PR|pull request|issue)\s*#?|#)(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoNumberRegex();
+
+    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<repo>[A-Za-z0-9_.-]+)#(?<number>\d+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex RepositoryNameNumberRegex();
 
     [GeneratedRegex(@"(?<separator>-|/|,|and)\s*#?(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesTokenRegex();

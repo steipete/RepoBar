@@ -35,7 +35,8 @@ internal sealed class GitHubReferenceClipboardMonitor
         var references = GitHubReferenceNavigator.FindReferences(
             clipboardText,
             settings.GitHubHost,
-            DefaultRepository(settings));
+            DefaultRepository(settings),
+            KnownRepositories(settings));
         if (references.Count == 0)
         {
             _lastReferenceKey = null;
@@ -76,6 +77,15 @@ internal sealed class GitHubReferenceClipboardMonitor
             .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
             .Select(repository => repository.FullName)
             .FirstOrDefault();
+    }
+
+    private static IReadOnlyList<string> KnownRepositories(WindowsSettings settings)
+    {
+        return settings.GetActiveRepositories()
+            .Where(repository => repository.IsVisible)
+            .Select(repository => repository.FullName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
     }
 
     private static string DisplayText(IReadOnlyList<GitHubReferenceMatch> references)

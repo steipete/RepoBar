@@ -216,6 +216,58 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_unique_repository_name_shorthand()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "discrawl#64 should open the matching known repository.",
+            "github.com",
+            "steipete/RepoBar",
+            ["openclaw/discrawl", "steipete/RepoBar"]);
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/discrawl", reference.RepositoryFullName);
+        Assert.Equal(64, reference.Number);
+        Assert.Equal("issues", reference.Kind);
+    }
+
+    [Fact]
+    public void FindReferences_resolves_default_repository_name_shorthand()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "RepoBar#66",
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal(66, reference.Number);
+    }
+
+    [Fact]
+    public void FindReferences_ignores_ambiguous_repository_name_shorthand()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "tools#64 should not fall back to the default repository.",
+            "github.com",
+            "steipete/RepoBar",
+            ["openclaw/tools", "steipete/tools", "steipete/RepoBar"]);
+
+        Assert.Empty(references);
+    }
+
+    [Fact]
+    public void FindReferences_ignores_unknown_repository_name_shorthand()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "missing#64 should not fall back to the default repository.",
+            "github.com",
+            "steipete/RepoBar",
+            ["steipete/RepoBar"]);
+
+        Assert.Empty(references);
+    }
+
+    [Fact]
     public void FindReferences_resolves_bare_issue_prose_lists_against_default_repository()
     {
         var references = GitHubReferenceNavigator.FindReferences(
