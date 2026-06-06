@@ -156,6 +156,66 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_chained_owner_repository_references()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "make - openclaw/crabbox#70/#71: work",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/crabbox", 70, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 71, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_resolves_ranged_owner_repository_references()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "also make openclaw/crabbox#66-#69 work",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/crabbox", 66, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 67, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 68, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 69, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_resolves_ranged_owner_repository_references_without_second_hash()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "openclaw/crabbox#66-69",
+            "github.com",
+            null);
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/crabbox", 66), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/crabbox", 67), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/crabbox", 68), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/crabbox", 69), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_preserves_pull_kind_for_owner_repository_series()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "openclaw/crabbox PR #7-#8",
+            "github.com",
+            null);
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/crabbox", 7, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/crabbox", 8, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
     public void FindReferences_resolves_bare_issue_prose_lists_against_default_repository()
     {
         var references = GitHubReferenceNavigator.FindReferences(

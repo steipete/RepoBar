@@ -16,6 +16,33 @@ internal static partial class GitHubReferenceNavigator
 
         var matches = new List<GitHubReferenceCandidate>();
         var claimedSpans = new List<RangeSpan>();
+        foreach (Match match in OwnerRepoSeriesRegex().Matches(text))
+        {
+            var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+            var kind = NormalizeKind(match.Groups["kind"].Value);
+            var startNumber = int.Parse(match.Groups["number"].Value);
+            matches.Add(new GitHubReferenceCandidate(
+                match.Groups["number"].Index,
+                new GitHubReferenceMatch(
+                    repositoryFullName,
+                    startNumber,
+                    kind,
+                    match.Groups["number"].Value)));
+
+            foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    number.Index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        number.Value,
+                        kind,
+                        number.Value.ToString())));
+            }
+
+            claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
+        }
+
         foreach (Match match in GitHubUrlRegex().Matches(text))
         {
             matches.Add(new GitHubReferenceCandidate(
@@ -103,6 +130,30 @@ internal static partial class GitHubReferenceNavigator
         return IsPullRequestKind(value) ? "pull" : "issues";
     }
 
+    private static IEnumerable<SeriesNumber> ExpandSeriesNumbers(Group tail, int startNumber)
+    {
+        var previous = startNumber;
+        foreach (Match token in SeriesTokenRegex().Matches(tail.Value))
+        {
+            var separator = token.Groups["separator"].Value;
+            var next = int.Parse(token.Groups["number"].Value);
+            var index = tail.Index + token.Groups["number"].Index;
+            if (separator == "-" && next > previous)
+            {
+                for (var number = previous + 1; number <= next; number++)
+                {
+                    yield return new SeriesNumber(number, index);
+                }
+            }
+            else
+            {
+                yield return new SeriesNumber(next, index);
+            }
+
+            previous = next;
+        }
+    }
+
     private static bool IsPullRequestKind(string value)
     {
         return string.Equals(value, "pr", StringComparison.OrdinalIgnoreCase) ||
@@ -119,8 +170,14 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?<kind>issues|pull|pulls)/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubUrlRegex();
 
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:(?<kind>PR|pull request|issue)\s*)?#(?<number>\d+)(?<tail>(?:\s*(?:-|/|,|and)\s*#?\d+)+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex OwnerRepoSeriesRegex();
+
     [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:(?<kind>PR|pull request|issue)\s*#?|#)(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoNumberRegex();
+
+    [GeneratedRegex(@"(?<separator>-|/|,|and)\s*#?(?<number>\d+)", RegexOptions.IgnoreCase)]
+    private static partial Regex SeriesTokenRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PR|pull request|issue)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]
     private static partial Regex KindedBareNumberRegex();
@@ -137,6 +194,8 @@ internal static partial class GitHubReferenceNavigator
     }
 
     private readonly record struct GitHubReferenceCandidate(int Index, GitHubReferenceMatch Reference);
+
+    private readonly record struct SeriesNumber(int Value, int Index);
 }
 
 internal sealed record GitHubReferenceMatch(string RepositoryFullName, int Number, string Kind, string RawText, string? Host = null)
