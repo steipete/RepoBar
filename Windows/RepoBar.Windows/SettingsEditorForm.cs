@@ -9,6 +9,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly WindowsSettingsStore _settingsStore;
     private readonly Label _credentialState = new();
     private readonly Label _oauthState = new();
+    private readonly Label _tokenValidationState = new();
     private readonly BindingList<AccountRow> _accounts = [];
     private readonly ComboBox _accountSelector = new();
     private readonly TextBox _accountLabelTextBox = new();
@@ -267,6 +268,10 @@ internal sealed class SettingsEditorForm : Form
         _oauthState.AutoSize = true;
         settingsGrid.Controls.Add(new Label { Text = "GitHub App OAuth", AutoSize = true, Anchor = AnchorStyles.Left });
         settingsGrid.Controls.Add(_oauthState);
+        _tokenValidationState.AutoSize = true;
+        _tokenValidationState.Text = "Not checked";
+        settingsGrid.Controls.Add(new Label { Text = "Token status", AutoSize = true, Anchor = AnchorStyles.Left });
+        settingsGrid.Controls.Add(_tokenValidationState);
 
         _openMenuOnLeftClick.Text = "Open menu on left click";
         _launchAtLogin.Text = "Launch at login";
@@ -368,8 +373,12 @@ internal sealed class SettingsEditorForm : Form
         removeButton.Click += (_, _) => RemoveSelectedRepositories();
         var clearTokenButton = new Button { Text = "Clear token" };
         clearTokenButton.Click += (_, _) => ClearCredentialToken();
+        var checkTokenButton = new Button { Text = "Check token" };
+        checkTokenButton.Click += async (_, _) => await CheckTokenAsync();
         var signInButton = new Button { Text = "Sign in with GitHub" };
         signInButton.Click += async (_, _) => await SignInWithGitHubAsync();
+        var refreshOAuthButton = new Button { Text = "Refresh OAuth" };
+        refreshOAuthButton.Click += async (_, _) => await RefreshOAuthAsync();
         var clearOAuthButton = new Button { Text = "Clear OAuth" };
         clearOAuthButton.Click += (_, _) => ClearOAuthToken();
         var addAccountButton = new Button { Text = "Add account" };
@@ -381,7 +390,9 @@ internal sealed class SettingsEditorForm : Form
         footer.Controls.Add(removeAccountButton);
         footer.Controls.Add(addAccountButton);
         footer.Controls.Add(clearOAuthButton);
+        footer.Controls.Add(refreshOAuthButton);
         footer.Controls.Add(signInButton);
+        footer.Controls.Add(checkTokenButton);
         footer.Controls.Add(clearTokenButton);
         footer.Controls.Add(removeButton);
         footer.Controls.Add(customizeMenuButton);
@@ -847,6 +858,53 @@ internal sealed class SettingsEditorForm : Form
         catch (Exception exception)
         {
             MessageBox.Show(exception.Message, "RepoBar GitHub Sign-In", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private async Task CheckTokenAsync()
+    {
+        SaveCredentialTokenIfNeeded();
+        try
+        {
+            var snapshot = CurrentSettingsSnapshot();
+            using var validator = new WindowsTokenValidator(snapshot, ResolveTokenForSnapshot());
+            var result = await validator.ValidateAsync(CancellationToken.None).ConfigureAwait(true);
+            _tokenValidationState.Text = result.Message;
+        }
+        catch (Exception exception)
+        {
+            _tokenValidationState.Text = $"Token check failed: {exception.Message}";
+        }
+    }
+
+    private async Task RefreshOAuthAsync()
+    {
+        try
+        {
+            var snapshot = CurrentSettingsSnapshot();
+            var account = snapshot.GetActiveAccount();
+            var store = new WindowsOAuthTokenStore(account.GitHubHost, account.Id);
+            var tokens = store.ReadTokens();
+            if (tokens == null)
+            {
+                _tokenValidationState.Text = "No OAuth token stored.";
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(tokens.RefreshToken))
+            {
+                _tokenValidationState.Text = "Stored OAuth token has no refresh token.";
+                return;
+            }
+
+            using var client = new WindowsOAuthClient();
+            var refreshed = await client.RefreshAsync(snapshot, tokens, CancellationToken.None).ConfigureAwait(true);
+            store.SaveTokens(refreshed);
+            UpdateCredentialState();
+            _tokenValidationState.Text = "OAuth token refreshed.";
+        }
+        catch (Exception exception)
+        {
+            _tokenValidationState.Text = $"OAuth refresh failed: {exception.Message}";
         }
     }
 
