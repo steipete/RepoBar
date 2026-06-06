@@ -214,6 +214,15 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         accountItem.DropDownItems.Add(new ToolStripMenuItem($"{account.PullRequestContributions:n0} pull requests") { Enabled = false });
         accountItem.DropDownItems.Add(new ToolStripMenuItem($"{account.PullRequestReviewContributions:n0} reviews") { Enabled = false });
         accountItem.DropDownItems.Add(new ToolStripMenuItem($"{account.IssueContributions:n0} issues") { Enabled = false });
+        if (account.ContributionWeeks.Count > 0)
+        {
+            accountItem.DropDownItems.Add(new ToolStripSeparator());
+            accountItem.DropDownItems.Add(new ToolStripMenuItem($"Heatmap: {account.ContributionHeatmapDisplayText}") { Enabled = false });
+            foreach (var week in account.ContributionWeeks.TakeLast(4))
+            {
+                accountItem.DropDownItems.Add(new ToolStripMenuItem(week.DisplayText) { Enabled = false });
+            }
+        }
         items.Add(accountItem);
     }
 

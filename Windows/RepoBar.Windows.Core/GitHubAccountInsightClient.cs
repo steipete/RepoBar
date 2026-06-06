@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Globalization;
 
 namespace RepoBar.Windows;
 
@@ -46,6 +47,13 @@ internal sealed class GitHubAccountInsightClient : IDisposable
                   totalPullRequestReviewContributions
                   contributionCalendar {
                     totalContributions
+                    weeks {
+                      firstDay
+                      contributionDays {
+                        date
+                        contributionCount
+                      }
+                    }
                   }
                 }
               }
@@ -93,7 +101,8 @@ internal sealed class GitHubAccountInsightClient : IDisposable
             TryGetNestedInt32(viewer, "contributionsCollection", "totalCommitContributions") ?? 0,
             TryGetNestedInt32(viewer, "contributionsCollection", "totalIssueContributions") ?? 0,
             TryGetNestedInt32(viewer, "contributionsCollection", "totalPullRequestContributions") ?? 0,
-            TryGetNestedInt32(viewer, "contributionsCollection", "totalPullRequestReviewContributions") ?? 0);
+            TryGetNestedInt32(viewer, "contributionsCollection", "totalPullRequestReviewContributions") ?? 0,
+            ParseContributionWeeks(viewer));
     }
 
     private static bool TryGetNestedProperty(JsonElement element, out JsonElement value, params string[] path)
@@ -125,6 +134,82 @@ internal sealed class GitHubAccountInsightClient : IDisposable
             : null;
     }
 
+    private static IReadOnlyList<GitHubContributionWeek> ParseContributionWeeks(JsonElement viewer)
+    {
+        if (!TryGetNestedProperty(viewer, out var weeks, "contributionsCollection", "contributionCalendar", "weeks") ||
+            weeks.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        var result = new List<GitHubContributionWeek>();
+        foreach (var week in weeks.EnumerateArray())
+        {
+            if (week.ValueKind != JsonValueKind.Object ||
+                !week.TryGetProperty("contributionDays", out var daysElement) ||
+                daysElement.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            var days = daysElement.EnumerateArray()
+                .Select(ParseContributionDay)
+                .Where(day => day != null)
+                .Cast<GitHubContributionDay>()
+                .OrderBy(day => day.Date)
+                .ToArray();
+            if (days.Length == 0)
+            {
+                continue;
+            }
+
+            var firstDay = TryGetDateOnly(week, "firstDay") ?? days[0].Date;
+            result.Add(new GitHubContributionWeek(firstDay, days));
+        }
+
+        return result
+            .OrderBy(week => week.FirstDay)
+            .ToArray();
+    }
+
+    private static GitHubContributionDay? ParseContributionDay(JsonElement day)
+    {
+        if (day.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        var date = TryGetDateOnly(day, "date");
+        if (date == null)
+        {
+            return null;
+        }
+
+        var count = day.TryGetProperty("contributionCount", out var countElement) &&
+            countElement.ValueKind == JsonValueKind.Number
+                ? countElement.GetInt32()
+                : 0;
+        return new GitHubContributionDay(date.Value, Math.Max(0, count));
+    }
+
+    private static DateOnly? TryGetDateOnly(JsonElement element, string propertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var raw = property.GetString();
+        if (DateOnly.TryParseExact(raw, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date))
+        {
+            return date;
+        }
+
+        return DateTimeOffset.TryParse(raw, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var timestamp)
+            ? DateOnly.FromDateTime(timestamp.UtcDateTime)
+            : null;
+    }
+
     public void Dispose()
     {
         _graphQlClient.Dispose();
@@ -139,8 +224,47 @@ internal sealed record GitHubAccountInsight(
     int CommitContributions,
     int IssueContributions,
     int PullRequestContributions,
-    int PullRequestReviewContributions)
+    int PullRequestReviewContributions,
+    IReadOnlyList<GitHubContributionWeek> ContributionWeeks)
 {
+    private static readonly char[] HeatmapBuckets = ['.', ':', '-', '=', '+', '*', '#'];
+
     public string DisplayName => string.IsNullOrWhiteSpace(Name) ? Login : Name!;
     public string DisplayText => $"{DisplayName} (@{Login})  {TotalContributions:n0} contributions";
+    public int ActiveContributionDays => ContributionWeeks.Sum(week => week.ActiveDays);
+    public int ActiveContributionWeeks => ContributionWeeks.Count(week => week.TotalContributions > 0);
+    public string ContributionHeatmapPreview => BuildContributionHeatmapPreview();
+    public string ContributionHeatmapDisplayText => ContributionWeeks.Count == 0
+        ? "No contribution heatmap"
+        : $"{ActiveContributionDays:n0} active days  {ActiveContributionWeeks:n0}/{ContributionWeeks.Count:n0} active weeks  {ContributionHeatmapPreview}";
+
+    private string BuildContributionHeatmapPreview()
+    {
+        if (ContributionWeeks.Count == 0)
+        {
+            return "";
+        }
+
+        var weeks = ContributionWeeks.TakeLast(26).ToArray();
+        var max = Math.Max(1, weeks.Max(week => week.TotalContributions));
+        return string.Concat(weeks.Select(week =>
+        {
+            if (week.TotalContributions <= 0)
+            {
+                return HeatmapBuckets[0];
+            }
+
+            var bucket = 1 + (int)Math.Floor((double)week.TotalContributions / max * (HeatmapBuckets.Length - 2));
+            return HeatmapBuckets[Math.Clamp(bucket, 1, HeatmapBuckets.Length - 1)];
+        }));
+    }
 }
+
+internal sealed record GitHubContributionWeek(DateOnly FirstDay, IReadOnlyList<GitHubContributionDay> Days)
+{
+    public int TotalContributions => Days.Sum(day => day.Count);
+    public int ActiveDays => Days.Count(day => day.Count > 0);
+    public string DisplayText => $"{FirstDay.ToString("MMM d", CultureInfo.CurrentCulture)}: {TotalContributions:n0} contributions";
+}
+
+internal sealed record GitHubContributionDay(DateOnly Date, int Count);

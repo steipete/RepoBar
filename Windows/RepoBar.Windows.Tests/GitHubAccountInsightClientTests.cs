@@ -28,7 +28,24 @@ public sealed class GitHubAccountInsightClientTests
                             "totalPullRequestContributions": 4,
                             "totalPullRequestReviewContributions": 5,
                             "contributionCalendar": {
-                              "totalContributions": 24
+                              "totalContributions": 24,
+                              "weeks": [
+                                {
+                                  "firstDay": "2026-05-17",
+                                  "contributionDays": [
+                                    {"date": "2026-05-17", "contributionCount": 0},
+                                    {"date": "2026-05-18", "contributionCount": 0}
+                                  ]
+                                },
+                                {
+                                  "firstDay": "2026-05-24",
+                                  "contributionDays": [
+                                    {"date": "2026-05-24", "contributionCount": 2},
+                                    {"date": "2026-05-25", "contributionCount": 3},
+                                    {"date": "2026-05-26", "contributionCount": 0}
+                                  ]
+                                }
+                              ]
                             }
                           }
                         }
@@ -46,6 +63,10 @@ public sealed class GitHubAccountInsightClientTests
         Assert.Equal(4, account.PullRequestContributions);
         Assert.Equal(5, account.PullRequestReviewContributions);
         Assert.Equal(3, account.IssueContributions);
+        Assert.Equal(2, account.ContributionWeeks.Count);
+        Assert.Equal(5, account.ContributionWeeks[1].TotalContributions);
+        Assert.Equal(".#", account.ContributionHeatmapPreview);
+        Assert.Equal("2 active days  1/2 active weeks  .#", account.ContributionHeatmapDisplayText);
     }
 
     [Fact]
