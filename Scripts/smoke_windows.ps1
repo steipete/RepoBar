@@ -41,7 +41,10 @@ function Save-SmokeScreenshot {
         try {
             $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
             $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
-            return $Path
+            return [ordered]@{
+                path = $Path
+                error = $null
+            }
         }
         finally {
             $graphics.Dispose()
@@ -50,7 +53,10 @@ function Save-SmokeScreenshot {
     }
     catch {
         Write-Warning "RepoBar.Windows smoke screenshot unavailable: $($_.Exception.Message)"
-        return $null
+        return [ordered]@{
+            path = $null
+            error = $_.Exception.Message
+        }
     }
 }
 
@@ -97,23 +103,48 @@ try {
     }
 
     $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
-    if (-not $settings.repositories -or $settings.repositories.Count -lt 1) {
+    $repositories = @($settings.repositories)
+    if ($repositories.Count -lt 1) {
         throw "RepoBar.Windows settings did not include the sample repository."
     }
 
     New-Item -ItemType Directory -Force -Path $smokeArtifacts | Out-Null
-    $capturedScreenshot = Save-SmokeScreenshot -Path $screenshotPath
+    $screenshot = Save-SmokeScreenshot -Path $screenshotPath
+    $capturedScreenshot = $screenshot.path
+    $activeAccount = @($settings.accounts) | Where-Object { $_.id -eq $settings.activeAccountId } | Select-Object -First 1
+    $sampleRepository = $repositories | Select-Object -First 1
+    $menuOrder = @($settings.menuCustomization.mainMenuOrder)
     $summary = [ordered]@{
         pid = $process.Id
+        processName = $process.ProcessName
+        executablePath = $exe.FullName
+        runtime = $Runtime
+        configuration = $Configuration
         settingsPath = $settingsPath
-        repositoryCount = $settings.repositories.Count
+        activeAccountId = $settings.activeAccountId
+        activeAccountLabel = if ($activeAccount) { $activeAccount.label } else { $null }
+        gitHubHost = $settings.githubHost
+        repositoryCount = $repositories.Count
+        sampleRepository = if ($sampleRepository) { "$($sampleRepository.owner)/$($sampleRepository.name)" } else { $null }
+        mainMenuOrder = $menuOrder
+        proof = [ordered]@{
+            processRunning = -not $process.HasExited
+            settingsCreated = Test-Path $settingsPath
+            sampleRepositoryConfigured = $null -ne $sampleRepository
+            accountSwitcherConfigured = $menuOrder -contains "accountSwitcher"
+            cacheResetConfigured = $menuOrder -contains "clearResponseCache"
+        }
+        screenshotAvailable = $null -ne $capturedScreenshot
         screenshotPath = $capturedScreenshot
+        screenshotError = $screenshot.error
         capturedAt = [DateTime]::UtcNow.ToString("o")
     }
     $summary | ConvertTo-Json | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
+    Write-Host "RepoBar.Windows smoke proof: $proofText"
 }
 finally {
     if (-not $process.HasExited) {

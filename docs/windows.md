@@ -209,7 +209,7 @@ Run the launch smoke on Windows:
 .\Scripts\smoke_windows.ps1 -Runtime win-x64
 ```
 
-The smoke publishes the app, launches `RepoBar.Windows.exe`, verifies the generated settings file, and writes a PNG screenshot plus JSON summary under `dist\windows\smoke\` when a desktop surface is available.
+The smoke publishes the app, launches `RepoBar.Windows.exe`, verifies the generated settings file, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, sample repository, configured tray menu order, and screenshot status. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary.
 
 ![RepoBar Windows tray menu](assets/repobar-windows-tray-menu.png)
 
