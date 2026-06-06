@@ -1234,14 +1234,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private string BuildTooltip(TrayHealth health)
     {
-        var summary = health switch
-        {
-            TrayHealth.Healthy => "healthy",
-            TrayHealth.Busy => "running",
-            TrayHealth.Failing => "needs attention",
-            _ => "ready",
-        };
-        return $"RepoBar - {_settingsStore.VisibleRepositories.Count} repos / {_localGitIndex.Repositories.Count} local - {summary}";
+        return WindowsTrayTooltipFormatter.Build(
+            _settingsStore.VisibleRepositories.Count,
+            _localGitIndex.Repositories.Count,
+            health,
+            _rateLimits,
+            _settingsStore.Settings.ShowRateLimits);
     }
 
     private void OnNotifyIconMouseUp(object? sender, MouseEventArgs eventArgs)
