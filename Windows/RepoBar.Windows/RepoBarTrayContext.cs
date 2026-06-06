@@ -176,6 +176,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                     hasLocalStatus = status.LocalStatus != null,
                     label = RepositoryRowFormatter.BuildLabel(status, _settingsStore.Settings),
                     localSync = status.LocalStatus?.SyncDetail,
+                    recentIssueTitles = status.RecentLists.Issues.Select(issue => issue.Title).ToArray(),
+                    recentPullRequestTitles = status.RecentLists.Pulls.Select(pull => pull.Title).ToArray(),
                 }).ToArray(),
             };
             File.WriteAllText(path, JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));

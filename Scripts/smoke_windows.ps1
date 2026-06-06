@@ -109,7 +109,8 @@ function Wait-SmokeRuntimeSummary {
 function Initialize-SmokeSettings {
     param(
         [string]$Path,
-        [string]$ProjectsRoot
+        [string]$ProjectsRoot,
+        [string]$ArchiveDatabasePath
     )
 
     $directory = Split-Path -Parent $Path
@@ -143,6 +144,7 @@ function Initialize-SmokeSettings {
         fetchLocalProjectsBeforeStatus = $false
         showDirtyFilesInMenu = $true
         enableResponseCache = $true
+        gitHubArchiveDatabasePath = $ArchiveDatabasePath
         repositoryDisplayLimit = 6
         repositoryMenuScope = "all"
         repositorySortKey = "activity"
@@ -220,6 +222,7 @@ $timestamp = [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ")
 $screenshotPath = Join-Path $smokeArtifacts "repobar-windows-smoke-$timestamp.png"
 $summaryPath = Join-Path $smokeArtifacts "repobar-windows-smoke-$timestamp.json"
 $runtimeSummaryPath = Join-Path $smokeArtifacts "repobar-windows-runtime-$timestamp.json"
+$archiveDatabasePath = Join-Path $smokeArtifacts "repobar-windows-archive-$timestamp.sqlite"
 
 Invoke-Native dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
     -p:PublishSingleFile=true `
@@ -241,9 +244,13 @@ if (Test-Path $settingsPath) {
 
 $projectsRoot = Join-Path $env:USERPROFILE "Projects"
 $localFixturePath = Initialize-LocalGitSmokeFixture -ProjectsRoot $projectsRoot
-Initialize-SmokeSettings -Path $settingsPath -ProjectsRoot $projectsRoot
+Initialize-SmokeSettings -Path $settingsPath -ProjectsRoot $projectsRoot -ArchiveDatabasePath $archiveDatabasePath
 $previousRuntimeSummaryPath = $env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH
+$previousSmokeArchiveFixture = $env:REPOBAR_WINDOWS_SMOKE_ARCHIVE_FIXTURE
+$previousSmokeForceArchiveFallback = $env:REPOBAR_WINDOWS_SMOKE_FORCE_ARCHIVE_FALLBACK
 $env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH = $runtimeSummaryPath
+$env:REPOBAR_WINDOWS_SMOKE_ARCHIVE_FIXTURE = "1"
+$env:REPOBAR_WINDOWS_SMOKE_FORCE_ARCHIVE_FALLBACK = "1"
 $process = Start-Process -FilePath $exe.FullName -PassThru
 try {
     Start-Sleep -Seconds $LaunchSeconds
@@ -271,6 +278,14 @@ try {
     if ($null -eq $localRepo -or $null -eq $localRow) {
         throw "RepoBar.Windows runtime smoke did not attach local Git status to steipete/RepoBar."
     }
+    $archiveIssueTitles = @($localRow.recentIssueTitles)
+    $archivePullTitles = @($localRow.recentPullRequestTitles)
+    if ($archiveIssueTitles -notcontains "#987 Smoke archive issue") {
+        throw "RepoBar.Windows runtime smoke did not render the archive-backed recent issue fallback."
+    }
+    if ($archivePullTitles -notcontains "#654 Smoke archive pull") {
+        throw "RepoBar.Windows runtime smoke did not render the archive-backed recent pull request fallback."
+    }
     if ($runtimeSummary.activeAccountId -ne "work") {
         throw "RepoBar.Windows runtime smoke did not use the work account profile."
     }
@@ -291,11 +306,14 @@ try {
         repositoryCount = $repositories.Count
         sampleRepository = if ($sampleRepository) { "$($sampleRepository.owner)/$($sampleRepository.name)" } else { $null }
         localGitFixturePath = $localFixturePath
+        gitHubArchiveDatabasePath = $archiveDatabasePath
         localRepositoryCount = $runtimeSummary.localRepositoryCount
         runtimeSummaryPath = $runtimeSummaryPath
         runtimeFirstLocalRepository = $localRepo.fullName
         runtimeFirstLocalSync = $localRepo.syncDetail
         runtimeFirstRowLabel = $localRow.label
+        runtimeFirstArchiveIssue = $archiveIssueTitles | Select-Object -First 1
+        runtimeFirstArchivePullRequest = $archivePullTitles | Select-Object -First 1
         runtimeActiveAccountId = $runtimeSummary.activeAccountId
         runtimeActiveAccountLabel = $runtimeSummary.activeAccountLabel
         runtimeActiveAccountCredentialTargets = @($runtimeSummary.activeAccountCredentialTargets)
@@ -306,6 +324,8 @@ try {
             sampleRepositoryConfigured = $null -ne $sampleRepository
             localGitFixtureCreated = Test-Path (Join-Path $localFixturePath ".git")
             localGitStatusAttached = $null -ne $localRow
+            archiveFallbackIssueListed = $archiveIssueTitles -contains "#987 Smoke archive issue"
+            archiveFallbackPullRequestListed = $archivePullTitles -contains "#654 Smoke archive pull"
             workAccountActive = $runtimeSummary.activeAccountId -eq "work"
             workCredentialTargetsScoped = @($runtimeSummary.activeAccountCredentialTargets) -contains "RepoBar.Windows:github.com:work"
             accountSwitcherConfigured = $menuOrder -contains "accountSwitcher"
@@ -319,12 +339,14 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }
 finally {
     $env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH = $previousRuntimeSummaryPath
+    $env:REPOBAR_WINDOWS_SMOKE_ARCHIVE_FIXTURE = $previousSmokeArchiveFixture
+    $env:REPOBAR_WINDOWS_SMOKE_FORCE_ARCHIVE_FALLBACK = $previousSmokeForceArchiveFallback
     if (-not $process.HasExited) {
         Stop-Process -Id $process.Id -Force
         $process.WaitForExit()

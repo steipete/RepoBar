@@ -6,6 +6,8 @@ namespace RepoBar.Windows;
 
 internal sealed class WindowsGitHubArchiveReader
 {
+    internal const string SmokeArchiveFixtureEnvironmentVariable = "REPOBAR_WINDOWS_SMOKE_ARCHIVE_FIXTURE";
+
     private readonly string _databasePath;
 
     public WindowsGitHubArchiveReader(string databasePath)
@@ -18,6 +20,68 @@ internal sealed class WindowsGitHubArchiveReader
         return string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
             ? null
             : new WindowsGitHubArchiveReader(settings.GitHubArchiveDatabasePath);
+    }
+
+    internal static void CreateSmokeFixtureIfRequested(WindowsSettings settings)
+    {
+        if (!string.Equals(
+            Environment.GetEnvironmentVariable(SmokeArchiveFixtureEnvironmentVariable),
+            "1",
+            StringComparison.Ordinal) ||
+            string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath))
+        {
+            return;
+        }
+
+        var databasePath = ResolvePath(settings.GitHubArchiveDatabasePath);
+        var directory = Path.GetDirectoryName(databasePath);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+        if (File.Exists(databasePath))
+        {
+            File.Delete(databasePath);
+        }
+
+        using var connection = new SqliteConnection($"Data Source={databasePath}");
+        connection.Open();
+        using (var command = connection.CreateCommand())
+        {
+            command.CommandText = """
+                create table threads(
+                    repository text not null,
+                    kind text not null,
+                    number text not null,
+                    title text,
+                    updated_at text,
+                    state text,
+                    html_url text,
+                    author_login text,
+                    _repobar_raw_json text not null
+                )
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        InsertSmokeThread(
+            connection,
+            settings.Repositories.FirstOrDefault(repository => repository.IsValid) ??
+                new RepositoryRef { Owner = "steipete", Name = "RepoBar" },
+            kind: "issue",
+            number: 987,
+            title: "Smoke archive issue",
+            urlKind: "issues",
+            author: "archive-issue-bot");
+        InsertSmokeThread(
+            connection,
+            settings.Repositories.FirstOrDefault(repository => repository.IsValid) ??
+                new RepositoryRef { Owner = "steipete", Name = "RepoBar" },
+            kind: "pull_request",
+            number: 654,
+            title: "Smoke archive pull",
+            urlKind: "pull",
+            author: "archive-pr-bot");
     }
 
     public IReadOnlyList<GitHubListItem> RecentIssues(RepositoryRef repository, int limit)
@@ -286,6 +350,44 @@ internal sealed class WindowsGitHubArchiveReader
         }
 
         return parts.Count == 0 ? null : string.Join(" - ", parts);
+    }
+
+    private static void InsertSmokeThread(
+        SqliteConnection connection,
+        RepositoryRef repository,
+        string kind,
+        int number,
+        string title,
+        string urlKind,
+        string author)
+    {
+        var url = $"https://github.com/{repository.Owner}/{repository.Name}/{urlKind}/{number}";
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            insert into threads(
+                repository, kind, number, title, updated_at, state, html_url, author_login, _repobar_raw_json
+            ) values (
+                $repository, $kind, $number, $title, $updated_at, $state, $html_url, $author_login, $raw_json
+            )
+            """;
+        command.Parameters.AddWithValue("$repository", repository.FullName);
+        command.Parameters.AddWithValue("$kind", kind);
+        command.Parameters.AddWithValue("$number", number.ToString(CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$title", title);
+        command.Parameters.AddWithValue("$updated_at", DateTimeOffset.UtcNow.ToString("o", CultureInfo.InvariantCulture));
+        command.Parameters.AddWithValue("$state", "open");
+        command.Parameters.AddWithValue("$html_url", url);
+        command.Parameters.AddWithValue("$author_login", author);
+        command.Parameters.AddWithValue(
+            "$raw_json",
+            JsonSerializer.Serialize(new
+            {
+                number,
+                title,
+                html_url = url,
+                user = new { login = author },
+            }));
+        command.ExecuteNonQuery();
     }
 
     private static string ResolvePath(string path)

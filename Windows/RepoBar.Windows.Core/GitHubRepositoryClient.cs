@@ -9,6 +9,8 @@ namespace RepoBar.Windows;
 
 internal sealed class GitHubRepositoryClient : IDisposable
 {
+    internal const string SmokeForceArchiveFallbackEnvironmentVariable = "REPOBAR_WINDOWS_SMOKE_FORCE_ARCHIVE_FALLBACK";
+
     private static readonly Regex LastPageRegex = new(@"[?&]page=(\d+)[^>]*>\s*;\s*rel=""last""", RegexOptions.Compiled);
 
     private readonly HttpClient _httpClient;
@@ -809,6 +811,11 @@ internal sealed class GitHubRepositoryClient : IDisposable
 
     private async Task<string?> TryReadJsonAsync(string path, CancellationToken cancellationToken)
     {
+        if (ShouldForceSmokeArchiveFallback(path))
+        {
+            return null;
+        }
+
         try
         {
             return await ReadJsonAsync(path, cancellationToken).ConfigureAwait(false);
@@ -817,6 +824,20 @@ internal sealed class GitHubRepositoryClient : IDisposable
         {
             return null;
         }
+    }
+
+    private static bool ShouldForceSmokeArchiveFallback(string path)
+    {
+        if (!string.Equals(
+            Environment.GetEnvironmentVariable(SmokeForceArchiveFallbackEnvironmentVariable),
+            "1",
+            StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        return path.Contains("/issues?state=open&sort=updated&direction=desc&per_page=10", StringComparison.Ordinal) ||
+            path.Contains("/pulls?state=all&sort=updated&direction=desc&per_page=5", StringComparison.Ordinal);
     }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)

@@ -174,6 +174,119 @@ public sealed class GitHubArchiveReaderTests
         }
     }
 
+    [Fact]
+    public async Task Repository_client_smoke_force_archive_fallback_uses_archive_recent_lists()
+    {
+        var databasePath = CreateArchiveDatabase();
+        var previous = Environment.GetEnvironmentVariable(GitHubRepositoryClient.SmokeForceArchiveFallbackEnvironmentVariable);
+        try
+        {
+            using (var connection = OpenWritable(databasePath))
+            {
+                CreateThreadsTable(connection);
+                InsertThread(
+                    connection,
+                    repository: "owner/name",
+                    kind: "issue",
+                    number: 987,
+                    title: "Smoke archive issue",
+                    state: "open",
+                    updatedAt: "2026-06-06T12:00:00Z",
+                    url: "https://github.com/owner/name/issues/987",
+                    author: "archive-issue-bot");
+                InsertThread(
+                    connection,
+                    repository: "owner/name",
+                    kind: "pull_request",
+                    number: 654,
+                    title: "Smoke archive pull",
+                    state: "open",
+                    updatedAt: "2026-06-06T12:01:00Z",
+                    url: "https://github.com/owner/name/pull/654",
+                    author: "archive-pr-bot");
+            }
+
+            Environment.SetEnvironmentVariable(GitHubRepositoryClient.SmokeForceArchiveFallbackEnvironmentVariable, "1");
+            var handler = new StubHandler(request =>
+            {
+                var path = request.RequestUri?.PathAndQuery ?? "";
+                return path switch
+                {
+                    "/repos/owner/name" => JsonResponse("""
+                        {
+                          "open_issues_count": 2,
+                          "stargazers_count": 10,
+                          "forks_count": 2,
+                          "default_branch": "main",
+                          "pushed_at": "2026-06-01T00:00:00Z"
+                        }
+                        """),
+                    "/repos/owner/name/pulls?state=open&per_page=1" => JsonResponse("[]"),
+                    "/repos/owner/name/issues?state=open&sort=updated&direction=desc&per_page=10" => JsonResponse("""
+                        [
+                          {
+                            "number": 1,
+                            "title": "Live issue should be bypassed",
+                            "html_url": "https://github.com/owner/name/issues/1",
+                            "updated_at": "2026-06-06T11:00:00Z",
+                            "user": { "login": "live" }
+                          }
+                        ]
+                        """),
+                    "/repos/owner/name/pulls?state=all&sort=updated&direction=desc&per_page=5" => JsonResponse("""
+                        [
+                          {
+                            "number": 2,
+                            "title": "Live pull should be bypassed",
+                            "html_url": "https://github.com/owner/name/pull/2",
+                            "updated_at": "2026-06-06T11:00:00Z",
+                            "user": { "login": "live" }
+                          }
+                        ]
+                        """),
+                    "/repos/owner/name/actions/runs?branch=main&per_page=1" => JsonResponse("""{"workflow_runs":[]}"""),
+                    "/repos/owner/name/actions/runs?per_page=5" => JsonResponse("""{"workflow_runs":[]}"""),
+                    "/repos/owner/name/releases/latest" => new HttpResponseMessage(HttpStatusCode.NotFound),
+                    "/repos/owner/name/contents/CHANGELOG.md?ref=main" => new HttpResponseMessage(HttpStatusCode.NotFound),
+                    _ => JsonResponse("[]"),
+                };
+            });
+            var graphQlHandler = new StubHandler(_ => JsonResponse("""
+                {
+                  "data": {
+                    "repository": {
+                      "discussions": {
+                        "nodes": []
+                      }
+                    }
+                  }
+                }
+                """));
+            var settings = new WindowsSettings
+            {
+                EnableResponseCache = false,
+                GitHubArchiveDatabasePath = databasePath,
+            };
+            using var client = new GitHubRepositoryClient(settings, token: null, handler, graphQlHandler, cache: null);
+
+            var statuses = await client.LoadRepositoriesAsync(
+                [new RepositoryRef { Owner = "owner", Name = "name" }],
+                new LocalGitIndex([]),
+                CancellationToken.None);
+
+            var status = Assert.Single(statuses);
+            Assert.Contains(status.RecentLists.Issues, issue => issue.Title == "#987 Smoke archive issue");
+            Assert.Contains(status.RecentLists.Pulls, pull => pull.Title == "#654 Smoke archive pull");
+            Assert.DoesNotContain(status.RecentLists.Issues, issue => issue.Title.Contains("Live issue", StringComparison.Ordinal));
+            Assert.DoesNotContain(status.RecentLists.Pulls, pull => pull.Title.Contains("Live pull", StringComparison.Ordinal));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(GitHubRepositoryClient.SmokeForceArchiveFallbackEnvironmentVariable, previous);
+            DeleteDatabase(databasePath);
+        }
+    }
+
     private static string CreateArchiveDatabase()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"repobar-archive-{Guid.NewGuid():N}");

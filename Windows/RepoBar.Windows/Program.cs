@@ -17,6 +17,7 @@ internal static class Program
         ApplicationConfiguration.Initialize();
 
         var settingsStore = WindowsSettingsStore.LoadOrCreate();
+        WindowsGitHubArchiveReader.CreateSmokeFixtureIfRequested(settingsStore.Settings);
         using var context = new RepoBarTrayContext(settingsStore);
         Application.Run(context);
     }
