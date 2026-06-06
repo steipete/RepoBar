@@ -564,11 +564,13 @@ internal sealed class GitHubRepositoryClient : IDisposable
             "CreateEvent" => new GitHubListItem(
                 $"Created {TryGetPayloadString(payload, "ref_type") ?? "ref"} {TryGetPayloadString(payload, "ref") ?? ""}".Trim(),
                 BuildWebUri(repository).ToString(),
-                Metadata(actor, createdAt)),
+                Metadata(actor, createdAt),
+                UpdatedAt: createdAt),
             _ => new GitHubListItem(
                 type.EndsWith("Event", StringComparison.Ordinal) ? type[..^5] : type,
                 BuildWebUri(repository).ToString(),
-                Metadata(actor, createdAt)),
+                Metadata(actor, createdAt),
+                UpdatedAt: createdAt),
         };
     }
 
@@ -588,7 +590,8 @@ internal sealed class GitHubRepositoryClient : IDisposable
         return new GitHubListItem(
             $"Pushed {commitCount} commit{(commitCount == 1 ? "" : "s")} to {branch}",
             head == null ? BuildWebUri(repository).ToString() : BuildWebUri(repository, $"commit/{head}").ToString(),
-            Metadata(actor, createdAt));
+            Metadata(actor, createdAt),
+            UpdatedAt: createdAt);
     }
 
     private static GitHubListItem? BuildNumberedActivity(
@@ -615,7 +618,8 @@ internal sealed class GitHubRepositoryClient : IDisposable
         return new GitHubListItem(
             $"{action} {subject}{(string.IsNullOrWhiteSpace(title) ? "" : $": {title}")}",
             url,
-            Metadata(actor, createdAt));
+            Metadata(actor, createdAt),
+            UpdatedAt: createdAt);
     }
 
     private static GitHubListItem? BuildReleaseActivity(JsonElement payload, string? actor, DateTimeOffset? createdAt)
@@ -632,7 +636,8 @@ internal sealed class GitHubRepositoryClient : IDisposable
         return new GitHubListItem(
             $"{action} release {name}",
             TryGetString(release, "html_url"),
-            Metadata(actor, createdAt));
+            Metadata(actor, createdAt),
+            UpdatedAt: createdAt);
     }
 
     private static string? TryGetPayloadString(JsonElement payload, string propertyName)
@@ -1101,7 +1106,8 @@ internal sealed record GitHubListItem(
     string? AuthorLogin = null,
     string[]? AssigneeLogins = null,
     string[]? LabelNames = null,
-    int? CommentCount = null);
+    int? CommentCount = null,
+    DateTimeOffset? UpdatedAt = null);
 
 internal sealed record RecentRepositoryLists(
     IReadOnlyList<GitHubListItem> Issues,

@@ -189,6 +189,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                     AddAccountInsightItems(items, _accountInsight);
                 }
                 break;
+            case WindowsMainMenuItem.GlobalActivity:
+                AddGlobalActivityItems(items);
+                break;
             case WindowsMainMenuItem.ActionsUsage:
                 if (_settingsStore.Settings.ShowActionsUsage)
                 {
@@ -262,6 +265,38 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         rateItem.DropDownItems.Add(new ToolStripSeparator());
         rateItem.DropDownItems.Add(new ToolStripMenuItem("Budget is shared by the GitHub user or token actor, not by each token string.") { Enabled = false });
         items.Add(rateItem);
+    }
+
+    private void AddGlobalActivityItems(ToolStripItemCollection items)
+    {
+        if (_statuses.Count == 0)
+        {
+            return;
+        }
+
+        var activity = WindowsGlobalActivity.FromStatuses(_statuses);
+        if (activity.Count == 0)
+        {
+            return;
+        }
+
+        var activityItem = new ToolStripMenuItem("Activity");
+        foreach (var item in activity)
+        {
+            var menuItem = new ToolStripMenuItem(item.Title, null, (_, _) =>
+            {
+                if (!string.IsNullOrWhiteSpace(item.Url))
+                {
+                    OpenUrl(item.Url);
+                }
+            })
+            {
+                Enabled = !string.IsNullOrWhiteSpace(item.Url),
+                ToolTipText = item.Subtitle ?? item.Title,
+            };
+            activityItem.DropDownItems.Add(menuItem);
+        }
+        items.Add(activityItem);
     }
 
     private void AddAccountInsightItems(ToolStripItemCollection items, GitHubAccountInsight account)
