@@ -304,6 +304,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                     AddRateLimitItems(items, _rateLimits);
                 }
                 break;
+            case WindowsMainMenuItem.RepositoryScope:
+                AddRepositoryScopeItem(items);
+                break;
             case WindowsMainMenuItem.Diagnostics:
                 items.Add(new ToolStripMenuItem("Diagnostics", null, (_, _) => ShowDiagnostics()));
                 break;
@@ -338,6 +341,31 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
                 break;
         }
+    }
+
+    private void AddRepositoryScopeItem(ToolStripItemCollection items)
+    {
+        var current = _settingsStore.Settings.RepositoryMenuScope;
+        var scopeMenu = new ToolStripMenuItem($"Repository scope: {current.DisplayName()}");
+        foreach (var scope in Enum.GetValues<RepositoryMenuScope>())
+        {
+            scopeMenu.DropDownItems.Add(new ToolStripMenuItem(scope.DisplayName(), null, (_, _) => SetRepositoryScope(scope))
+            {
+                Checked = scope == current,
+            });
+        }
+
+        items.Add(scopeMenu);
+    }
+
+    private void SetRepositoryScope(RepositoryMenuScope scope)
+    {
+        if (_settingsStore.SetRepositoryMenuScope(scope))
+        {
+            BeginRefresh();
+        }
+
+        BuildMenu();
     }
 
     private void AddAccountSwitcherItem(ToolStripItemCollection items)

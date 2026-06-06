@@ -96,6 +96,17 @@ public sealed class WindowsSettingsStoreTests
         Assert.Equal(WindowsLogVerbosity.Info, settings.LoggingVerbosity);
     }
 
+    [Fact]
+    public void SetRepositoryMenuScope_persists_scope_changes()
+    {
+        var store = CreateStore(new WindowsSettings());
+
+        Assert.True(store.SetRepositoryMenuScope(RepositoryMenuScope.Local));
+        Assert.Equal(RepositoryMenuScope.Local, store.Settings.RepositoryMenuScope);
+        Assert.False(store.SetRepositoryMenuScope(RepositoryMenuScope.Local));
+        Assert.False(store.SetRepositoryMenuScope((RepositoryMenuScope)999));
+    }
+
     private static WindowsSettingsStore CreateStore(WindowsSettings settings)
     {
         var settingsPath = Path.Combine(Path.GetTempPath(), $"repobar-settings-{Guid.NewGuid():N}.json");

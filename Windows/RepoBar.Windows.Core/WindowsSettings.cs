@@ -572,6 +572,18 @@ internal sealed class WindowsSettingsStore
         return true;
     }
 
+    public bool SetRepositoryMenuScope(RepositoryMenuScope scope)
+    {
+        if (!Enum.IsDefined(scope) || Settings.RepositoryMenuScope == scope)
+        {
+            return false;
+        }
+
+        Settings.RepositoryMenuScope = scope;
+        Save();
+        return true;
+    }
+
     public void Save()
     {
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(Settings, JsonOptions));
