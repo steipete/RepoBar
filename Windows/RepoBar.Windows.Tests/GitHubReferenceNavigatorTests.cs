@@ -441,6 +441,48 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_repository_colon_kinded_references()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "- openclaw/Tachikoma: PR 18",
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/Tachikoma", reference.RepositoryFullName);
+        Assert.Equal(18L, reference.Number);
+        Assert.Equal("pull", reference.Kind);
+    }
+
+    [Fact]
+    public void FindReferences_keeps_repository_count_heading_same_line_bare_references_default_scoped()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "- openclaw/Tachikoma: 1 issue / 1 PR 18",
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal(18L, reference.Number);
+        Assert.Equal("pull", reference.Kind);
+    }
+
+    [Fact]
+    public void FindReferences_keeps_repository_colon_nonleading_kinded_references_default_scoped()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "- openclaw/Tachikoma: issue PR 18",
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal(18L, reference.Number);
+        Assert.Equal("pull", reference.Kind);
+    }
+
+    [Fact]
     public void FindReferences_resolves_repository_heading_child_references()
     {
         var references = GitHubReferenceNavigator.FindReferences(
