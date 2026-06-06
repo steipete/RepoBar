@@ -176,6 +176,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             AddRateLimitItems(_menu.Items, _rateLimits);
         }
         _menu.Items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
+        _menu.Items.Add(new ToolStripMenuItem("Log out", null, (_, _) => LogOut()));
         _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
         _menu.Items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
         _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
@@ -840,6 +841,23 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             _resolvedToken = null;
             _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
             BeginRefresh();
+        }
+    }
+
+    private void LogOut()
+    {
+        try
+        {
+            _settingsStore.ClearActiveAccountStoredCredentials();
+            _resolvedToken = null;
+            _githubClient.Dispose();
+            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, null);
+            _notifyIcon.ShowBalloonTip(5000, "RepoBar", "Stored GitHub credentials cleared.", ToolTipIcon.Info);
+            BeginRefresh();
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Log Out", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 

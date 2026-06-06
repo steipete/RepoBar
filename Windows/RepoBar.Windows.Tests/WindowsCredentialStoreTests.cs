@@ -61,6 +61,42 @@ public sealed class WindowsCredentialStoreTests
         Assert.Null(new WindowsCredentialStore("github.com").ReadToken());
     }
 
+    [Fact]
+    public void ClearActiveAccountStoredCredentials_targets_active_account_pat_and_oauth_tokens()
+    {
+        var settings = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts =
+            [
+                new WindowsAccountProfile
+                {
+                    Id = "default",
+                    Label = "Default",
+                    GitHubHost = "github.com",
+                },
+                new WindowsAccountProfile
+                {
+                    Id = "work",
+                    Label = "Work",
+                    GitHubHost = "github.enterprise.test",
+                },
+            ],
+        };
+        WindowsSettingsStore.NormalizeSettings(settings);
+        var store = new WindowsSettingsStore(Path.Combine(Path.GetTempPath(), "repobar-settings-test.json"), settings);
+
+        Assert.Equal(
+            [
+                "RepoBar.Windows:github.enterprise.test:work",
+                "RepoBar.Windows.OAuth:github.enterprise.test:work",
+            ],
+            store.ActiveAccountStoredCredentialTargetNames);
+        var exception = Record.Exception(store.ClearActiveAccountStoredCredentials);
+
+        Assert.Null(exception);
+    }
+
     [Theory]
     [InlineData(null, "github.com")]
     [InlineData("", "github.com")]

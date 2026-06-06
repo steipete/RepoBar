@@ -93,7 +93,7 @@ internal sealed class WindowsSettingsStore
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
     };
 
-    private WindowsSettingsStore(string settingsPath, WindowsSettings settings)
+    internal WindowsSettingsStore(string settingsPath, WindowsSettings settings)
     {
         SettingsPath = settingsPath;
         Settings = settings;
@@ -303,5 +303,25 @@ internal sealed class WindowsSettingsStore
 
         var ghToken = Environment.GetEnvironmentVariable("GH_TOKEN");
         return string.IsNullOrWhiteSpace(ghToken) ? null : ghToken;
+    }
+
+    internal IReadOnlyList<string> ActiveAccountStoredCredentialTargetNames
+    {
+        get
+        {
+            var account = Settings.GetActiveAccount();
+            return
+            [
+                WindowsCredentialStore.BuildTargetName(account.GitHubHost, account.Id),
+                WindowsCredentialStore.BuildOAuthTargetName(account.GitHubHost, account.Id),
+            ];
+        }
+    }
+
+    public void ClearActiveAccountStoredCredentials()
+    {
+        var account = Settings.GetActiveAccount();
+        new WindowsCredentialStore(account.GitHubHost, account.Id).ClearToken();
+        new WindowsOAuthTokenStore(account.GitHubHost, account.Id).ClearTokens();
     }
 }
