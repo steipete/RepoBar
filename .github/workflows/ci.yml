@@ -3,6 +3,7 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
     branches: [main]
 
@@ -64,6 +65,8 @@ jobs:
     name: Windows tray
     runs-on: windows-latest
     timeout-minutes: 20
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
@@ -84,3 +87,115 @@ jobs:
       - name: Package tray layout
         shell: pwsh
         run: ./Scripts/package_windows.ps1 -Runtime win-x64 -SkipInstaller
+
+      - name: Upload unsigned tray layout
+        uses: actions/upload-artifact@v7
+        with:
+          name: repobar-windows-win-x64-unsigned
+          path: dist/windows/publish/win-x64
+
+  windows-signing:
+    name: Windows signing
+    needs: windows
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+    runs-on: windows-latest
+    timeout-minutes: 15
+    environment: release-signing
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Download unsigned tray layout
+        uses: actions/download-artifact@v8
+        with:
+          name: repobar-windows-win-x64-unsigned
+          path: dist/windows/publish/win-x64
+
+      - name: Azure Login for Release Signing
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Stage RepoBar Executable for Signing
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path signing-input-win-x64 -Force | Out-Null
+          New-Item -ItemType HardLink -Path signing-input-win-x64\RepoBar.Windows.exe -Target dist\windows\publish\win-x64\RepoBar.Windows.exe | Out-Null
+
+      - name: Sign RepoBar Windows Executable
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: https://eus.codesigning.azure.net/
+          signing-account-name: openclaw
+          certificate-profile-name: openclaw
+          files-folder: signing-input-win-x64
+          files-folder-filter: exe
+          files-folder-depth: 1
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Verify RepoBar Windows Signing Policy
+        shell: pwsh
+        run: ./Scripts/Test-WindowsReleaseSignatures.ps1 -PayloadPath dist/windows/publish/win-x64 -RequireSignedRepoBar
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y
+
+      - name: Build Windows installer from signed layout
+        shell: pwsh
+        run: |
+          $version = "0.1.0"
+          if (Test-Path version.env) {
+            $line = Get-Content version.env | Where-Object { $_ -match '^(MARKETING_VERSION|VERSION)=' } | Select-Object -First 1
+            if ($line) {
+              $version = $line -replace '^(MARKETING_VERSION|VERSION)=', ''
+            }
+          }
+
+          $env:REPOBAR_WINDOWS_VERSION = $version
+          $env:REPOBAR_WINDOWS_PUBLISH_DIR = (Resolve-Path dist/windows/publish/win-x64).Path
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" Windows/installer.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC.exe exited with code $LASTEXITCODE" }
+
+      - name: Sign RepoBar Windows Installer
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: https://eus.codesigning.azure.net/
+          signing-account-name: openclaw
+          certificate-profile-name: openclaw
+          files-folder: dist/windows
+          files-folder-filter: exe
+          files-folder-depth: 1
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Verify RepoBar Windows Installer Signature
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -LiteralPath dist/windows -File -Filter "RepoBar-Windows-*.exe" | Select-Object -First 1
+          if (-not $installer) { throw "RepoBar Windows installer was not produced." }
+          $signature = Get-AuthenticodeSignature -LiteralPath $installer.FullName
+          if ($signature.Status -ne "Valid") { throw "$($installer.Name) signature was $($signature.Status)." }
+          $subject = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { "" }
+          if ($subject -notmatch "OpenClaw Foundation") { throw "$($installer.Name) signer was not OpenClaw Foundation: $subject" }
+
+      - name: Upload signed tray layout
+        uses: actions/upload-artifact@v7
+        with:
+          name: repobar-windows-win-x64-signed
+          path: dist/windows/publish/win-x64
+
+      - name: Upload signed Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: repobar-windows-installer-win-x64-signed
+          path: dist/windows/RepoBar-Windows-*.exe
