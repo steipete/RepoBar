@@ -1,5 +1,7 @@
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using Xunit;
 
 namespace RepoBar.Windows.Tests;
@@ -74,6 +76,59 @@ public sealed class WindowsUpdateCheckerTests
         Assert.True(status.IsNewer);
         Assert.Null(status.InstallerUrl);
         Assert.Equal(status.ReleaseUrl, status.PreferredUpdateUrl);
+    }
+
+    [Fact]
+    public void FindWindowsInstallerUrl_prefers_current_x64_architecture()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "assets": [
+                {"name":"RepoBar-Windows-arm64.msi","browser_download_url":"https://example.com/repobar-arm64.msi"},
+                {"name":"RepoBar-Windows-x64.exe","browser_download_url":"https://example.com/repobar-x64.exe"},
+                {"name":"RepoBar-Windows.zip","browser_download_url":"https://example.com/repobar-generic.zip"}
+              ]
+            }
+            """);
+
+        Assert.Equal(
+            "https://example.com/repobar-x64.exe",
+            WindowsUpdateChecker.FindWindowsInstallerUrl(document.RootElement, Architecture.X64));
+    }
+
+    [Fact]
+    public void FindWindowsInstallerUrl_prefers_current_arm64_architecture()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "assets": [
+                {"name":"RepoBar-Windows-x64.msi","browser_download_url":"https://example.com/repobar-x64.msi"},
+                {"name":"RepoBar-Windows-arm64.exe","browser_download_url":"https://example.com/repobar-arm64.exe"},
+                {"name":"RepoBar-Windows.zip","browser_download_url":"https://example.com/repobar-generic.zip"}
+              ]
+            }
+            """);
+
+        Assert.Equal(
+            "https://example.com/repobar-arm64.exe",
+            WindowsUpdateChecker.FindWindowsInstallerUrl(document.RootElement, Architecture.Arm64));
+    }
+
+    [Fact]
+    public void FindWindowsInstallerUrl_uses_extension_preference_with_generic_assets()
+    {
+        using var document = JsonDocument.Parse("""
+            {
+              "assets": [
+                {"name":"RepoBar-Windows.zip","browser_download_url":"https://example.com/repobar.zip"},
+                {"name":"RepoBar-Windows.exe","browser_download_url":"https://example.com/repobar.exe"}
+              ]
+            }
+            """);
+
+        Assert.Equal(
+            "https://example.com/repobar.exe",
+            WindowsUpdateChecker.FindWindowsInstallerUrl(document.RootElement, Architecture.X64));
     }
 
     private static HttpResponseMessage JsonResponse(string json)

@@ -39,7 +39,7 @@ internal sealed record WindowsUpdateDiagnostics(
             $"os_description: {OsDescription}",
             $"process_architecture: {ProcessArchitecture}",
             "latest_release_api: https://api.github.com/repos/steipete/RepoBar/releases/latest",
-            "windows_installer_asset_preference: msi, exe, zip",
+            "windows_installer_asset_preference: matching architecture, then msi, exe, zip",
         ]);
     }
 }

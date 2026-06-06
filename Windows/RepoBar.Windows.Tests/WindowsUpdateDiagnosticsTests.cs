@@ -20,7 +20,7 @@ public sealed class WindowsUpdateDiagnosticsTests
         Assert.Contains("current_version: 0.7.1", text);
         Assert.Contains("can_check_for_updates: True", text);
         Assert.Contains("latest_release_api: https://api.github.com/repos/steipete/RepoBar/releases/latest", text);
-        Assert.Contains("windows_installer_asset_preference: msi, exe, zip", text);
+        Assert.Contains("windows_installer_asset_preference: matching architecture, then msi, exe, zip", text);
         Assert.False(string.IsNullOrWhiteSpace(diagnostics.OsDescription));
         Assert.False(string.IsNullOrWhiteSpace(diagnostics.ProcessArchitecture));
     }

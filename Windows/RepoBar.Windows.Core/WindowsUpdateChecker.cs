@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
@@ -32,7 +33,7 @@ internal sealed class WindowsUpdateChecker : IDisposable
         using var document = JsonDocument.Parse(json);
         var tag = TryGetString(document.RootElement, "tag_name") ?? "";
         var url = TryGetString(document.RootElement, "html_url");
-        var installerUrl = FindWindowsInstallerUrl(document.RootElement);
+        var installerUrl = FindWindowsInstallerUrl(document.RootElement, RuntimeInformation.ProcessArchitecture);
         var latestVersion = NormalizeVersion(tag);
         var normalizedCurrent = NormalizeVersion(currentVersion);
         var isNewer = latestVersion != null &&
@@ -88,7 +89,7 @@ internal sealed class WindowsUpdateChecker : IDisposable
             : null;
     }
 
-    internal static string? FindWindowsInstallerUrl(JsonElement release)
+    internal static string? FindWindowsInstallerUrl(JsonElement release, Architecture? architecture = null)
     {
         if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
         {
@@ -100,8 +101,8 @@ internal sealed class WindowsUpdateChecker : IDisposable
                 TryGetString(asset, "name") ?? "",
                 TryGetString(asset, "browser_download_url")))
             .Where(asset => !string.IsNullOrWhiteSpace(asset.Url))
-            .OrderByDescending(asset => asset.Score)
-            .FirstOrDefault(asset => asset.Score > 0)
+            .OrderByDescending(asset => asset.ScoreFor(architecture))
+            .FirstOrDefault(asset => asset.ScoreFor(architecture) > 0)
             ?.Url;
     }
 
@@ -122,30 +123,52 @@ internal sealed record WindowsUpdateStatus(string CurrentVersion, string LatestT
 
 internal sealed record ReleaseAsset(string Name, string? Url)
 {
-    public int Score
+    public int ScoreFor(Architecture? architecture)
     {
-        get
+        var lower = Name.ToLowerInvariant();
+        if (!lower.Contains("windows", StringComparison.Ordinal) &&
+            !lower.Contains("win-", StringComparison.Ordinal) &&
+            !lower.Contains("win_", StringComparison.Ordinal))
         {
-            var lower = Name.ToLowerInvariant();
-            if (!lower.Contains("windows", StringComparison.Ordinal) && !lower.Contains("win-", StringComparison.Ordinal) && !lower.Contains("win_", StringComparison.Ordinal))
-            {
-                return 0;
-            }
-
-            if (lower.EndsWith(".msi", StringComparison.Ordinal))
-            {
-                return 40;
-            }
-            if (lower.EndsWith(".exe", StringComparison.Ordinal))
-            {
-                return 30;
-            }
-            if (lower.EndsWith(".zip", StringComparison.Ordinal))
-            {
-                return 20;
-            }
-
-            return 10;
+            return 0;
         }
+
+        var score = 10 + ArchitectureScore(lower, architecture);
+        if (lower.EndsWith(".msi", StringComparison.Ordinal))
+        {
+            return score + 400;
+        }
+        if (lower.EndsWith(".exe", StringComparison.Ordinal))
+        {
+            return score + 300;
+        }
+        if (lower.EndsWith(".zip", StringComparison.Ordinal))
+        {
+            return score + 200;
+        }
+
+        return score + 100;
+    }
+
+    private static int ArchitectureScore(string lowerName, Architecture? architecture)
+    {
+        var isArm64 = lowerName.Contains("arm64", StringComparison.Ordinal) ||
+            lowerName.Contains("aarch64", StringComparison.Ordinal);
+        var isX64 = lowerName.Contains("x64", StringComparison.Ordinal) ||
+            lowerName.Contains("amd64", StringComparison.Ordinal);
+        var isX86 = lowerName.Contains("x86", StringComparison.Ordinal) ||
+            lowerName.Contains("ia32", StringComparison.Ordinal);
+
+        return architecture switch
+        {
+            Architecture.Arm64 when isArm64 => 80,
+            Architecture.Arm64 when isX64 || isX86 => -80,
+            Architecture.X64 when isX64 => 80,
+            Architecture.X64 when isArm64 || isX86 => -80,
+            Architecture.X86 when isX86 => 80,
+            Architecture.X86 when isArm64 || isX64 => -80,
+            _ when !isArm64 && !isX64 && !isX86 => 10,
+            _ => 0,
+        };
     }
 }
