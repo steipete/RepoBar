@@ -2,7 +2,7 @@
 
 ## 0.7.1 - Unreleased
 
-- Add an initial native Windows taskbar tray companion with configured repository status, local Git state, repository discovery and visibility controls, recent lists, discussions, activity, Actions queue/billing/runner, release, traffic, heatmap, contribution, and changelog summaries, GitHub navigation links, native preferences with named account profiles, GitHub App OAuth, account-scoped Credential Manager token storage, ETag cache, archive-backed issue/PR fallback, rate-limit diagnostics, PR notification click-through, launch-at-login and update-check controls, installer packaging, and Windows smoke/Crabbox validation scripts.
+- Add an initial native Windows taskbar tray companion with configured repository status, local Git state, repository discovery and visibility controls, recent lists, discussions, activity, Actions queue/billing/runner, release, traffic, heatmap, contribution, and changelog summaries, GitHub navigation links, native preferences with named account profiles, GitHub App OAuth, account-scoped Credential Manager token storage, ETag cache, archive-backed issue/PR fallback, rate-limit diagnostics, PR notification click-through, launch-at-login and update-check controls, installer packaging, and Windows smoke/Crabbox validation scripts with screenshot artifacts.
 - Keep Issue Navigator reference clicks from being overwritten by clipboard seeding, and show unresolved GitHub metadata as the reference label instead of "preview unavailable."
 - Keep the Repositories settings table from rendering duplicate rows when the same repository is both pinned and hidden (thanks @devYRPauli). (#73)
 

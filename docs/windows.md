@@ -124,6 +124,8 @@ Run the launch smoke on Windows:
 .\Scripts\smoke_windows.ps1 -Runtime win-x64
 ```
 
+The smoke publishes the app, launches `RepoBar.Windows.exe`, verifies the generated settings file, and writes a PNG screenshot plus JSON summary under `dist\windows\smoke\` when a desktop surface is available.
+
 Run the hosted Windows Crabbox validation from a machine with Crabbox access:
 
 ```bash

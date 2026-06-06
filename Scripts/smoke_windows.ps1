@@ -21,6 +21,39 @@ function Invoke-Native {
     }
 }
 
+function Save-SmokeScreenshot {
+    param(
+        [string]$Path
+    )
+
+    try {
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+
+        $screen = [System.Windows.Forms.Screen]::PrimaryScreen
+        if ($null -eq $screen -or $screen.Bounds.Width -le 0 -or $screen.Bounds.Height -le 0) {
+            return $null
+        }
+
+        $bounds = $screen.Bounds
+        $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+        $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+        try {
+            $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+            $bitmap.Save($Path, [System.Drawing.Imaging.ImageFormat]::Png)
+            return $Path
+        }
+        finally {
+            $graphics.Dispose()
+            $bitmap.Dispose()
+        }
+    }
+    catch {
+        Write-Warning "RepoBar.Windows smoke screenshot unavailable: $($_.Exception.Message)"
+        return $null
+    }
+}
+
 $isWindowsHost = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $env:OS -eq "Windows_NT" }
 if (-not $isWindowsHost) {
     throw "Windows tray smoke must run on Windows."
@@ -30,6 +63,10 @@ $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 $project = Join-Path $root "Windows/RepoBar.Windows/RepoBar.Windows.csproj"
 $appData = Join-Path $env:APPDATA "RepoBar"
 $settingsPath = Join-Path $appData "windows-settings.json"
+$smokeArtifacts = Join-Path $root "dist/windows/smoke"
+$timestamp = [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ")
+$screenshotPath = Join-Path $smokeArtifacts "repobar-windows-smoke-$timestamp.png"
+$summaryPath = Join-Path $smokeArtifacts "repobar-windows-smoke-$timestamp.json"
 
 Invoke-Native dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
     -p:PublishSingleFile=true `
@@ -64,7 +101,19 @@ try {
         throw "RepoBar.Windows settings did not include the sample repository."
     }
 
-    Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath"
+    New-Item -ItemType Directory -Force -Path $smokeArtifacts | Out-Null
+    $capturedScreenshot = Save-SmokeScreenshot -Path $screenshotPath
+    $summary = [ordered]@{
+        pid = $process.Id
+        settingsPath = $settingsPath
+        repositoryCount = $settings.repositories.Count
+        screenshotPath = $capturedScreenshot
+        capturedAt = [DateTime]::UtcNow.ToString("o")
+    }
+    $summary | ConvertTo-Json | Set-Content -Encoding UTF8 -Path $summaryPath
+
+    $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
+    Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
 }
 finally {
     if (-not $process.HasExited) {
