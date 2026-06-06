@@ -15,6 +15,19 @@ public sealed class LocalGitServiceTests
         Assert.Equal(expected, LocalGitService.TryParseGitHubFullName(remote));
     }
 
+    [Theory]
+    [InlineData("https://github.com/steipete/RepoBar.git", "github.com", "steipete/RepoBar")]
+    [InlineData("git@github.enterprise.test:owner/repo.git", "github.enterprise.test", "owner/repo")]
+    [InlineData("ssh://git@GitHub.Example.com/owner/repo.git", "github.example.com", "owner/repo")]
+    public void TryParseGitHubRemote_preserves_remote_host(string remote, string expectedHost, string expectedFullName)
+    {
+        var parsed = LocalGitService.TryParseGitHubRemote(remote) ??
+            throw new InvalidOperationException("Expected remote to parse.");
+
+        Assert.Equal(expectedHost, parsed.Host);
+        Assert.Equal(expectedFullName, parsed.FullName);
+    }
+
     [Fact]
     public void DiscoverRepositoryRoots_detects_git_directories_and_worktree_files()
     {
@@ -255,6 +268,26 @@ public sealed class LocalGitServiceTests
     }
 
     [Fact]
+    public void Local_index_matches_repositories_by_active_host_when_remote_host_is_known()
+    {
+        var github = LocalStatus("owner/repo", LocalSyncState.Synced, "github.com");
+        var enterprise = LocalStatus("owner/repo", LocalSyncState.Synced, "github.enterprise.test");
+
+        var index = new LocalGitIndex([github, enterprise], [], "github.enterprise.test");
+
+        Assert.Equal(enterprise, index.Find(new RepositoryRef { Owner = "owner", Name = "repo" }));
+    }
+
+    [Fact]
+    public void Local_index_does_not_cross_match_known_remote_hosts()
+    {
+        var github = LocalStatus("owner/repo", LocalSyncState.Synced, "github.com");
+        var index = new LocalGitIndex([github], [], "github.enterprise.test");
+
+        Assert.Null(index.Find(new RepositoryRef { Owner = "owner", Name = "repo" }));
+    }
+
+    [Fact]
     public void Local_sync_notification_formats_single_and_multiple_repositories()
     {
         var one = LocalStatus("owner/one", LocalSyncState.Synced);
@@ -274,7 +307,7 @@ public sealed class LocalGitServiceTests
         };
     }
 
-    private static LocalGitRepositoryStatus LocalStatus(string fullName, LocalSyncState syncState)
+    private static LocalGitRepositoryStatus LocalStatus(string fullName, LocalSyncState syncState, string? gitHubHost = null)
     {
         var name = fullName.Split('/')[1];
         return new LocalGitRepositoryStatus(
@@ -289,6 +322,7 @@ public sealed class LocalGitServiceTests
             DirtyCounts: LocalDirtyCounts.Empty,
             DirtyFiles: [],
             WorktreeName: null,
-            UpstreamBranch: "origin/main");
+            UpstreamBranch: "origin/main",
+            GitHubHost: gitHubHost);
     }
 }

@@ -12,7 +12,8 @@ internal sealed record LocalGitRepositoryStatus(
     LocalDirtyCounts DirtyCounts,
     IReadOnlyList<string> DirtyFiles,
     string? WorktreeName,
-    string? UpstreamBranch)
+    string? UpstreamBranch,
+    string? GitHubHost = null)
 {
     public string DisplayName => FullName ?? Name;
     public bool CanFastForward => IsClean && SyncState == LocalSyncState.Behind;
@@ -80,25 +81,35 @@ internal enum LocalSyncState
 
 internal sealed class LocalGitIndex
 {
+    private readonly string? _activeGitHubHost;
     private readonly Dictionary<string, LocalGitRepositoryStatus> _byFullName;
+    private readonly Dictionary<string, LocalGitRepositoryStatus> _byScopedFullName;
     private readonly Dictionary<string, LocalGitRepositoryStatus> _byName;
 
     public LocalGitIndex(IReadOnlyList<LocalGitRepositoryStatus> repositories)
-        : this(repositories, [])
+        : this(repositories, [], null)
     {
     }
 
     public LocalGitIndex(
         IReadOnlyList<LocalGitRepositoryStatus> repositories,
-        IReadOnlyList<LocalGitRepositoryStatus> autoSyncedRepositories)
+        IReadOnlyList<LocalGitRepositoryStatus> autoSyncedRepositories,
+        string? activeGitHubHost = null)
     {
         Repositories = repositories;
         AutoSyncedRepositories = autoSyncedRepositories;
+        _activeGitHubHost = string.IsNullOrWhiteSpace(activeGitHubHost) ? null : GitHubHost.Normalize(activeGitHubHost);
+        _byScopedFullName = repositories
+            .Where(repository => !string.IsNullOrWhiteSpace(repository.FullName) && !string.IsNullOrWhiteSpace(repository.GitHubHost))
+            .GroupBy(repository => ScopedFullNameKey(repository.GitHubHost!, repository.FullName!), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => PreferPrimary(group), StringComparer.OrdinalIgnoreCase);
         _byFullName = repositories
-            .Where(repository => !string.IsNullOrWhiteSpace(repository.FullName))
+            .Where(repository => !string.IsNullOrWhiteSpace(repository.FullName) &&
+                (_activeGitHubHost == null || string.IsNullOrWhiteSpace(repository.GitHubHost)))
             .GroupBy(repository => repository.FullName!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => PreferPrimary(group), StringComparer.OrdinalIgnoreCase);
         _byName = repositories
+            .Where(repository => _activeGitHubHost == null || string.IsNullOrWhiteSpace(repository.GitHubHost))
             .GroupBy(repository => repository.Name, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(group => group.Key, group => PreferPrimary(group), StringComparer.OrdinalIgnoreCase);
     }
@@ -110,6 +121,12 @@ internal sealed class LocalGitIndex
 
     public LocalGitRepositoryStatus? Find(RepositoryRef repository)
     {
+        if (_activeGitHubHost != null &&
+            _byScopedFullName.TryGetValue(ScopedFullNameKey(_activeGitHubHost, repository.FullName), out var scopedMatch))
+        {
+            return scopedMatch;
+        }
+
         if (_byFullName.TryGetValue(repository.FullName, out var fullNameMatch))
         {
             return fullNameMatch;
@@ -124,6 +141,11 @@ internal sealed class LocalGitIndex
             .OrderBy(repository => repository.WorktreeName is null ? 0 : 1)
             .ThenBy(repository => repository.Path, StringComparer.OrdinalIgnoreCase)
             .First();
+    }
+
+    private static string ScopedFullNameKey(string gitHubHost, string fullName)
+    {
+        return $"{GitHubHost.Normalize(gitHubHost)}/{fullName}";
     }
 }
 
@@ -155,6 +177,8 @@ internal sealed record LocalGitScanSummary(string? Root, int RepositoryCount, bo
 internal sealed record LocalGitWorktree(string Path, string? Branch, string? Head, bool IsBare);
 
 internal sealed record LocalGitBranch(string Name, bool IsCurrent);
+
+internal sealed record GitHubRemoteRef(string Host, string FullName);
 
 internal sealed record LocalGitActionResult(bool Success, string Output, string Error)
 {

@@ -59,7 +59,8 @@ internal sealed class LocalGitService
 
         return new LocalGitIndex(
             statuses.OrderBy(status => status.DisplayName, StringComparer.OrdinalIgnoreCase).ToList(),
-            autoSyncedStatuses.OrderBy(status => status.DisplayName, StringComparer.OrdinalIgnoreCase).ToList());
+            autoSyncedStatuses.OrderBy(status => status.DisplayName, StringComparer.OrdinalIgnoreCase).ToList(),
+            settings.GitHubHost);
     }
 
     internal static IReadOnlyList<string> DiscoverRepositoryRoots(string root, int maxDepth)
@@ -140,12 +141,12 @@ internal sealed class LocalGitService
         var dirtyFiles = dirtyLines.Select(ParseDirtyFile).Where(file => file.Length > 0).Take(8).ToArray();
         var isClean = dirtyLines.Length == 0;
         var remote = await TryGitAsync(repoRoot, ["remote", "get-url", "origin"], cancellationToken).ConfigureAwait(false);
-        var fullName = remote == null ? null : TryParseGitHubFullName(remote.Trim());
+        var remoteRef = remote == null ? null : TryParseGitHubRemote(remote.Trim());
 
         return new LocalGitRepositoryStatus(
             Path.GetFullPath(repoRoot),
-            fullName?.Split('/').LastOrDefault() ?? Path.GetFileName(repoRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
-            fullName,
+            remoteRef?.FullName.Split('/').LastOrDefault() ?? Path.GetFileName(repoRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)),
+            remoteRef?.FullName,
             branch,
             isClean,
             ahead,
@@ -154,7 +155,8 @@ internal sealed class LocalGitService
             dirtyCounts,
             dirtyFiles,
             WorktreeName(repoRoot),
-            upstream);
+            upstream,
+            remoteRef?.Host);
     }
 
     internal async Task<LocalGitActionResult> FetchAsync(string repoRoot, CancellationToken cancellationToken)
@@ -455,6 +457,11 @@ internal sealed class LocalGitService
 
     internal static string? TryParseGitHubFullName(string remote)
     {
+        return TryParseGitHubRemote(remote)?.FullName;
+    }
+
+    internal static GitHubRemoteRef? TryParseGitHubRemote(string remote)
+    {
         var normalized = remote.Trim();
         if (normalized.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
         {
@@ -464,15 +471,20 @@ internal sealed class LocalGitService
         if (Uri.TryCreate(normalized, UriKind.Absolute, out var uri))
         {
             var parts = uri.AbsolutePath.Trim('/').Split('/', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Length >= 2 ? $"{parts[^2]}/{parts[^1]}" : null;
+            return parts.Length >= 2 && !string.IsNullOrWhiteSpace(uri.Host)
+                ? new GitHubRemoteRef(GitHubHost.Normalize(uri.Host), $"{parts[^2]}/{parts[^1]}")
+                : null;
         }
 
         var marker = normalized.IndexOf(':', StringComparison.Ordinal);
         if (marker >= 0 && normalized[..marker].Contains('@'))
         {
+            var host = normalized[..marker].Split('@').LastOrDefault();
             var path = normalized[(marker + 1)..].Trim('/');
             var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Length >= 2 ? $"{parts[^2]}/{parts[^1]}" : null;
+            return parts.Length >= 2 && !string.IsNullOrWhiteSpace(host)
+                ? new GitHubRemoteRef(GitHubHost.Normalize(host), $"{parts[^2]}/{parts[^1]}")
+                : null;
         }
 
         return null;
