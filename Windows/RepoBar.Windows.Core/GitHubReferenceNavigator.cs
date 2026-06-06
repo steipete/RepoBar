@@ -811,22 +811,22 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?<kind>issues|pull|pulls)/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubUrlRegex();
 
-    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):\s*(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?<tail>(?:\s*(?:,|and)\s*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):[ \t]*(?<kind>PRs?|pull requests?|issues?)[ \t]+#?(?<number>\d+)(?<tail>(?:[ \t]*(?:,|and)[ \t]*#?\d+)*)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RepositoryColonKindedSeriesRegex();
 
-    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s+(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?<tail>(?:\s*(?:,|and)\s*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]+(?<kind>PRs?|pull requests?|issues?)[ \t]+#?(?<number>\d+)(?<tail>(?:[ \t]*(?:,|and)[ \t]*#?\d+)*)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoKindedSeriesRegex();
 
-    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:(?<kind>PR|pull request|issue)\s*)?#(?<number>\d+)(?<tail>(?:\s*(?:-|/|,|and)\s*#?\d+)+)\b", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]*(?:(?<kind>PR|pull request|issue)[ \t]*)?#(?<number>\d+)(?<tail>(?:[ \t]*(?:-|/|,|and)[ \t]*#?\d+)+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoSeriesRegex();
 
-    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*(?:(?<kind>PR|pull request|issue)\s*#?|#)(?<number>\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)[ \t]*(?:(?<kind>PR|pull request|issue)[ \t]*#?|#)(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex OwnerRepoNumberRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<repo>[A-Za-z0-9_.-]+)#(?<number>\d+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RepositoryNameNumberRegex();
 
-    [GeneratedRegex(@"(?<separator>-|/|,|and)\s*#?(?<number>\d+)", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"(?<separator>-|/|,|and)[ \t]*#?(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesTokenRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]

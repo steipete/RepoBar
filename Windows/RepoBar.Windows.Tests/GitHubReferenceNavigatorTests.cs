@@ -694,6 +694,111 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_stops_heading_child_explicit_spaced_repository_series_at_sentence_boundary()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 depends on other/repo #7. #8 belongs to Tachikoma.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("other/repo", 7L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 8L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_stops_heading_child_explicit_compact_repository_series_at_sentence_boundary()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 depends on other/repo#7. #8 belongs to Tachikoma.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("other/repo", 7L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 8L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_preserves_heading_child_later_explicit_repository_spaced_series()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 depends on other/repo #7 and #8
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("other/repo", 7L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("other/repo", 8L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_stops_heading_child_explicit_repository_series_at_later_heading_prose()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              See other/repo #7 and PR #8
+              See other/repo#9 and issue #10
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 8L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 9L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 10L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_explicit_repository_series_on_the_same_pasted_line()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "other/repo PR #7 and #8",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("other/repo", 8L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_does_not_continue_explicit_repository_series_across_pasted_lines()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            other/repo PR #7
+            and #8
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 7L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 8L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
     public void FindReferences_preserves_repository_heading_reference_before_explicit_repository_refs()
     {
         var references = GitHubReferenceNavigator.FindReferences(
