@@ -62,7 +62,7 @@ Use `-SkipInstaller` to validate the publish layout without requiring the Inno c
 
 The installer can optionally create a desktop shortcut and a current-user startup entry.
 
-Use **Launch at login** in Preferences to add or remove the current executable from the current user's Windows `Run` registry key. Use **Check for updates** from the tray menu to compare the running app version with the latest RepoBar GitHub release and open the Windows installer asset when one is attached.
+Use **Launch at login** in Preferences to add or remove the current executable from the current user's Windows `Run` registry key. Use **Check for updates** from the tray menu to compare the running app version with the latest RepoBar GitHub release and open the Windows installer asset when one is attached. Use **Copy update diagnostics** to copy the current executable path, install directory, app version, OS, process architecture, release API, and Windows installer asset preference for troubleshooting update/install issues.
 
 ## Run
 
@@ -139,6 +139,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
       "preferences",
       "about",
       "checkForUpdates",
+      "copyUpdateDiagnostics",
       "openSettingsFile",
       "clearResponseCache",
       "quit"

@@ -167,6 +167,7 @@ function Initialize-SmokeSettings {
                 "preferences",
                 "about",
                 "checkForUpdates",
+                "copyUpdateDiagnostics",
                 "openSettingsFile",
                 "clearResponseCache",
                 "quit"
@@ -334,6 +335,7 @@ try {
             cacheResetConfigured = $menuOrder -contains "clearResponseCache"
             diagnosticsConfigured = $menuOrder -contains "diagnostics"
             localFetchIntervalConfigured = $settings.localProjectsFetchIntervalMinutes -eq 5
+            updateDiagnosticsConfigured = $menuOrder -contains "copyUpdateDiagnostics"
         }
         screenshotAvailable = $null -ne $capturedScreenshot
         screenshotPath = $capturedScreenshot
@@ -343,7 +345,7 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), localFetchInterval=$($summary.proof.localFetchIntervalConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }

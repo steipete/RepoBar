@@ -315,6 +315,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsMainMenuItem.CheckForUpdates:
                 items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
                 break;
+            case WindowsMainMenuItem.CopyUpdateDiagnostics:
+                items.Add(new ToolStripMenuItem("Copy update diagnostics", null, (_, _) => CopyUpdateDiagnostics()));
+                break;
             case WindowsMainMenuItem.OpenSettingsFile:
                 items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
                 break;
@@ -1445,6 +1448,19 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
 
             MessageBox.Show(status.DisplayText, "RepoBar Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Updates", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private static void CopyUpdateDiagnostics()
+    {
+        try
+        {
+            Clipboard.SetText(WindowsUpdateDiagnostics.Capture().ClipboardText());
+            MessageBox.Show("Copied update diagnostics.", "RepoBar Updates", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
         catch (Exception exception)
         {
