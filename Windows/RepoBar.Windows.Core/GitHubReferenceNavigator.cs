@@ -350,6 +350,8 @@ internal static partial class GitHubReferenceNavigator
             var isHeadingChild = !string.IsNullOrWhiteSpace(headingRepository) && indent > headingIndent;
             if (isHeadingChild)
             {
+                AddExplicitRepositoryLineReferences(line, lineStart, matches, claimedSpans);
+
                 var headingChildHasCommitContext = HasCommitContext(line);
                 var headingChildHasIssueReferenceContext = HeadingChildHasIssueReferenceContext(line);
                 if (previousHeadingChildHadCommitContext || headingChildHasCommitContext)
@@ -512,6 +514,94 @@ internal static partial class GitHubReferenceNavigator
             }
 
             lineStart = lineEnd + 1;
+        }
+    }
+
+    private static void AddExplicitRepositoryLineReferences(
+        string line,
+        int lineStart,
+        List<GitHubReferenceCandidate> matches,
+        List<RangeSpan> claimedSpans)
+    {
+        foreach (Match match in OwnerRepoKindedSeriesRegex().Matches(line))
+        {
+            if (claimedSpans.Any(span => span.Contains(lineStart + match.Index)))
+            {
+                continue;
+            }
+
+            var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+            var kind = NormalizeKind(match.Groups["kind"].Value);
+            var startNumber = long.Parse(match.Groups["number"].Value);
+            matches.Add(new GitHubReferenceCandidate(
+                lineStart + match.Groups["number"].Index,
+                new GitHubReferenceMatch(
+                    repositoryFullName,
+                    startNumber,
+                    kind,
+                    match.Groups["number"].Value)));
+
+            foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    lineStart + number.Index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        number.Value,
+                        kind,
+                        number.Value.ToString())));
+            }
+
+            claimedSpans.Add(new RangeSpan(lineStart + match.Index, lineStart + match.Index + match.Length));
+        }
+
+        foreach (Match match in OwnerRepoSeriesRegex().Matches(line))
+        {
+            if (claimedSpans.Any(span => span.Contains(lineStart + match.Index)))
+            {
+                continue;
+            }
+
+            var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+            var kind = NormalizeKind(match.Groups["kind"].Value);
+            var startNumber = long.Parse(match.Groups["number"].Value);
+            matches.Add(new GitHubReferenceCandidate(
+                lineStart + match.Groups["number"].Index,
+                new GitHubReferenceMatch(
+                    repositoryFullName,
+                    startNumber,
+                    kind,
+                    match.Groups["number"].Value)));
+
+            foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    lineStart + number.Index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        number.Value,
+                        kind,
+                        number.Value.ToString())));
+            }
+
+            claimedSpans.Add(new RangeSpan(lineStart + match.Index, lineStart + match.Index + match.Length));
+        }
+
+        foreach (Match match in OwnerRepoNumberRegex().Matches(line))
+        {
+            if (claimedSpans.Any(span => span.Contains(lineStart + match.Index)))
+            {
+                continue;
+            }
+
+            matches.Add(new GitHubReferenceCandidate(
+                lineStart + match.Groups["number"].Index,
+                new GitHubReferenceMatch(
+                    $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
+                    long.Parse(match.Groups["number"].Value),
+                    NormalizeKind(match.Groups["kind"].Value),
+                    match.Value)));
+            claimedSpans.Add(new RangeSpan(lineStart + match.Index, lineStart + match.Index + match.Length));
         }
     }
 

@@ -694,6 +694,40 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_preserves_repository_heading_reference_before_explicit_repository_refs()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 depends on other/repo #7
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("other/repo", 7L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_same_number_heading_and_explicit_repository_refs()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 depends on other/repo #18
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("other/repo", 18L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
     public void FindReferences_carries_repository_heading_issue_context_across_child_lines()
     {
         var references = GitHubReferenceNavigator.FindReferences(
