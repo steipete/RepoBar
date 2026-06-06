@@ -37,6 +37,43 @@ public sealed class GitHubRepositoryDiscoveryClientTests
         Assert.Equal("owner/one", repositories[1].FullName);
     }
 
+    [Fact]
+    public async Task LoadAccessibleRepositories_filters_by_query_before_adding_repositories()
+    {
+        var handler = new StubHandler(request =>
+        {
+            var path = request.RequestUri?.PathAndQuery ?? "";
+            return path switch
+            {
+                "/user/repos?visibility=all&affiliation=owner,collaborator,organization_member&sort=updated&per_page=100&page=1" => JsonResponse("""
+                    [
+                      {"full_name":"owner/one","description":"calendar heatmap","pushed_at":"2026-06-01T00:00:00Z"},
+                      {"full_name":"owner/two","description":"issue browser","pushed_at":"2026-06-02T00:00:00Z"},
+                      {"full_name":"other/three","description":"settings","pushed_at":"2026-06-03T00:00:00Z"}
+                    ]
+                    """),
+                _ => JsonResponse("[]"),
+            };
+        });
+        using var client = new GitHubRepositoryDiscoveryClient(new WindowsSettings(), token: null, handler);
+
+        var repositories = await client.LoadAccessibleRepositoriesAsync(CancellationToken.None, "browser");
+
+        var repository = Assert.Single(repositories);
+        Assert.Equal("owner/two", repository.FullName);
+    }
+
+    [Theory]
+    [InlineData("owner/one")]
+    [InlineData("one")]
+    [InlineData("calendar")]
+    public void RepositorySearchResult_matches_full_name_name_and_description(string query)
+    {
+        var repository = new RepositorySearchResult("owner", "one", "calendar heatmap", DateTimeOffset.UtcNow);
+
+        Assert.True(repository.Matches(query));
+    }
+
     private static HttpResponseMessage JsonResponse(string json)
     {
         return new HttpResponseMessage(HttpStatusCode.OK)

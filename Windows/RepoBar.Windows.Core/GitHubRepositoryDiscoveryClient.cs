@@ -29,7 +29,9 @@ internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
         }
     }
 
-    public async Task<IReadOnlyList<RepositorySearchResult>> LoadAccessibleRepositoriesAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<RepositorySearchResult>> LoadAccessibleRepositoriesAsync(
+        CancellationToken cancellationToken,
+        string? query = null)
     {
         var results = new List<RepositorySearchResult>();
         var page = 1;
@@ -63,6 +65,7 @@ internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
         return results
             .GroupBy(repository => repository!.FullName, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First()!)
+            .Where(repository => repository.Matches(query))
             .OrderByDescending(repository => repository.PushedAt ?? DateTimeOffset.MinValue)
             .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
             .ToArray();
@@ -114,4 +117,18 @@ internal sealed class GitHubRepositoryDiscoveryClient : IDisposable
 internal sealed record RepositorySearchResult(string Owner, string Name, string? Description, DateTimeOffset? PushedAt)
 {
     public string FullName => $"{Owner}/{Name}";
+
+    public bool Matches(string? query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        var value = query.Trim();
+        return FullName.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            Owner.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            Name.Contains(value, StringComparison.OrdinalIgnoreCase) ||
+            (Description?.Contains(value, StringComparison.OrdinalIgnoreCase) == true);
+    }
 }

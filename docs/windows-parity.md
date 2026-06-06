@@ -11,7 +11,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Repository submenu | GitHub links, local state, worktrees, issues, PRs, releases, changelog, CI runs, discussions, tags, branches, contributors, commits, activity, pin/hide | Same actions where GitHub APIs support them; Windows shell opens folders/terminal | Partial |
 | Local projects | Scan project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Finder/Terminal, sync actions | Scan Windows project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Explorer/Terminal, safe fast-forward sync actions | Partial |
 | Auth/accounts | GitHub App OAuth, PAT fallback, GitHub Enterprise, multi-account storage | GitHub App browser OAuth with refresh, PAT/env fallback, GitHub Enterprise host support, named account profiles with account-scoped Credential Manager entries | Mostly |
-| Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with accessible repo discovery and visibility controls | Partial |
+| Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with filtered accessible repo discovery and visibility controls | Mostly |
 | Cache/offline | SQLite cache, ETags, archive fallback | ETag response cache plus RepoBar archive SQLite fallback for recent issue/PR lists | Mostly |
 | Contribution header | Signed-in account contribution heatmap | Signed-in account contribution totals, compact heatmap preview, and recent week totals in the tray menu | Mostly |
 | Rate limits | REST/GraphQL resource meter and blocker banner | Tray rate-limit state with REST/GraphQL resource buckets, quota, reset, blocker, and shared-budget details | Mostly |

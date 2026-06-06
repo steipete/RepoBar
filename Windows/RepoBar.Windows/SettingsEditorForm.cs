@@ -33,6 +33,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _enablePullRequestNotifications = new();
     private readonly BindingList<RepositoryRow> _repositories = [];
     private readonly DataGridView _repositoriesGrid = new();
+    private readonly TextBox _repositoryFilterTextBox = new();
     private AccountRow? _selectedAccount;
     private bool _loadingAccount;
 
@@ -99,9 +100,10 @@ internal sealed class SettingsEditorForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 6,
             Padding = new Padding(12),
         };
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -175,6 +177,20 @@ internal sealed class SettingsEditorForm : Form
         localRootPanel.Controls.Add(browseButton);
         root.Controls.Add(new Label { Text = "Local projects root", Dock = DockStyle.Top });
         root.Controls.Add(localRootPanel);
+
+        var repositoryFilterPanel = new TableLayoutPanel
+        {
+            AutoSize = true,
+            ColumnCount = 2,
+            Dock = DockStyle.Top,
+        };
+        repositoryFilterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        repositoryFilterPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        _repositoryFilterTextBox.PlaceholderText = "owner, repository, or description";
+        _repositoryFilterTextBox.Anchor = AnchorStyles.Left | AnchorStyles.Right;
+        repositoryFilterPanel.Controls.Add(new Label { Text = "Repository filter", AutoSize = true, Anchor = AnchorStyles.Left });
+        repositoryFilterPanel.Controls.Add(_repositoryFilterTextBox);
+        root.Controls.Add(repositoryFilterPanel);
 
         ConfigureRepositoryGrid();
         root.Controls.Add(_repositoriesGrid);
@@ -388,7 +404,9 @@ internal sealed class SettingsEditorForm : Form
         try
         {
             using var client = new GitHubRepositoryDiscoveryClient(CurrentSettingsSnapshot(), ResolveTokenForSnapshot());
-            var repositories = await client.LoadAccessibleRepositoriesAsync(CancellationToken.None).ConfigureAwait(true);
+            var repositories = await client.LoadAccessibleRepositoriesAsync(
+                CancellationToken.None,
+                _repositoryFilterTextBox.Text).ConfigureAwait(true);
             var existing = _repositories
                 .Where(repository => !string.IsNullOrWhiteSpace(repository.Owner) && !string.IsNullOrWhiteSpace(repository.Name))
                 .ToDictionary(repository => $"{repository.Owner}/{repository.Name}", StringComparer.OrdinalIgnoreCase);

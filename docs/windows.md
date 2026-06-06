@@ -16,8 +16,8 @@ The Windows app currently provides:
 - optional traffic views/clones, commit activity summary, and changelog headline
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
-- repository discovery from GitHub's accessible repository list
+- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, repository discovery filtering, and repository visibility
+- filtered repository discovery from GitHub's accessible repository list
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional RepoBar archive SQLite fallback for recent issue and pull request submenus
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
