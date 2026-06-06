@@ -39,6 +39,8 @@ internal sealed class WindowsMenuCustomization
         WindowsRepositoryMenuItem.OpenActions,
         WindowsRepositoryMenuItem.LatestRelease,
         WindowsRepositoryMenuItem.Changelog,
+        WindowsRepositoryMenuItem.OpenFolder,
+        WindowsRepositoryMenuItem.OpenTerminal,
         WindowsRepositoryMenuItem.Checkout,
         WindowsRepositoryMenuItem.LocalStatus,
         WindowsRepositoryMenuItem.RecentIssues,
@@ -179,6 +181,8 @@ internal enum WindowsRepositoryMenuItem
     OpenIssues,
     OpenPullRequests,
     OpenActions,
+    OpenFolder,
+    OpenTerminal,
     Checkout,
     RecentIssues,
     RecentPullRequests,
@@ -253,6 +257,8 @@ internal static class WindowsMenuCustomizationLabels
             WindowsRepositoryMenuItem.OpenIssues => "Open issues",
             WindowsRepositoryMenuItem.OpenPullRequests => "Open pull requests",
             WindowsRepositoryMenuItem.OpenActions => "Open Actions",
+            WindowsRepositoryMenuItem.OpenFolder => "Open folder",
+            WindowsRepositoryMenuItem.OpenTerminal => "Open in terminal",
             WindowsRepositoryMenuItem.Checkout => "Checkout locally",
             WindowsRepositoryMenuItem.RecentIssues => "Recent issues",
             WindowsRepositoryMenuItem.RecentPullRequests => "Recent pull requests",
@@ -286,7 +292,9 @@ internal static class WindowsMenuCustomizationLabels
                 WindowsRepositoryMenuItem.OpenActions or
                 WindowsRepositoryMenuItem.LatestRelease or
                 WindowsRepositoryMenuItem.Changelog => WindowsRepositoryMenuGroup.Open,
-            WindowsRepositoryMenuItem.Checkout or
+            WindowsRepositoryMenuItem.OpenFolder or
+                WindowsRepositoryMenuItem.OpenTerminal or
+                WindowsRepositoryMenuItem.Checkout or
                 WindowsRepositoryMenuItem.LocalStatus => WindowsRepositoryMenuGroup.Local,
             WindowsRepositoryMenuItem.RecentIssues or
                 WindowsRepositoryMenuItem.RecentPullRequests or

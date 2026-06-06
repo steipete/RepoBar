@@ -164,6 +164,16 @@ public sealed class WindowsMenuCustomizationTests
                 WindowsRepositoryMenuGroup.Manage,
             ],
             blocks.Select(block => block.Group));
+
+        var localBlock = Assert.Single(blocks, block => block.Group == WindowsRepositoryMenuGroup.Local);
+        Assert.Equal(
+            [
+                WindowsRepositoryMenuItem.OpenFolder,
+                WindowsRepositoryMenuItem.OpenTerminal,
+                WindowsRepositoryMenuItem.Checkout,
+                WindowsRepositoryMenuItem.LocalStatus,
+            ],
+            localBlock.Items);
     }
 
     [Fact]

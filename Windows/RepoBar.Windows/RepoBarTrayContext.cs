@@ -742,10 +742,11 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
             if (status.LocalStatus != null)
             {
+                AddLocalOpenItems(item.DropDownItems, status.LocalStatus, customization);
                 if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.LocalStatus))
                 {
                     item.DropDownItems.Add(new ToolStripSeparator());
-                    AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
+                    AddLocalStatusItems(item.DropDownItems, status.LocalStatus, includeOpenActions: false);
                 }
             }
             else if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.Checkout))
@@ -799,6 +800,18 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 break;
             case WindowsRepositoryMenuItem.OpenActions:
                 items.Add(new ToolStripMenuItem("Open Actions", null, (_, _) => OpenRepository(status.Repository, "actions")));
+                break;
+            case WindowsRepositoryMenuItem.OpenFolder:
+                if (status.LocalStatus != null)
+                {
+                    items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(status.LocalStatus.Path)));
+                }
+                break;
+            case WindowsRepositoryMenuItem.OpenTerminal:
+                if (status.LocalStatus != null)
+                {
+                    items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(status.LocalStatus.Path)));
+                }
                 break;
             case WindowsRepositoryMenuItem.Checkout:
                 if (status.LocalStatus == null)
@@ -868,7 +881,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsRepositoryMenuItem.LocalStatus:
                 if (status.LocalStatus != null)
                 {
-                    AddLocalStatusItems(items, status.LocalStatus);
+                    AddLocalStatusItems(items, status.LocalStatus, includeOpenActions: false);
                 }
                 break;
             case WindowsRepositoryMenuItem.PushedAt:
@@ -913,7 +926,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         foreach (var local in localOnly)
         {
             var item = new ToolStripMenuItem($"[git] {local.DisplayName}  {local.SyncDetail}");
-            AddLocalStatusItems(item.DropDownItems, local);
+            AddLocalStatusItems(item.DropDownItems, local, includeOpenActions: true);
             if (!string.IsNullOrWhiteSpace(local.FullName))
             {
                 item.DropDownItems.Add(new ToolStripSeparator());
@@ -925,7 +938,30 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         return localOnly.Length;
     }
 
-    private void AddLocalStatusItems(ToolStripItemCollection items, LocalGitRepositoryStatus local)
+    private void AddLocalOpenItems(
+        ToolStripItemCollection items,
+        LocalGitRepositoryStatus local,
+        WindowsMenuCustomization customization)
+    {
+        var start = items.Count;
+        if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.OpenFolder))
+        {
+            items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
+        }
+        if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.OpenTerminal))
+        {
+            items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+        }
+        if (start > 0 && items.Count > start)
+        {
+            items.Insert(start, new ToolStripSeparator());
+        }
+    }
+
+    private void AddLocalStatusItems(
+        ToolStripItemCollection items,
+        LocalGitRepositoryStatus local,
+        bool includeOpenActions)
     {
         items.Add(new ToolStripMenuItem($"Branch: {local.Branch}") { Enabled = false });
         if (!string.IsNullOrWhiteSpace(local.UpstreamBranch))
@@ -964,9 +1000,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         });
         AddBranchesSubmenu(items, local);
         AddWorktreesSubmenu(items, local);
-        items.Add(new ToolStripSeparator());
-        items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
-        items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+        if (includeOpenActions)
+        {
+            items.Add(new ToolStripSeparator());
+            items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
+            items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+        }
     }
 
     private void ShowAutoSyncNotifications(IReadOnlyList<LocalGitRepositoryStatus> syncedRepositories)
