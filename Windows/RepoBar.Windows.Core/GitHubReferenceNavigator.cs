@@ -585,7 +585,7 @@ internal static partial class GitHubReferenceNavigator
     {
         var lines = EnumerateLines(text);
         var repositoryHeadingLines = RepositoryHeadingLineIndexes(lines);
-        var repositoryFullName = NormalRepositoryContext(lines, repositoryHeadingLines) ?? defaultRepositoryFullName;
+        var repositoryFullName = RepositoryContext(lines, repositoryHeadingLines, defaultRepositoryFullName);
         if (string.IsNullOrWhiteSpace(repositoryFullName))
         {
             return;
@@ -688,7 +688,7 @@ internal static partial class GitHubReferenceNavigator
     {
         var lines = EnumerateLines(text);
         var repositoryHeadingLines = RepositoryHeadingLineIndexes(lines);
-        var repositoryFullName = NormalRepositoryContext(lines, repositoryHeadingLines);
+        var repositoryFullName = RepositoryContext(lines, repositoryHeadingLines);
         if (string.IsNullOrWhiteSpace(repositoryFullName))
         {
             return;
@@ -849,6 +849,16 @@ internal static partial class GitHubReferenceNavigator
         return consumed;
     }
 
+    private static string? RepositoryContext(
+        IReadOnlyList<LineInfo> lines,
+        HashSet<int> repositoryHeadingLines,
+        string? fallbackRepositoryFullName = null)
+    {
+        return NormalRepositoryContext(lines, repositoryHeadingLines) ??
+            SingleRepositoryOnlyListContext(lines, repositoryHeadingLines) ??
+            fallbackRepositoryFullName;
+    }
+
     private static string? NormalRepositoryContext(
         IReadOnlyList<LineInfo> lines,
         HashSet<int> repositoryHeadingLines)
@@ -888,6 +898,58 @@ internal static partial class GitHubReferenceNavigator
         }
 
         return repositories.Count == 1 ? repositories[0] : null;
+    }
+
+    private static string? SingleRepositoryOnlyListContext(
+        IReadOnlyList<LineInfo> lines,
+        HashSet<int> repositoryHeadingLines)
+    {
+        var candidateRepositories = new List<string>();
+        var consumedRepositories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var seenCandidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var line = lines[i].Text;
+            var repositoryFullName = RepositoryOnlyFullName(line);
+            if (repositoryFullName is not null)
+            {
+                if (repositoryHeadingLines.Contains(i))
+                {
+                    consumedRepositories.Add(repositoryFullName);
+                }
+                else if (seenCandidates.Add(repositoryFullName))
+                {
+                    candidateRepositories.Add(repositoryFullName);
+                }
+
+                continue;
+            }
+
+            var countHeading = RepositoryCountHeadingRegex().Match(line);
+            if (countHeading.Success && repositoryHeadingLines.Contains(i))
+            {
+                consumedRepositories.Add($"{countHeading.Groups["owner"].Value}/{countHeading.Groups["repo"].Value}");
+            }
+        }
+
+        if (candidateRepositories.Count != 1)
+        {
+            return null;
+        }
+
+        var candidate = candidateRepositories[0];
+        return consumedRepositories.Any(repository => !string.Equals(repository, candidate, StringComparison.OrdinalIgnoreCase))
+            ? null
+            : candidate;
+    }
+
+    private static string? RepositoryOnlyFullName(string line)
+    {
+        var repositoryOnlyHeading = RepositoryOnlyHeadingRegex().Match(line);
+        return repositoryOnlyHeading.Success
+            ? $"{repositoryOnlyHeading.Groups["owner"].Value}/{repositoryOnlyHeading.Groups["repo"].Value}"
+            : null;
     }
 
     private static HashSet<string> LineScopedRepositories(string line)

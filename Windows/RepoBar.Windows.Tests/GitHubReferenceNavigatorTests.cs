@@ -1178,6 +1178,82 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_bare_refs_from_single_repository_list_item_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. openclaw/Peekaboo
+
+            - Do: PR #139, maybe #138 in same pass.
+            - Why: small, concrete stale-tool-schema prompt fix; tests added. #138 is a 1-line community docs add.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Peekaboo", 139L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Peekaboo", 138L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_multiple_repository_list_items_default_scoped()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. openclaw/Peekaboo
+            2. openclaw/gogcli
+
+            - Do: PR #139
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal(139L, reference.Number);
+        Assert.Equal("pull", reference.Kind);
+    }
+
+    [Fact]
+    public void FindReferences_keeps_consumed_repository_heading_from_selecting_unrelated_list_item_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. openclaw/Peekaboo
+            2. openclaw/gogcli
+               - 0 issues / 1 PR
+               - PR #2
+
+            - Do: PR #139
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/gogcli", 2L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 139L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_lets_normal_repository_context_beat_single_repository_list_item_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. openclaw/Peekaboo
+
+            Found in openclaw/gogcli: #569
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/gogcli", reference.RepositoryFullName);
+        Assert.Equal(569L, reference.Number);
+    }
+
+    [Fact]
     public void FindReferences_resolves_unique_repository_name_shorthand()
     {
         var references = GitHubReferenceNavigator.FindReferences(
