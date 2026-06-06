@@ -365,6 +365,7 @@ try {
         runtimeLogFilePath = $runtimeSummary.logFilePath
         runtimeResponseCacheDirectory = $runtimeSummary.responseCacheDirectory
         runtimeResponseCacheEntryCount = $runtimeSummary.responseCacheEntryCount
+        runtimePullRequestNotificationStatePath = $runtimeSummary.pullRequestNotificationStatePath
         mainMenuOrder = $menuOrder
         proof = [ordered]@{
             processRunning = -not $process.HasExited
@@ -388,6 +389,7 @@ try {
             logVerbosityConfigured = $runtimeSummary.loggingVerbosity -eq "debug"
             fileLoggingWritten = $runtimeSummary.fileLoggingEnabled -and (Test-Path $runtimeSummary.logFilePath)
             responseCacheAccountScoped = $runtimeSummary.responseCacheDirectory -like "*\cache\github\accounts\*"
+            pullRequestNotificationsAccountScoped = $runtimeSummary.pullRequestNotificationStatePath -like "*\pull-request-notifications\accounts\*"
             localFetchIntervalConfigured = $settings.localProjectsFetchIntervalMinutes -eq 5
             actionsMonitoredOwnersConfigured = @($settings.actionsMonitoredOwners) -contains "steipete"
             actionsPlanTierConfigured = $settings.actionsPlanTier -eq "team"
@@ -402,7 +404,7 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), activeAccountRepositoriesScoped=$($summary.proof.activeAccountRepositoriesScoped), responseCacheAccountScoped=$($summary.proof.responseCacheAccountScoped), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), autoUpdateCheck=$($summary.proof.autoUpdateCheckConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), activeAccountRepositoriesScoped=$($summary.proof.activeAccountRepositoriesScoped), responseCacheAccountScoped=$($summary.proof.responseCacheAccountScoped), pullRequestNotificationsAccountScoped=$($summary.proof.pullRequestNotificationsAccountScoped), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), autoUpdateCheck=$($summary.proof.autoUpdateCheckConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }

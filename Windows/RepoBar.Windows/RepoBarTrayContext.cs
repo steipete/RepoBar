@@ -15,7 +15,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private readonly System.Windows.Forms.Timer _referenceMonitorTimer = new();
     private readonly CancellationTokenSource _shutdown = new();
     private readonly GitHubReferenceClipboardMonitor _referenceClipboardMonitor = new();
-    private readonly PullRequestNotificationTracker _pullRequestNotificationTracker = PullRequestNotificationTracker.CreateDefault();
+    private PullRequestNotificationTracker _pullRequestNotificationTracker;
     private GitHubRepositoryClient _githubClient;
     private IReadOnlyList<RepositoryStatus> _statuses = [];
     private ActionsInsights _actionsInsights = ActionsInsights.Empty;
@@ -32,7 +32,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     public RepoBarTrayContext(WindowsSettingsStore settingsStore)
     {
         _settingsStore = settingsStore;
-        _githubClient = new GitHubRepositoryClient(settingsStore.Settings, settingsStore.ResolveToken());
+        _githubClient = CreateGitHubClient(settingsStore.ResolveToken());
+        _pullRequestNotificationTracker = PullRequestNotificationTracker.CreateForSettings(settingsStore.Settings);
         _notifyIcon = new NotifyIcon
         {
             Icon = TrayIconFactory.Create(TrayHealth.Unknown),
@@ -157,6 +158,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             var activeAccount = _settingsStore.Settings.GetActiveAccount();
             var logFilePath = WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath();
             var responseCacheDirectory = GitHubResponseCache.DirectoryForSettings(_settingsStore.Settings);
+            var pullRequestNotificationStatePath = _pullRequestNotificationTracker.StatePath;
             WindowsDiagnosticsLogger.Log(
                 WindowsLogVerbosity.Debug,
                 "smoke",
@@ -179,6 +181,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 logFileExists = File.Exists(logFilePath),
                 responseCacheDirectory,
                 responseCacheEntryCount = GitHubResponseCache.EntryCountForSettings(_settingsStore.Settings),
+                pullRequestNotificationStatePath,
                 localRepositories = _localGitIndex.Repositories.Select(repository => new
                 {
                     repository.DisplayName,
@@ -1470,9 +1473,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             _refreshTimer.Interval = Math.Clamp(_settingsStore.Settings.RefreshIntervalMinutes, 1, 60) * 60 * 1000;
             ConfigureReferenceMonitorTimer();
-            _githubClient.Dispose();
             _resolvedToken = null;
-            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+            RefreshAccountBoundServices(_settingsStore.ResolveToken());
             if (_settingsStore.Settings.CheckForUpdatesAutomatically)
             {
                 _ = CheckForUpdatesInBackgroundAsync();
@@ -1488,7 +1490,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             _settingsStore.ClearActiveAccountStoredCredentials();
             _resolvedToken = null;
             _githubClient.Dispose();
-            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, null);
+            _githubClient = CreateGitHubClient(null);
             _notifyIcon.ShowBalloonTip(5000, "RepoBar", "Stored GitHub credentials cleared.", ToolTipIcon.Info);
             BeginRefresh();
         }
@@ -1508,8 +1510,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
 
             _resolvedToken = null;
-            _githubClient.Dispose();
-            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+            RefreshAccountBoundServices(_settingsStore.ResolveToken());
             _notifyIcon.ShowBalloonTip(5000, "RepoBar Account", $"Using {_settingsStore.Settings.GetActiveAccount().DisplayName}.", ToolTipIcon.Info);
             BeginRefresh();
         }
@@ -1517,6 +1518,19 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             MessageBox.Show(exception.Message, "RepoBar Account", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
+    }
+
+    private GitHubRepositoryClient CreateGitHubClient(string? token)
+    {
+        return new GitHubRepositoryClient(_settingsStore.Settings, token);
+    }
+
+    private void RefreshAccountBoundServices(string? token)
+    {
+        _githubClient.Dispose();
+        _githubClient = CreateGitHubClient(token);
+        _pullRequestNotificationTracker = PullRequestNotificationTracker.CreateForSettings(_settingsStore.Settings);
+        _lastPullRequestNotificationTarget = null;
     }
 
     private void ShowIssueNavigator(string? initialText = null)

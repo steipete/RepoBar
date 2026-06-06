@@ -5,6 +5,82 @@ namespace RepoBar.Windows.Tests;
 public sealed class PullRequestNotificationTrackerTests
 {
     [Fact]
+    public void StatePathForSettings_scopes_by_host_and_account()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
+        var github = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts = [Account("work", "github.com")],
+        };
+        var enterprise = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts = [Account("work", "ghe.example.com")],
+        };
+        WindowsSettingsStore.NormalizeSettings(github);
+        WindowsSettingsStore.NormalizeSettings(enterprise);
+
+        var githubPath = PullRequestNotificationTracker.StatePathForSettings(github, root);
+        var enterprisePath = PullRequestNotificationTracker.StatePathForSettings(enterprise, root);
+
+        Assert.Contains($"{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}", githubPath);
+        Assert.NotEqual(githubPath, enterprisePath);
+        Assert.Contains(GitHubResponseCache.SafeScope("github.com", "work"), githubPath);
+        Assert.Contains(GitHubResponseCache.SafeScope("ghe.example.com", "work"), enterprisePath);
+    }
+
+    [Fact]
+    public void Account_scoped_state_keeps_notification_baselines_separate()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
+        try
+        {
+            var settings = new WindowsSettings
+            {
+                ActiveAccountId = "default",
+                Accounts =
+                [
+                    Account("default", "github.com"),
+                    Account("work", "github.com"),
+                ],
+            };
+            WindowsSettingsStore.NormalizeSettings(settings);
+            var defaultTracker = new PullRequestNotificationTracker(PullRequestNotificationTracker.StatePathForSettings(settings, root));
+            Assert.Empty(defaultTracker.DetectEvents("steipete/RepoBar", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z"),
+            ], NotificationSettings()));
+
+            settings.ActiveAccountId = "work";
+            WindowsSettingsStore.NormalizeSettings(settings);
+            var workTracker = new PullRequestNotificationTracker(PullRequestNotificationTracker.StatePathForSettings(settings, root));
+            Assert.Empty(workTracker.DetectEvents("steipete/RepoBar", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z"),
+            ], NotificationSettings()));
+
+            var workEvents = workTracker.DetectEvents("steipete/RepoBar", [
+                Pull("#2 Second", 2, "2026-06-06T10:05:00Z"),
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z"),
+            ], NotificationSettings());
+            var defaultEvents = defaultTracker.DetectEvents("steipete/RepoBar", [
+                Pull("#2 Second", 2, "2026-06-06T10:05:00Z"),
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z"),
+            ], NotificationSettings());
+
+            Assert.Single(workEvents);
+            Assert.Single(defaultEvents);
+            Assert.NotEqual(defaultTracker.StatePath, workTracker.StatePath);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void DetectNewPullRequests_seeds_then_reports_only_new_items()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
@@ -223,6 +299,16 @@ public sealed class PullRequestNotificationTrackerTests
             EnablePullRequestUpdateNotifications = true,
             EnablePullRequestReviewRequestNotifications = true,
             EnablePullRequestCommentNotifications = true,
+        };
+    }
+
+    private static WindowsAccountProfile Account(string id, string host)
+    {
+        return new WindowsAccountProfile
+        {
+            Id = id,
+            Label = id,
+            GitHubHost = host,
         };
     }
 

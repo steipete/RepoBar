@@ -41,7 +41,7 @@ Feature parity is not complete until the Windows target has:
 - A Crabbox desktop smoke that launches the tray, captures the notification-area process, and verifies the generated settings file. Current screenshot proof is checked in at `docs/assets/repobar-windows-tray-menu.png`.
 - A manual or automated proof artifact for at least one repository with GitHub status and local git status shown together; Windows validation writes a TRX artifact for this coverage under `dist/windows/test-results`.
 - GitHub App OAuth proof against GitHub.com or a stubbed loopback/token exchange plus refresh coverage.
-- Account-switch proof that separate Windows profiles resolve separate OAuth/PAT credential targets and separate repository lists.
+- Account-switch proof that separate Windows profiles resolve separate OAuth/PAT credential targets, repository lists, response caches, and PR notification baselines.
 - Archive fallback proof that recent issue and pull request lists survive failed live GitHub endpoints.
 - Diagnostics logging proof that Windows settings can enable debug/file logging and the launched tray writes the configured log file.
 

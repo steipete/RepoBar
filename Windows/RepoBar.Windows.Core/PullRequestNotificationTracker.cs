@@ -21,13 +21,44 @@ internal sealed class PullRequestNotificationTracker
         _snapshotsByRepository = LoadState(statePath);
     }
 
+    public string StatePath => _statePath;
+
     public static PullRequestNotificationTracker CreateDefault()
     {
-        var statePath = Path.Combine(
+        return new PullRequestNotificationTracker(DefaultStatePath());
+    }
+
+    public static PullRequestNotificationTracker CreateForSettings(WindowsSettings settings)
+    {
+        return new PullRequestNotificationTracker(StatePathForSettings(settings));
+    }
+
+    public static string DefaultStatePath()
+    {
+        return Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "RepoBar",
             "pull-request-notifications.json");
-        return new PullRequestNotificationTracker(statePath);
+    }
+
+    public static string StatePathForSettings(WindowsSettings settings)
+    {
+        return StatePathForSettings(
+            settings,
+            Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "RepoBar",
+                "pull-request-notifications"));
+    }
+
+    internal static string StatePathForSettings(WindowsSettings settings, string rootDirectory)
+    {
+        var account = settings.GetActiveAccount();
+        return Path.Combine(
+            rootDirectory,
+            "accounts",
+            GitHubResponseCache.SafeScope(account.GitHubHost, account.Id),
+            "pull-request-notifications.json");
     }
 
     public IReadOnlyList<PullRequestNotificationEvent> DetectEvents(
