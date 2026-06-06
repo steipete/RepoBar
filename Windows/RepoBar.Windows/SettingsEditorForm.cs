@@ -28,6 +28,8 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _autoSyncLocalProjects = new();
     private readonly CheckBox _enableResponseCache = new();
     private readonly TextBox _gitHubArchiveDatabasePath = new();
+    private readonly NumericUpDown _repositoryDisplayLimit = new();
+    private readonly ComboBox _repositorySortKey = new();
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
@@ -86,6 +88,16 @@ internal sealed class SettingsEditorForm : Form
         _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
         _enableResponseCache.Checked = settings.EnableResponseCache;
         _gitHubArchiveDatabasePath.Text = settings.GitHubArchiveDatabasePath ?? "";
+        _repositoryDisplayLimit.Minimum = 1;
+        _repositoryDisplayLimit.Maximum = 100;
+        _repositoryDisplayLimit.Value = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
+        _repositorySortKey.DropDownStyle = ComboBoxStyle.DropDownList;
+        _repositorySortKey.DataSource = Enum.GetValues<RepositorySortKey>()
+            .Select(RepositorySortKeyRow.FromSortKey)
+            .ToArray();
+        _repositorySortKey.DisplayMember = nameof(RepositorySortKeyRow.DisplayName);
+        _repositorySortKey.ValueMember = nameof(RepositorySortKeyRow.SortKey);
+        _repositorySortKey.SelectedValue = settings.RepositorySortKey;
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
@@ -148,6 +160,8 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Local scan depth", _localProjectsDepth);
         AddLabeledControl(settingsGrid, "Worktree folder", _localWorktreeFolderName);
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
+        AddLabeledControl(settingsGrid, "Repository limit", _repositoryDisplayLimit);
+        AddLabeledControl(settingsGrid, "Repository sort", _repositorySortKey);
         AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
         _credentialState.AutoSize = true;
@@ -474,6 +488,10 @@ internal sealed class SettingsEditorForm : Form
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(_gitHubArchiveDatabasePath.Text)
             ? null
             : _gitHubArchiveDatabasePath.Text.Trim();
+        settings.RepositoryDisplayLimit = (int)_repositoryDisplayLimit.Value;
+        settings.RepositorySortKey = _repositorySortKey.SelectedValue is RepositorySortKey sortKey
+            ? sortKey
+            : RepositorySortKey.Activity;
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
@@ -714,6 +732,14 @@ internal sealed class SettingsEditorForm : Form
         public static NotificationClickActionRow FromAction(PullRequestNotificationClickAction action)
         {
             return new NotificationClickActionRow(action, action.DisplayName());
+        }
+    }
+
+    private sealed record RepositorySortKeyRow(RepositorySortKey SortKey, string DisplayName)
+    {
+        public static RepositorySortKeyRow FromSortKey(RepositorySortKey sortKey)
+        {
+            return new RepositorySortKeyRow(sortKey, sortKey.DisplayName());
         }
     }
 }

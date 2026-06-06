@@ -16,7 +16,7 @@ The Windows app currently provides:
 - optional traffic views/clones, commit activity summary, and changelog headline
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, and repository visibility
+- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, repository visibility, display limit, and sort order
 - filtered repository discovery from GitHub's accessible repository list
 - repository checkout from the tray into the configured local projects folder
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
@@ -102,6 +102,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "autoSyncLocalProjects": false,
   "enableResponseCache": true,
   "gitHubArchiveDatabasePath": "%APPDATA%\\RepoBar\\Archives\\example.sqlite",
+  "repositoryDisplayLimit": 6,
+  "repositorySortKey": "activity",
   "showRateLimits": true,
   "showContributionSummary": true,
   "enablePullRequestNotifications": false,
@@ -111,6 +113,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   ]
 }
 ```
+
+Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name; pinned repositories stay ahead of the normal sorted list.
 
 ## Validation
 

@@ -148,7 +148,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
         else
         {
-            foreach (var status in _statuses)
+            foreach (var status in WindowsRepositoryDisplay.Apply(_statuses, _settingsStore.Settings))
             {
                 _menu.Items.Add(BuildRepositoryMenu(status));
             }

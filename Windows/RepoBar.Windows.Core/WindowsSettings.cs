@@ -22,6 +22,8 @@ internal sealed class WindowsSettings
     public bool AutoSyncLocalProjects { get; set; }
     public bool EnableResponseCache { get; set; } = true;
     public string? GitHubArchiveDatabasePath { get; set; }
+    public int RepositoryDisplayLimit { get; set; } = 6;
+    public RepositorySortKey RepositorySortKey { get; set; } = RepositorySortKey.Activity;
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public bool EnablePullRequestNotifications { get; set; }
@@ -82,6 +84,30 @@ internal enum RepositoryVisibility
     Visible,
     Pinned,
     Hidden,
+}
+
+internal enum RepositorySortKey
+{
+    Activity,
+    Issues,
+    PullRequests,
+    Stars,
+    Name,
+}
+
+internal static class RepositorySortKeyLabels
+{
+    public static string DisplayName(this RepositorySortKey sortKey)
+    {
+        return sortKey switch
+        {
+            RepositorySortKey.Issues => "Most issues",
+            RepositorySortKey.PullRequests => "Most PRs",
+            RepositorySortKey.Stars => "Most stars",
+            RepositorySortKey.Name => "Repository name",
+            _ => "Latest activity",
+        };
+    }
 }
 
 internal enum PullRequestNotificationClickAction
@@ -206,6 +232,7 @@ internal sealed class WindowsSettingsStore
             ? ".work"
             : settings.LocalWorktreeFolderName.Trim();
         settings.RefreshIntervalMinutes = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
+        settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
             ? null
             : settings.GitHubArchiveDatabasePath.Trim();
@@ -342,5 +369,48 @@ internal sealed class WindowsSettingsStore
         var account = Settings.GetActiveAccount();
         new WindowsCredentialStore(account.GitHubHost, account.Id).ClearToken();
         new WindowsOAuthTokenStore(account.GitHubHost, account.Id).ClearTokens();
+    }
+}
+
+internal static class WindowsRepositoryDisplay
+{
+    public static IReadOnlyList<RepositoryStatus> Apply(IReadOnlyList<RepositoryStatus> statuses, WindowsSettings settings)
+    {
+        var pinnedOrder = settings.Repositories
+            .Where(repository => repository.Visibility == RepositoryVisibility.Pinned)
+            .Select((repository, index) => (repository.FullName, index))
+            .GroupBy(pair => pair.FullName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToDictionary(pair => pair.FullName, pair => pair.index, StringComparer.OrdinalIgnoreCase);
+        var pinned = statuses
+            .Where(status => pinnedOrder.ContainsKey(status.Repository.FullName))
+            .OrderBy(status => pinnedOrder[status.Repository.FullName]);
+        var normal = Sort(statuses.Where(status => !pinnedOrder.ContainsKey(status.Repository.FullName)), settings.RepositorySortKey);
+
+        return pinned
+            .Concat(normal)
+            .Take(Math.Clamp(settings.RepositoryDisplayLimit, 1, 100))
+            .ToArray();
+    }
+
+    private static IOrderedEnumerable<RepositoryStatus> Sort(IEnumerable<RepositoryStatus> statuses, RepositorySortKey sortKey)
+    {
+        return sortKey switch
+        {
+            RepositorySortKey.Issues => statuses
+                .OrderByDescending(status => status.IssueCount)
+                .ThenBy(status => status.Repository.FullName, StringComparer.OrdinalIgnoreCase),
+            RepositorySortKey.PullRequests => statuses
+                .OrderByDescending(status => status.PullRequestCount)
+                .ThenBy(status => status.Repository.FullName, StringComparer.OrdinalIgnoreCase),
+            RepositorySortKey.Stars => statuses
+                .OrderByDescending(status => status.Stars)
+                .ThenBy(status => status.Repository.FullName, StringComparer.OrdinalIgnoreCase),
+            RepositorySortKey.Name => statuses
+                .OrderBy(status => status.Repository.FullName, StringComparer.OrdinalIgnoreCase),
+            _ => statuses
+                .OrderByDescending(status => status.PushedAt ?? DateTimeOffset.MinValue)
+                .ThenBy(status => status.Repository.FullName, StringComparer.OrdinalIgnoreCase),
+        };
     }
 }
