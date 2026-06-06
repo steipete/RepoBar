@@ -37,7 +37,7 @@ Feature parity is not complete until the Windows target has:
 
 - `dotnet build` and `dotnet test` passing on a Windows runner.
 - A Crabbox Windows run proving build and tests against the dirty checkout.
-- A Crabbox desktop smoke that launches the tray, captures the notification-area process, and verifies the generated settings file.
+- A Crabbox desktop smoke that launches the tray, captures the notification-area process, and verifies the generated settings file. Current screenshot proof is checked in at `docs/assets/repobar-windows-tray-menu.png`.
 - A manual or automated proof artifact for at least one repository with GitHub status and local git status shown together; Windows validation writes a TRX artifact for this coverage under `dist/windows/test-results`.
 - GitHub App OAuth proof against GitHub.com or a stubbed loopback/token exchange plus refresh coverage.
 - Account-switch proof that separate Windows profiles resolve separate OAuth/PAT credential targets.

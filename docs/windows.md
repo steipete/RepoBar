@@ -128,6 +128,10 @@ Run the launch smoke on Windows:
 
 The smoke publishes the app, launches `RepoBar.Windows.exe`, verifies the generated settings file, and writes a PNG screenshot plus JSON summary under `dist\windows\smoke\` when a desktop surface is available.
 
+![RepoBar Windows tray menu](assets/repobar-windows-tray-menu.png)
+
+The checked-in screenshot above was captured from a Crabbox AWS Windows desktop lease with `crabbox desktop launch` and `crabbox screenshot`, then cropped to exclude instance metadata.
+
 Run the hosted Windows Crabbox validation from a machine with Crabbox access:
 
 ```bash
