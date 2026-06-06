@@ -60,6 +60,52 @@ function Save-SmokeScreenshot {
     }
 }
 
+function Initialize-LocalGitSmokeFixture {
+    param(
+        [string]$ProjectsRoot
+    )
+
+    $git = Get-Command git -ErrorAction SilentlyContinue
+    if ($null -eq $git) {
+        throw "Git is required for the RepoBar.Windows local project smoke proof."
+    }
+
+    New-Item -ItemType Directory -Force -Path $ProjectsRoot | Out-Null
+    $repoPath = Join-Path $ProjectsRoot "RepoBar"
+    if (Test-Path $repoPath) {
+        Remove-Item $repoPath -Recurse -Force
+    }
+
+    New-Item -ItemType Directory -Force -Path $repoPath | Out-Null
+    Invoke-Native git -C $repoPath init -b main | Out-Null
+    Invoke-Native git -C $repoPath config user.email "repobar-smoke@example.invalid" | Out-Null
+    Invoke-Native git -C $repoPath config user.name "RepoBar Smoke" | Out-Null
+    Invoke-Native git -C $repoPath remote add origin "https://github.com/steipete/RepoBar.git" | Out-Null
+    Set-Content -Encoding UTF8 -Path (Join-Path $repoPath "README.md") -Value "RepoBar smoke fixture"
+    Invoke-Native git -C $repoPath add README.md | Out-Null
+    Invoke-Native git -C $repoPath commit -m "smoke fixture" | Out-Null
+
+    return $repoPath
+}
+
+function Wait-SmokeRuntimeSummary {
+    param(
+        [string]$Path,
+        [int]$TimeoutSeconds = 30
+    )
+
+    $deadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        if (Test-Path $Path) {
+            return Get-Content $Path -Raw | ConvertFrom-Json
+        }
+
+        Start-Sleep -Milliseconds 500
+    }
+
+    throw "RepoBar.Windows did not write the runtime smoke summary at $Path."
+}
+
 $isWindowsHost = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $env:OS -eq "Windows_NT" }
 if (-not $isWindowsHost) {
     throw "Windows tray smoke must run on Windows."
@@ -73,6 +119,7 @@ $smokeArtifacts = Join-Path $root "dist/windows/smoke"
 $timestamp = [DateTime]::UtcNow.ToString("yyyyMMddTHHmmssZ")
 $screenshotPath = Join-Path $smokeArtifacts "repobar-windows-smoke-$timestamp.png"
 $summaryPath = Join-Path $smokeArtifacts "repobar-windows-smoke-$timestamp.json"
+$runtimeSummaryPath = Join-Path $smokeArtifacts "repobar-windows-runtime-$timestamp.json"
 
 Invoke-Native dotnet publish $project -c $Configuration -r $Runtime --self-contained true `
     -p:PublishSingleFile=true `
@@ -92,6 +139,10 @@ if (Test-Path $settingsPath) {
     Remove-Item $settingsPath -Force
 }
 
+$projectsRoot = Join-Path $env:USERPROFILE "Projects"
+$localFixturePath = Initialize-LocalGitSmokeFixture -ProjectsRoot $projectsRoot
+$previousRuntimeSummaryPath = $env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH
+$env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH = $runtimeSummaryPath
 $process = Start-Process -FilePath $exe.FullName -PassThru
 try {
     Start-Sleep -Seconds $LaunchSeconds
@@ -111,6 +162,15 @@ try {
     New-Item -ItemType Directory -Force -Path $smokeArtifacts | Out-Null
     $screenshot = Save-SmokeScreenshot -Path $screenshotPath
     $capturedScreenshot = $screenshot.path
+    $runtimeSummary = Wait-SmokeRuntimeSummary -Path $runtimeSummaryPath
+    $localRepositories = @($runtimeSummary.localRepositories)
+    $runtimeRows = @($runtimeSummary.rows)
+    $localRepo = $localRepositories | Where-Object { $_.fullName -eq "steipete/RepoBar" } | Select-Object -First 1
+    $localRow = $runtimeRows | Where-Object { $_.repository -eq "steipete/RepoBar" -and $_.hasLocalStatus } | Select-Object -First 1
+    if ($null -eq $localRepo -or $null -eq $localRow) {
+        throw "RepoBar.Windows runtime smoke did not attach local Git status to steipete/RepoBar."
+    }
+
     $activeAccount = @($settings.accounts) | Where-Object { $_.id -eq $settings.activeAccountId } | Select-Object -First 1
     $sampleRepository = $repositories | Select-Object -First 1
     $menuOrder = @($settings.menuCustomization.mainMenuOrder)
@@ -126,11 +186,19 @@ try {
         gitHubHost = $settings.githubHost
         repositoryCount = $repositories.Count
         sampleRepository = if ($sampleRepository) { "$($sampleRepository.owner)/$($sampleRepository.name)" } else { $null }
+        localGitFixturePath = $localFixturePath
+        localRepositoryCount = $runtimeSummary.localRepositoryCount
+        runtimeSummaryPath = $runtimeSummaryPath
+        runtimeFirstLocalRepository = $localRepo.fullName
+        runtimeFirstLocalSync = $localRepo.syncDetail
+        runtimeFirstRowLabel = $localRow.label
         mainMenuOrder = $menuOrder
         proof = [ordered]@{
             processRunning = -not $process.HasExited
             settingsCreated = Test-Path $settingsPath
             sampleRepositoryConfigured = $null -ne $sampleRepository
+            localGitFixtureCreated = Test-Path (Join-Path $localFixturePath ".git")
+            localGitStatusAttached = $null -ne $localRow
             accountSwitcherConfigured = $menuOrder -contains "accountSwitcher"
             cacheResetConfigured = $menuOrder -contains "clearResponseCache"
         }
@@ -139,14 +207,15 @@ try {
         screenshotError = $screenshot.error
         capturedAt = [DateTime]::UtcNow.ToString("o")
     }
-    $summary | ConvertTo-Json | Set-Content -Encoding UTF8 -Path $summaryPath
+    $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }
 finally {
+    $env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH = $previousRuntimeSummaryPath
     if (-not $process.HasExited) {
         Stop-Process -Id $process.Id -Force
         $process.WaitForExit()

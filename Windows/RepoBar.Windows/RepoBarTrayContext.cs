@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Drawing;
+using System.Text.Json;
 using System.Windows.Forms;
 
 namespace RepoBar.Windows;
@@ -126,7 +127,58 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             {
                 UpdateTrayIcon();
                 BuildMenu();
+                WriteSmokeRuntimeSummary();
             }
+        }
+    }
+
+    private void WriteSmokeRuntimeSummary()
+    {
+        var path = Environment.GetEnvironmentVariable("REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH");
+        if (string.IsNullOrWhiteSpace(path))
+        {
+            return;
+        }
+
+        try
+        {
+            var directory = Path.GetDirectoryName(path);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var displayedStatuses = WindowsRepositoryDisplay.Apply(_statuses, _settingsStore.Settings);
+            var summary = new
+            {
+                capturedAt = DateTimeOffset.UtcNow,
+                settingsPath = _settingsStore.SettingsPath,
+                visibleRepositoryCount = _settingsStore.VisibleRepositories.Count,
+                loadedRepositoryCount = _statuses.Count,
+                localRepositoryCount = _localGitIndex.Repositories.Count,
+                lastError = _lastError,
+                localRepositories = _localGitIndex.Repositories.Select(repository => new
+                {
+                    repository.DisplayName,
+                    repository.FullName,
+                    repository.Branch,
+                    repository.SyncDetail,
+                    repository.IsClean,
+                    repository.Path,
+                }).ToArray(),
+                rows = displayedStatuses.Select(status => new
+                {
+                    repository = status.Repository.FullName,
+                    hasLocalStatus = status.LocalStatus != null,
+                    label = RepositoryRowFormatter.BuildLabel(status, _settingsStore.Settings),
+                    localSync = status.LocalStatus?.SyncDetail,
+                }).ToArray(),
+            };
+            File.WriteAllText(path, JsonSerializer.Serialize(summary, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch
+        {
+            // Smoke diagnostics must not affect normal tray behavior.
         }
     }
 
