@@ -42,8 +42,10 @@ internal sealed class GitHubActionsInsightClient : IDisposable
             results.Add(await LoadRepositoryAsync(repository, cancellationToken).ConfigureAwait(false));
         }
 
-        var billing = await LoadBillingUsageAsync(repositories, cancellationToken).ConfigureAwait(false);
-        return new ActionsInsights(results, billing, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
+        var owners = UniqueOwners(repositories);
+        var billing = await LoadBillingUsageAsync(owners, cancellationToken).ConfigureAwait(false);
+        var cacheUsage = await LoadCacheUsageAsync(owners, cancellationToken).ConfigureAwait(false);
+        return new ActionsInsights(results, billing, cacheUsage, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
     }
 
     private async Task<RepositoryActionsInsight> LoadRepositoryAsync(
@@ -118,17 +120,21 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         return new ActionsRunnerFleet(totalCount, runners);
     }
 
-    private async Task<ActionsBillingUsage?> LoadBillingUsageAsync(
-        IReadOnlyList<RepositoryRef> repositories,
-        CancellationToken cancellationToken)
+    private static IReadOnlyList<string> UniqueOwners(IReadOnlyList<RepositoryRef> repositories)
     {
-        var owners = repositories
+        return repositories
             .Select(repository => repository.Owner)
             .Where(owner => !string.IsNullOrWhiteSpace(owner))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .Take(8)
             .ToArray();
-        if (owners.Length == 0)
+    }
+
+    private async Task<ActionsBillingUsage?> LoadBillingUsageAsync(
+        IReadOnlyList<string> owners,
+        CancellationToken cancellationToken)
+    {
+        if (owners.Count == 0)
         {
             return null;
         }
@@ -145,6 +151,45 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         }
 
         return items.Count == 0 ? null : new ActionsBillingUsage(items);
+    }
+
+    private async Task<IReadOnlyList<ActionsOwnerCacheUsage>> LoadCacheUsageAsync(
+        IReadOnlyList<string> owners,
+        CancellationToken cancellationToken)
+    {
+        var results = new List<ActionsOwnerCacheUsage>();
+        foreach (var owner in owners)
+        {
+            if (await TryLoadCacheUsageForOwnerAsync(owner, cancellationToken).ConfigureAwait(false) is { } usage)
+            {
+                results.Add(usage);
+            }
+        }
+
+        return results;
+    }
+
+    private async Task<ActionsOwnerCacheUsage?> TryLoadCacheUsageForOwnerAsync(
+        string owner,
+        CancellationToken cancellationToken)
+    {
+        using var response = await _httpClient.GetAsync(
+            $"orgs/{Uri.EscapeDataString(owner)}/actions/cache/usage",
+            cancellationToken).ConfigureAwait(false);
+        CaptureRateLimit(response);
+        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        using var document = JsonDocument.Parse(json);
+        var count = TryGetInt32(document.RootElement, "total_active_caches_count");
+        var bytes = TryGetInt64(document.RootElement, "total_active_caches_size_in_bytes");
+        return count == null && bytes == null
+            ? null
+            : new ActionsOwnerCacheUsage(owner, count ?? 0, bytes ?? 0);
     }
 
     private async Task<IReadOnlyList<ActionsBillingUsageItem>?> TryLoadBillingUsageForOwnerAsync(
@@ -221,6 +266,20 @@ internal sealed class GitHubActionsInsightClient : IDisposable
             : 0;
     }
 
+    private static int? TryGetInt32(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Number
+            ? property.GetInt32()
+            : null;
+    }
+
+    private static long? TryGetInt64(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Number
+            ? property.GetInt64()
+            : null;
+    }
+
     private static ActionsBillingUsageItem? ParseBillingUsageItem(JsonElement item)
     {
         var date = TryGetString(item, "date");
@@ -258,10 +317,11 @@ internal sealed class GitHubActionsInsightClient : IDisposable
 internal sealed record ActionsInsights(
     IReadOnlyList<RepositoryActionsInsight> Repositories,
     ActionsBillingUsage? Billing,
+    IReadOnlyList<ActionsOwnerCacheUsage> CacheUsage,
     DateTimeOffset FetchedAt,
     IReadOnlyList<GitHubRateLimitSnapshot> RateLimits)
 {
-    public static readonly ActionsInsights Empty = new([], null, DateTimeOffset.MinValue, []);
+    public static readonly ActionsInsights Empty = new([], null, [], DateTimeOffset.MinValue, []);
 
     public int RunningCount => Repositories.Sum(repository => repository.Queue.InProgressCount);
     public int QueuedCount => Repositories.Sum(repository => repository.Queue.QueuedCount);
@@ -284,7 +344,8 @@ internal sealed record ActionsInsights(
                 ? $"  {OnlineRunnerCount:n0}/{RunnerCount:n0} runners"
                 : "";
             var billing = Billing == null ? "" : $"  {Billing.DisplayText}";
-            return $"Actions: {queue}{runners}{billing}";
+            var cache = CacheUsage.Count == 0 ? "" : $"  {CacheUsage.Sum(usage => usage.CacheSizeMb):n0} MB cache";
+            return $"Actions: {queue}{runners}{billing}{cache}";
         }
     }
 }
@@ -394,3 +455,9 @@ internal sealed record ActionsBillingUsageItem(
     double NetAmount,
     string? OrganizationName,
     string? RepositoryName);
+
+internal sealed record ActionsOwnerCacheUsage(string Owner, int TotalCachesCount, long TotalCachesSizeBytes)
+{
+    public double CacheSizeMb => TotalCachesSizeBytes / 1024d / 1024d;
+    public string DisplayText => $"{Owner}: {TotalCachesCount:n0} caches  {CacheSizeMb:n0} MB";
+}

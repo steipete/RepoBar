@@ -276,6 +276,15 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 }
                 actions.DropDownItems.Add(new ToolStripSeparator());
             }
+            if (_actionsInsights.CacheUsage.Count > 0)
+            {
+                actions.DropDownItems.Add(new ToolStripMenuItem($"Cache: {_actionsInsights.CacheUsage.Sum(usage => usage.CacheSizeMb):n0} MB") { Enabled = false });
+                foreach (var usage in _actionsInsights.CacheUsage.OrderBy(usage => usage.Owner, StringComparer.OrdinalIgnoreCase))
+                {
+                    actions.DropDownItems.Add(new ToolStripMenuItem(usage.DisplayText) { Enabled = false });
+                }
+                actions.DropDownItems.Add(new ToolStripSeparator());
+            }
 
             foreach (var insight in _actionsInsights.Repositories)
             {

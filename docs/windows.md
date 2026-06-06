@@ -22,7 +22,7 @@ The Windows app currently provides:
 - optional RepoBar archive SQLite fallback for recent issue and pull request submenus
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
-- optional Actions summary with latest workflow state, active queue counts, billing usage, and self-hosted runner state per configured repository
+- optional Actions summary with latest workflow state, active queue counts, billing usage, cache usage, and self-hosted runner state per configured repository
 - optional pull request notifications through Windows tray balloons with click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview
 - optional launch-at-login registration for the current Windows user

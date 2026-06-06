@@ -35,6 +35,12 @@ public sealed class GitHubActionsInsightClientTests
                       ]
                     }
                     """),
+                "/orgs/owner/actions/cache/usage" => JsonResponse("""
+                    {
+                      "total_active_caches_count": 3,
+                      "total_active_caches_size_in_bytes": 10485760
+                    }
+                    """),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound),
             };
         });
@@ -57,6 +63,11 @@ public sealed class GitHubActionsInsightClientTests
         Assert.Equal(1.25, insights.Billing.TotalNetAmount);
         Assert.Equal(120.5, insights.Billing.MinutesByOs["Windows"]);
         Assert.Contains("$1.25", insights.DisplayText);
+        var cacheUsage = Assert.Single(insights.CacheUsage);
+        Assert.Equal("owner", cacheUsage.Owner);
+        Assert.Equal(3, cacheUsage.TotalCachesCount);
+        Assert.Equal(10d, cacheUsage.CacheSizeMb);
+        Assert.Contains("10 MB cache", insights.DisplayText);
         var rateLimit = Assert.Single(insights.RateLimits);
         Assert.Equal("core", rateLimit.Resource);
         Assert.Equal(4997, rateLimit.Remaining);
