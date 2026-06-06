@@ -513,6 +513,26 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_repository_heading_child_compound_bare_shorthand()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 2 issues / 1 PR
+              - #61/#62 fixes both.
+              - #64-#65 fixes series.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 61L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 62L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 64L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 65L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
     public void FindReferences_stops_repository_heading_context_at_unindented_lines()
     {
         var references = GitHubReferenceNavigator.FindReferences(

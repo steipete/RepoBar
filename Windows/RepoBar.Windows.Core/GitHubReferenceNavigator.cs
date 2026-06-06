@@ -274,6 +274,37 @@ internal static partial class GitHubReferenceNavigator
                     }
                 }
 
+                foreach (Match match in BareIssueSeriesRegex().Matches(line))
+                {
+                    var index = lineStart + match.Groups["number"].Index;
+                    if (claimedSpans.Any(span => span.Contains(index)))
+                    {
+                        continue;
+                    }
+
+                    var startNumber = long.Parse(match.Groups["number"].Value);
+                    matches.Add(new GitHubReferenceCandidate(
+                        index,
+                        new GitHubReferenceMatch(
+                            headingRepository,
+                            startNumber,
+                            "issues",
+                            match.Groups["number"].Value)));
+
+                    foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+                    {
+                        matches.Add(new GitHubReferenceCandidate(
+                            lineStart + number.Index,
+                            new GitHubReferenceMatch(
+                                headingRepository,
+                                number.Value,
+                                "issues",
+                                number.Value.ToString())));
+                    }
+
+                    claimedSpans.Add(new RangeSpan(lineStart + match.Index, lineStart + match.Index + match.Length));
+                }
+
                 foreach (Match match in BareNumberRegex().Matches(line))
                 {
                     var index = lineStart + match.Index;
@@ -500,6 +531,9 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]
     private static partial Regex KindedBareNumberRegex();
+
+    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)(?<tail>(?:\s*(?:-|/|,|and)\s*#?\d+)+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex BareIssueSeriesRegex();
 
     [GeneratedRegex(@"^\s*(?<prefix>gh-|#)?(?<number>\d+)\.?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex DirectBareNumberRegex();
