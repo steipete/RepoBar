@@ -26,7 +26,7 @@ The Windows app currently provides:
 - optional pull request notifications through Windows tray balloons with click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview
 - optional launch-at-login registration for the current Windows user
-- manual update check against the latest GitHub release
+- manual update check against the latest GitHub release with Windows installer asset detection
 
 ## Build
 
@@ -56,7 +56,7 @@ Use `-SkipInstaller` to validate the publish layout without requiring the Inno c
 
 The installer can optionally create a desktop shortcut and a current-user startup entry.
 
-Use **Launch at login** in Preferences to add or remove the current executable from the current user's Windows `Run` registry key. Use **Check for updates** from the tray menu to compare the running app version with the latest RepoBar GitHub release.
+Use **Launch at login** in Preferences to add or remove the current executable from the current user's Windows `Run` registry key. Use **Check for updates** from the tray menu to compare the running app version with the latest RepoBar GitHub release and open the Windows installer asset when one is attached.
 
 ## Run
 

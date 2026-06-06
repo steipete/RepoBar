@@ -32,13 +32,14 @@ internal sealed class WindowsUpdateChecker : IDisposable
         using var document = JsonDocument.Parse(json);
         var tag = TryGetString(document.RootElement, "tag_name") ?? "";
         var url = TryGetString(document.RootElement, "html_url");
+        var installerUrl = FindWindowsInstallerUrl(document.RootElement);
         var latestVersion = NormalizeVersion(tag);
         var normalizedCurrent = NormalizeVersion(currentVersion);
         var isNewer = latestVersion != null &&
             normalizedCurrent != null &&
             latestVersion.CompareTo(normalizedCurrent) > 0;
 
-        return new WindowsUpdateStatus(currentVersion, tag, url, isNewer);
+        return new WindowsUpdateStatus(currentVersion, tag, url, installerUrl, isNewer);
     }
 
     public static string CurrentVersion()
@@ -87,15 +88,64 @@ internal sealed class WindowsUpdateChecker : IDisposable
             : null;
     }
 
+    internal static string? FindWindowsInstallerUrl(JsonElement release)
+    {
+        if (!release.TryGetProperty("assets", out var assets) || assets.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        return assets.EnumerateArray()
+            .Select(asset => new ReleaseAsset(
+                TryGetString(asset, "name") ?? "",
+                TryGetString(asset, "browser_download_url")))
+            .Where(asset => !string.IsNullOrWhiteSpace(asset.Url))
+            .OrderByDescending(asset => asset.Score)
+            .FirstOrDefault(asset => asset.Score > 0)
+            ?.Url;
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();
     }
 }
 
-internal sealed record WindowsUpdateStatus(string CurrentVersion, string LatestTag, string? ReleaseUrl, bool IsNewer)
+internal sealed record WindowsUpdateStatus(string CurrentVersion, string LatestTag, string? ReleaseUrl, string? InstallerUrl, bool IsNewer)
 {
+    public string? PreferredUpdateUrl => InstallerUrl ?? ReleaseUrl;
+
     public string DisplayText => IsNewer
         ? $"RepoBar {LatestTag} is available"
         : $"RepoBar is up to date ({CurrentVersion})";
+}
+
+internal sealed record ReleaseAsset(string Name, string? Url)
+{
+    public int Score
+    {
+        get
+        {
+            var lower = Name.ToLowerInvariant();
+            if (!lower.Contains("windows", StringComparison.Ordinal) && !lower.Contains("win-", StringComparison.Ordinal) && !lower.Contains("win_", StringComparison.Ordinal))
+            {
+                return 0;
+            }
+
+            if (lower.EndsWith(".msi", StringComparison.Ordinal))
+            {
+                return 40;
+            }
+            if (lower.EndsWith(".exe", StringComparison.Ordinal))
+            {
+                return 30;
+            }
+            if (lower.EndsWith(".zip", StringComparison.Ordinal))
+            {
+                return 20;
+            }
+
+            return 10;
+        }
+    }
 }

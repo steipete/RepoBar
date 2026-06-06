@@ -692,16 +692,17 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             using var checker = new WindowsUpdateChecker();
             var status = await checker.CheckLatestAsync(WindowsUpdateChecker.CurrentVersion(), CancellationToken.None).ConfigureAwait(true);
-            if (status.IsNewer && !string.IsNullOrWhiteSpace(status.ReleaseUrl))
+            if (status.IsNewer && !string.IsNullOrWhiteSpace(status.PreferredUpdateUrl))
             {
+                var target = status.InstallerUrl == null ? "latest release" : "Windows installer";
                 var result = MessageBox.Show(
-                    $"{status.DisplayText}.\n\nOpen the latest release?",
+                    $"{status.DisplayText}.\n\nOpen the {target}?",
                     "RepoBar Updates",
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Information);
                 if (result == DialogResult.Yes)
                 {
-                    OpenUrl(status.ReleaseUrl);
+                    OpenUrl(status.PreferredUpdateUrl);
                 }
                 return;
             }
