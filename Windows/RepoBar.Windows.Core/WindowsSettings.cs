@@ -27,6 +27,7 @@ internal sealed class WindowsSettings
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public bool EnableGitHubReferenceMonitor { get; set; }
+    public WindowsMenuCustomization MenuCustomization { get; set; } = new();
     public bool EnablePullRequestNotifications { get; set; }
     public bool EnablePullRequestNewNotifications { get; set; } = true;
     public bool EnablePullRequestUpdateNotifications { get; set; } = true;
@@ -238,6 +239,8 @@ internal sealed class WindowsSettingsStore
             : settings.LocalWorktreeFolderName.Trim();
         settings.RefreshIntervalMinutes = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
         settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
+        settings.MenuCustomization ??= new WindowsMenuCustomization();
+        settings.MenuCustomization.Normalize();
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
             ? null
             : settings.GitHubArchiveDatabasePath.Trim();

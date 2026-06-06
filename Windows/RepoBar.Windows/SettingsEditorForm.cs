@@ -43,6 +43,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly BindingList<RepositoryRow> _repositories = [];
     private readonly DataGridView _repositoriesGrid = new();
     private readonly TextBox _repositoryFilterTextBox = new();
+    private WindowsMenuCustomization _menuCustomization = new();
     private AccountRow? _selectedAccount;
     private bool _loadingAccount;
 
@@ -119,6 +120,7 @@ internal sealed class SettingsEditorForm : Form
         _pullRequestNotificationClickAction.DisplayMember = nameof(NotificationClickActionRow.DisplayName);
         _pullRequestNotificationClickAction.ValueMember = nameof(NotificationClickActionRow.Action);
         _pullRequestNotificationClickAction.SelectedValue = settings.PullRequestNotificationClickAction;
+        _menuCustomization = settings.MenuCustomization.Copy();
 
         foreach (var repository in settings.Repositories)
         {
@@ -254,6 +256,8 @@ internal sealed class SettingsEditorForm : Form
         addButton.Click += (_, _) => _repositories.Add(new RepositoryRow("", "", RepositoryVisibility.Visible));
         var discoverButton = new Button { Text = "Discover repos" };
         discoverButton.Click += async (_, _) => await DiscoverRepositoriesAsync();
+        var customizeMenuButton = new Button { Text = "Customize menu" };
+        customizeMenuButton.Click += (_, _) => CustomizeMenu();
         var removeButton = new Button { Text = "Remove selected" };
         removeButton.Click += (_, _) => RemoveSelectedRepositories();
         var clearTokenButton = new Button { Text = "Clear token" };
@@ -274,6 +278,7 @@ internal sealed class SettingsEditorForm : Form
         footer.Controls.Add(signInButton);
         footer.Controls.Add(clearTokenButton);
         footer.Controls.Add(removeButton);
+        footer.Controls.Add(customizeMenuButton);
         footer.Controls.Add(discoverButton);
         footer.Controls.Add(addButton);
         root.Controls.Add(footer);
@@ -444,6 +449,12 @@ internal sealed class SettingsEditorForm : Form
         }
     }
 
+    private void CustomizeMenu()
+    {
+        using var form = new MenuCustomizationForm(_menuCustomization);
+        form.ShowDialog(this);
+    }
+
     private async Task DiscoverRepositoriesAsync()
     {
         SaveCredentialTokenIfNeeded();
@@ -524,6 +535,7 @@ internal sealed class SettingsEditorForm : Form
         settings.PullRequestNotificationClickAction = _pullRequestNotificationClickAction.SelectedValue is PullRequestNotificationClickAction action
             ? action
             : PullRequestNotificationClickAction.OpenInBrowser;
+        settings.MenuCustomization = _menuCustomization.Copy();
         WindowsSettingsStore.NormalizeSettings(settings);
 
         _settingsStore.ReplaceRepositories(_repositories

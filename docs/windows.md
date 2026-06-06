@@ -17,6 +17,7 @@ The Windows app currently provides:
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
 - native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, repository visibility, display limit, and sort order
+- native menu customization for hiding and reordering main tray actions and repository submenu entries
 - filtered repository discovery from GitHub's accessible repository list
 - repository checkout from the tray into the configured local projects folder
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
@@ -107,6 +108,47 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "showRateLimits": true,
   "showContributionSummary": true,
   "enableGitHubReferenceMonitor": false,
+  "menuCustomization": {
+    "hiddenMainMenuItems": [],
+    "mainMenuOrder": [
+      "refreshNow",
+      "contributionSummary",
+      "actionsUsage",
+      "rateLimits",
+      "issueNavigator",
+      "logOut",
+      "preferences",
+      "checkForUpdates",
+      "openSettingsFile",
+      "quit"
+    ],
+    "hiddenRepositoryMenuItems": [],
+    "repositoryMenuOrder": [
+      "openRepository",
+      "openIssues",
+      "openPullRequests",
+      "openActions",
+      "checkout",
+      "recentIssues",
+      "recentPullRequests",
+      "releases",
+      "ciRuns",
+      "branches",
+      "tags",
+      "commits",
+      "contributors",
+      "activity",
+      "discussions",
+      "latestRelease",
+      "statusDetails",
+      "traffic",
+      "heatmap",
+      "changelog",
+      "localStatus",
+      "pushedAt",
+      "visibility"
+    ]
+  },
   "enablePullRequestNotifications": false,
   "enablePullRequestNewNotifications": true,
   "enablePullRequestUpdateNotifications": true,
@@ -121,6 +163,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 ```
 
 Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name; pinned repositories stay ahead of the normal sorted list.
+
+Use **Customize menu** in Preferences to hide or reorder main tray actions and repository submenu entries. Preferences and Quit remain required so a customized menu cannot trap the app without settings or exit controls.
 
 Use **Watch clipboard references** to enable the clipboard-only GitHub reference monitor. Windows polls text copied to the clipboard, ignores the initial clipboard contents as a baseline, sends a tray balloon for newly copied issue or pull request references, and opens Issue Navigator with the copied text when the balloon is clicked.
 

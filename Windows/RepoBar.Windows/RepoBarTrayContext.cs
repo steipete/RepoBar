@@ -170,25 +170,56 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
 
         _menu.Items.Add(new ToolStripSeparator());
-        _menu.Items.Add(new ToolStripMenuItem(_isRefreshing ? "Refreshing..." : "Refresh now", null, (_, _) => BeginRefresh()) { Enabled = !_isRefreshing });
-        if (_accountInsight != null)
+        foreach (var item in _settingsStore.Settings.MenuCustomization.VisibleMainMenuItems())
         {
-            AddAccountInsightItems(_menu.Items, _accountInsight);
+            AddMainMenuItem(_menu.Items, item);
         }
-        if (_settingsStore.Settings.ShowActionsUsage)
+    }
+
+    private void AddMainMenuItem(ToolStripItemCollection items, WindowsMainMenuItem item)
+    {
+        switch (item)
         {
-            AddActionsUsageItems(_menu.Items);
+            case WindowsMainMenuItem.RefreshNow:
+                items.Add(new ToolStripMenuItem(_isRefreshing ? "Refreshing..." : "Refresh now", null, (_, _) => BeginRefresh()) { Enabled = !_isRefreshing });
+                break;
+            case WindowsMainMenuItem.ContributionSummary:
+                if (_accountInsight != null)
+                {
+                    AddAccountInsightItems(items, _accountInsight);
+                }
+                break;
+            case WindowsMainMenuItem.ActionsUsage:
+                if (_settingsStore.Settings.ShowActionsUsage)
+                {
+                    AddActionsUsageItems(items);
+                }
+                break;
+            case WindowsMainMenuItem.RateLimits:
+                if (_settingsStore.Settings.ShowRateLimits && _rateLimits.Count > 0)
+                {
+                    AddRateLimitItems(items, _rateLimits);
+                }
+                break;
+            case WindowsMainMenuItem.IssueNavigator:
+                items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
+                break;
+            case WindowsMainMenuItem.LogOut:
+                items.Add(new ToolStripMenuItem("Log out", null, (_, _) => LogOut()));
+                break;
+            case WindowsMainMenuItem.Preferences:
+                items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
+                break;
+            case WindowsMainMenuItem.CheckForUpdates:
+                items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
+                break;
+            case WindowsMainMenuItem.OpenSettingsFile:
+                items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
+                break;
+            case WindowsMainMenuItem.Quit:
+                items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
+                break;
         }
-        if (_settingsStore.Settings.ShowRateLimits && _rateLimits.Count > 0)
-        {
-            AddRateLimitItems(_menu.Items, _rateLimits);
-        }
-        _menu.Items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
-        _menu.Items.Add(new ToolStripMenuItem("Log out", null, (_, _) => LogOut()));
-        _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
-        _menu.Items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
-        _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
-        _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
     }
 
     private static void AddRateLimitItems(ToolStripItemCollection items, IReadOnlyList<GitHubRateLimitSnapshot> snapshots)
@@ -372,72 +403,135 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         if (status.ErrorMessage != null)
         {
             item.DropDownItems.Add(new ToolStripMenuItem(status.ErrorMessage) { Enabled = false });
-            item.DropDownItems.Add(new ToolStripMenuItem("Open repository", null, (_, _) => OpenRepository(status.Repository)));
+            var customization = _settingsStore.Settings.MenuCustomization;
+            if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.OpenRepository))
+            {
+                item.DropDownItems.Add(new ToolStripMenuItem("Open repository", null, (_, _) => OpenRepository(status.Repository)));
+            }
             if (status.LocalStatus != null)
             {
-                item.DropDownItems.Add(new ToolStripSeparator());
-                AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
+                if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.LocalStatus))
+                {
+                    item.DropDownItems.Add(new ToolStripSeparator());
+                    AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
+                }
             }
-            else
+            else if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.Checkout))
             {
                 AddCheckoutItem(item.DropDownItems, status.Repository);
             }
-            AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
+            if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.Visibility))
+            {
+                AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
+            }
             return item;
         }
 
-        item.DropDownItems.Add(new ToolStripMenuItem("Open repository", null, (_, _) => OpenRepository(status.Repository)));
-        item.DropDownItems.Add(new ToolStripMenuItem("Open issues", null, (_, _) => OpenRepository(status.Repository, "issues")));
-        item.DropDownItems.Add(new ToolStripMenuItem("Open pull requests", null, (_, _) => OpenRepository(status.Repository, "pulls")));
-        item.DropDownItems.Add(new ToolStripMenuItem("Open Actions", null, (_, _) => OpenRepository(status.Repository, "actions")));
-        if (status.LocalStatus == null)
+        foreach (var menuItem in _settingsStore.Settings.MenuCustomization.VisibleRepositoryMenuItems())
         {
-            AddCheckoutItem(item.DropDownItems, status.Repository);
+            AddRepositoryMenuItem(item.DropDownItems, status, menuItem);
         }
-        AddRecentItemsSubmenu(item.DropDownItems, "Issues", status.RecentLists.Issues);
-        AddRecentItemsSubmenu(item.DropDownItems, "Pull Requests", status.RecentLists.Pulls);
-        AddRecentItemsSubmenu(item.DropDownItems, "Releases", status.RecentLists.Releases);
-        AddRecentItemsSubmenu(item.DropDownItems, "CI Runs", status.RecentLists.WorkflowRuns);
-        AddRecentItemsSubmenu(item.DropDownItems, "Branches", status.RecentLists.Branches);
-        AddRecentItemsSubmenu(item.DropDownItems, "Tags", status.RecentLists.Tags);
-        AddRecentItemsSubmenu(item.DropDownItems, "Commits", status.RecentLists.Commits);
-        AddRecentItemsSubmenu(item.DropDownItems, "Contributors", status.RecentLists.Contributors);
-        AddRecentItemsSubmenu(item.DropDownItems, "Activity", status.RecentLists.Activity);
-        AddRecentItemsSubmenu(item.DropDownItems, "Discussions", status.RecentLists.Discussions);
-
-        if (status.LatestRelease is { Url: { Length: > 0 } releaseUrl })
-        {
-            item.DropDownItems.Add(new ToolStripMenuItem($"Latest release: {status.LatestRelease.TagName}", null, (_, _) => OpenUrl(releaseUrl)));
-        }
-
-        item.DropDownItems.Add(new ToolStripSeparator());
-        item.DropDownItems.Add(new ToolStripMenuItem($"CI: {status.LatestRun?.DisplayText ?? "not available"}") { Enabled = false });
-        item.DropDownItems.Add(new ToolStripMenuItem($"Stars: {status.Stars}  Forks: {status.Forks}") { Enabled = false });
-        item.DropDownItems.Add(new ToolStripMenuItem($"Default branch: {status.DefaultBranch}") { Enabled = false });
-        if (status.Traffic is { DisplayText.Length: > 0 })
-        {
-            item.DropDownItems.Add(new ToolStripMenuItem($"Traffic: {status.Traffic.DisplayText}") { Enabled = false });
-        }
-        if (status.Heatmap != null)
-        {
-            item.DropDownItems.Add(new ToolStripMenuItem($"Heatmap: {status.Heatmap.DisplayText}") { Enabled = false });
-        }
-        if (status.Changelog != null)
-        {
-            item.DropDownItems.Add(new ToolStripMenuItem($"Changelog: {status.Changelog.Headline}", null, (_, _) => OpenUrl(status.Changelog.Url)));
-        }
-        if (status.LocalStatus != null)
-        {
-            item.DropDownItems.Add(new ToolStripSeparator());
-            AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
-        }
-        if (status.PushedAt != null)
-        {
-            item.DropDownItems.Add(new ToolStripMenuItem($"Pushed: {status.PushedAt.Value.LocalDateTime:g}") { Enabled = false });
-        }
-        AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
 
         return item;
+    }
+
+    private void AddRepositoryMenuItem(ToolStripItemCollection items, RepositoryStatus status, WindowsRepositoryMenuItem menuItem)
+    {
+        switch (menuItem)
+        {
+            case WindowsRepositoryMenuItem.OpenRepository:
+                items.Add(new ToolStripMenuItem("Open repository", null, (_, _) => OpenRepository(status.Repository)));
+                break;
+            case WindowsRepositoryMenuItem.OpenIssues:
+                items.Add(new ToolStripMenuItem("Open issues", null, (_, _) => OpenRepository(status.Repository, "issues")));
+                break;
+            case WindowsRepositoryMenuItem.OpenPullRequests:
+                items.Add(new ToolStripMenuItem("Open pull requests", null, (_, _) => OpenRepository(status.Repository, "pulls")));
+                break;
+            case WindowsRepositoryMenuItem.OpenActions:
+                items.Add(new ToolStripMenuItem("Open Actions", null, (_, _) => OpenRepository(status.Repository, "actions")));
+                break;
+            case WindowsRepositoryMenuItem.Checkout:
+                if (status.LocalStatus == null)
+                {
+                    AddCheckoutItem(items, status.Repository);
+                }
+                break;
+            case WindowsRepositoryMenuItem.RecentIssues:
+                AddRecentItemsSubmenu(items, "Issues", status.RecentLists.Issues);
+                break;
+            case WindowsRepositoryMenuItem.RecentPullRequests:
+                AddRecentItemsSubmenu(items, "Pull Requests", status.RecentLists.Pulls);
+                break;
+            case WindowsRepositoryMenuItem.Releases:
+                AddRecentItemsSubmenu(items, "Releases", status.RecentLists.Releases);
+                break;
+            case WindowsRepositoryMenuItem.CiRuns:
+                AddRecentItemsSubmenu(items, "CI Runs", status.RecentLists.WorkflowRuns);
+                break;
+            case WindowsRepositoryMenuItem.Branches:
+                AddRecentItemsSubmenu(items, "Branches", status.RecentLists.Branches);
+                break;
+            case WindowsRepositoryMenuItem.Tags:
+                AddRecentItemsSubmenu(items, "Tags", status.RecentLists.Tags);
+                break;
+            case WindowsRepositoryMenuItem.Commits:
+                AddRecentItemsSubmenu(items, "Commits", status.RecentLists.Commits);
+                break;
+            case WindowsRepositoryMenuItem.Contributors:
+                AddRecentItemsSubmenu(items, "Contributors", status.RecentLists.Contributors);
+                break;
+            case WindowsRepositoryMenuItem.Activity:
+                AddRecentItemsSubmenu(items, "Activity", status.RecentLists.Activity);
+                break;
+            case WindowsRepositoryMenuItem.Discussions:
+                AddRecentItemsSubmenu(items, "Discussions", status.RecentLists.Discussions);
+                break;
+            case WindowsRepositoryMenuItem.LatestRelease:
+                if (status.LatestRelease is { Url: { Length: > 0 } releaseUrl })
+                {
+                    items.Add(new ToolStripMenuItem($"Latest release: {status.LatestRelease.TagName}", null, (_, _) => OpenUrl(releaseUrl)));
+                }
+                break;
+            case WindowsRepositoryMenuItem.StatusDetails:
+                items.Add(new ToolStripMenuItem($"CI: {status.LatestRun?.DisplayText ?? "not available"}") { Enabled = false });
+                items.Add(new ToolStripMenuItem($"Stars: {status.Stars}  Forks: {status.Forks}") { Enabled = false });
+                items.Add(new ToolStripMenuItem($"Default branch: {status.DefaultBranch}") { Enabled = false });
+                break;
+            case WindowsRepositoryMenuItem.Traffic:
+                if (status.Traffic is { DisplayText.Length: > 0 })
+                {
+                    items.Add(new ToolStripMenuItem($"Traffic: {status.Traffic.DisplayText}") { Enabled = false });
+                }
+                break;
+            case WindowsRepositoryMenuItem.Heatmap:
+                if (status.Heatmap != null)
+                {
+                    items.Add(new ToolStripMenuItem($"Heatmap: {status.Heatmap.DisplayText}") { Enabled = false });
+                }
+                break;
+            case WindowsRepositoryMenuItem.Changelog:
+                if (status.Changelog != null)
+                {
+                    items.Add(new ToolStripMenuItem($"Changelog: {status.Changelog.Headline}", null, (_, _) => OpenUrl(status.Changelog.Url)));
+                }
+                break;
+            case WindowsRepositoryMenuItem.LocalStatus:
+                if (status.LocalStatus != null)
+                {
+                    AddLocalStatusItems(items, status.LocalStatus);
+                }
+                break;
+            case WindowsRepositoryMenuItem.PushedAt:
+                if (status.PushedAt != null)
+                {
+                    items.Add(new ToolStripMenuItem($"Pushed: {status.PushedAt.Value.LocalDateTime:g}") { Enabled = false });
+                }
+                break;
+            case WindowsRepositoryMenuItem.Visibility:
+                AddVisibilityItems(items, status.Repository.FullName);
+                break;
+        }
     }
 
     private void AddCheckoutItem(ToolStripItemCollection items, RepositoryRef repository)
