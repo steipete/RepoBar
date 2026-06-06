@@ -149,10 +149,14 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
 
             var displayedStatuses = WindowsRepositoryDisplay.Apply(_statuses, _settingsStore.Settings);
+            var activeAccount = _settingsStore.Settings.GetActiveAccount();
             var summary = new
             {
                 capturedAt = DateTimeOffset.UtcNow,
                 settingsPath = _settingsStore.SettingsPath,
+                activeAccountId = _settingsStore.Settings.ActiveAccountId,
+                activeAccountLabel = activeAccount.DisplayName,
+                activeAccountCredentialTargets = _settingsStore.ActiveAccountStoredCredentialTargetNames,
                 visibleRepositoryCount = _settingsStore.VisibleRepositories.Count,
                 loadedRepositoryCount = _statuses.Count,
                 localRepositoryCount = _localGitIndex.Repositories.Count,

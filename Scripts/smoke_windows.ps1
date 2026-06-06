@@ -106,6 +106,106 @@ function Wait-SmokeRuntimeSummary {
     throw "RepoBar.Windows did not write the runtime smoke summary at $Path."
 }
 
+function Initialize-SmokeSettings {
+    param(
+        [string]$Path,
+        [string]$ProjectsRoot
+    )
+
+    $directory = Split-Path -Parent $Path
+    New-Item -ItemType Directory -Force -Path $directory | Out-Null
+    $settings = [ordered]@{
+        activeAccountId = "work"
+        accounts = @(
+            [ordered]@{
+                id = "default"
+                label = "Default"
+                gitHubHost = "github.com"
+                tokenEnvironmentVariable = "REPOBAR_GITHUB_TOKEN"
+                gitHubOAuthClientId = "Iv23liGm2arUyotWSjwJ"
+                gitHubOAuthClientSecretEnvironmentVariable = "REPOBAR_GITHUB_CLIENT_SECRET"
+            },
+            [ordered]@{
+                id = "work"
+                label = "Work"
+                gitHubHost = "github.com"
+                tokenEnvironmentVariable = "REPOBAR_WORK_GITHUB_TOKEN"
+                gitHubOAuthClientId = "Iv23liGm2arUyotWSjwJ"
+                gitHubOAuthClientSecretEnvironmentVariable = "REPOBAR_WORK_GITHUB_CLIENT_SECRET"
+            }
+        )
+        refreshIntervalMinutes = 5
+        openMenuOnLeftClick = $true
+        discoverLocalProjects = $true
+        localProjectsRoot = $ProjectsRoot
+        localProjectsMaxDepth = 3
+        localWorktreeFolderName = ".work"
+        fetchLocalProjectsBeforeStatus = $false
+        showDirtyFilesInMenu = $true
+        enableResponseCache = $true
+        repositoryDisplayLimit = 6
+        repositoryMenuScope = "all"
+        repositorySortKey = "activity"
+        showRateLimits = $true
+        showContributionSummary = $false
+        menuCustomization = [ordered]@{
+            hiddenMainMenuItems = @()
+            mainMenuOrder = @(
+                "refreshNow",
+                "contributionSummary",
+                "globalCommits",
+                "globalActivity",
+                "actionsUsage",
+                "rateLimits",
+                "issueNavigator",
+                "accountSwitcher",
+                "logOut",
+                "preferences",
+                "about",
+                "checkForUpdates",
+                "openSettingsFile",
+                "clearResponseCache",
+                "quit"
+            )
+            hiddenRepositoryMenuItems = @()
+            repositoryMenuOrder = @(
+                "openRepository",
+                "openIssues",
+                "openPullRequests",
+                "openActions",
+                "checkout",
+                "recentIssues",
+                "recentPullRequests",
+                "releases",
+                "ciRuns",
+                "branches",
+                "tags",
+                "commits",
+                "contributors",
+                "activity",
+                "discussions",
+                "latestRelease",
+                "statusDetails",
+                "traffic",
+                "heatmap",
+                "changelog",
+                "localStatus",
+                "pushedAt",
+                "visibility"
+            )
+        }
+        repositories = @(
+            [ordered]@{
+                owner = "steipete"
+                name = "RepoBar"
+                visibility = "pinned"
+            }
+        )
+    }
+
+    $settings | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 -Path $Path
+}
+
 $isWindowsHost = if ($PSVersionTable.PSVersion.Major -ge 6) { $IsWindows } else { $env:OS -eq "Windows_NT" }
 if (-not $isWindowsHost) {
     throw "Windows tray smoke must run on Windows."
@@ -141,6 +241,7 @@ if (Test-Path $settingsPath) {
 
 $projectsRoot = Join-Path $env:USERPROFILE "Projects"
 $localFixturePath = Initialize-LocalGitSmokeFixture -ProjectsRoot $projectsRoot
+Initialize-SmokeSettings -Path $settingsPath -ProjectsRoot $projectsRoot
 $previousRuntimeSummaryPath = $env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH
 $env:REPOBAR_WINDOWS_SMOKE_SUMMARY_PATH = $runtimeSummaryPath
 $process = Start-Process -FilePath $exe.FullName -PassThru
@@ -170,6 +271,9 @@ try {
     if ($null -eq $localRepo -or $null -eq $localRow) {
         throw "RepoBar.Windows runtime smoke did not attach local Git status to steipete/RepoBar."
     }
+    if ($runtimeSummary.activeAccountId -ne "work") {
+        throw "RepoBar.Windows runtime smoke did not use the work account profile."
+    }
 
     $activeAccount = @($settings.accounts) | Where-Object { $_.id -eq $settings.activeAccountId } | Select-Object -First 1
     $sampleRepository = $repositories | Select-Object -First 1
@@ -192,6 +296,9 @@ try {
         runtimeFirstLocalRepository = $localRepo.fullName
         runtimeFirstLocalSync = $localRepo.syncDetail
         runtimeFirstRowLabel = $localRow.label
+        runtimeActiveAccountId = $runtimeSummary.activeAccountId
+        runtimeActiveAccountLabel = $runtimeSummary.activeAccountLabel
+        runtimeActiveAccountCredentialTargets = @($runtimeSummary.activeAccountCredentialTargets)
         mainMenuOrder = $menuOrder
         proof = [ordered]@{
             processRunning = -not $process.HasExited
@@ -199,6 +306,8 @@ try {
             sampleRepositoryConfigured = $null -ne $sampleRepository
             localGitFixtureCreated = Test-Path (Join-Path $localFixturePath ".git")
             localGitStatusAttached = $null -ne $localRow
+            workAccountActive = $runtimeSummary.activeAccountId -eq "work"
+            workCredentialTargetsScoped = @($runtimeSummary.activeAccountCredentialTargets) -contains "RepoBar.Windows:github.com:work"
             accountSwitcherConfigured = $menuOrder -contains "accountSwitcher"
             cacheResetConfigured = $menuOrder -contains "clearResponseCache"
         }
@@ -210,7 +319,7 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }

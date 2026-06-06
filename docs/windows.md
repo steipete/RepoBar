@@ -209,7 +209,7 @@ Run the launch smoke on Windows:
 .\Scripts\smoke_windows.ps1 -Runtime win-x64
 ```
 
-The smoke publishes the app, creates a local Git fixture for `steipete/RepoBar`, launches `RepoBar.Windows.exe`, verifies the generated settings file, waits for the app's runtime summary, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, sample repository, local Git attachment, configured tray menu order, and screenshot status. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary.
+The smoke publishes the app, creates a local Git fixture for `steipete/RepoBar`, writes a two-account smoke settings file, launches `RepoBar.Windows.exe`, verifies the settings file, waits for the app's runtime summary, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, scoped credential targets, sample repository, local Git attachment, configured tray menu order, and screenshot status. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary.
 
 ![RepoBar Windows tray menu](assets/repobar-windows-tray-menu.png)
 
