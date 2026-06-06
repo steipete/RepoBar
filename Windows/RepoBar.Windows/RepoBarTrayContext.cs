@@ -348,8 +348,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private ToolStripMenuItem BuildRepositoryMenu(RepositoryStatus status)
     {
-        var label = $"{HealthPrefix(status.Health)} {status.Repository.FullName}  {status.IssueCount} issues  {status.PullRequestCount} PRs";
-        var item = new ToolStripMenuItem(label);
+        var item = new ToolStripMenuItem(RepositoryRowFormatter.BuildLabel(status));
 
         if (status.ErrorMessage != null)
         {
@@ -748,14 +747,4 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
     }
 
-    private static string HealthPrefix(TrayHealth health)
-    {
-        return health switch
-        {
-            TrayHealth.Healthy => "[ok]",
-            TrayHealth.Busy => "[..]",
-            TrayHealth.Failing => "[!]",
-            _ => "[ ]",
-        };
-    }
 }

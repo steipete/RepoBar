@@ -6,7 +6,7 @@ The Windows app currently provides:
 
 - a single-instance tray process
 - left-click or right-click taskbar menu access
-- configured repository status rows
+- configured repository status rows with issue/PR counts, CI, release, stars/forks, local sync, traffic, activity, and heatmap signals
 - optional local project discovery
 - local branch, upstream, ahead/behind, dirty-file, and worktree state
 - local fetch and fast-forward sync actions
