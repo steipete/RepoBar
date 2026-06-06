@@ -334,6 +334,7 @@ try {
             accountSwitcherConfigured = $menuOrder -contains "accountSwitcher"
             cacheResetConfigured = $menuOrder -contains "clearResponseCache"
             diagnosticsConfigured = $menuOrder -contains "diagnostics"
+            aboutConfigured = $menuOrder -contains "about"
             localFetchIntervalConfigured = $settings.localProjectsFetchIntervalMinutes -eq 5
             updateDiagnosticsConfigured = $menuOrder -contains "copyUpdateDiagnostics"
         }
@@ -345,7 +346,7 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }

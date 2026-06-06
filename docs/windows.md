@@ -31,6 +31,7 @@ The Windows app currently provides:
 - optional pull request notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
+- About window with project, website, issue tracker, email, update check, and copyable update diagnostics actions
 - optional launch-at-login registration for the current Windows user
 - manual update check against the latest GitHub release with Windows installer asset detection
 

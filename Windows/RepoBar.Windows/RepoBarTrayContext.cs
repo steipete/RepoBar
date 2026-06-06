@@ -1394,11 +1394,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private static void ShowAbout()
     {
-        MessageBox.Show(
-            $"RepoBar Windows\nVersion {WindowsUpdateChecker.CurrentVersion()}\n\nNative taskbar tray companion for GitHub repository status.",
-            "About RepoBar",
-            MessageBoxButtons.OK,
-            MessageBoxIcon.Information);
+        using var form = new AboutForm(
+            WindowsAboutInfo.Current(),
+            OpenUrl,
+            CopyUpdateDiagnostics,
+            CheckForUpdatesAsync);
+        form.ShowDialog();
     }
 
     private void ClearResponseCache()
