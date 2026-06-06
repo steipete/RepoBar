@@ -17,6 +17,7 @@ internal sealed class WindowsSettings
     public bool AutoSyncLocalProjects { get; set; }
     public bool EnableResponseCache { get; set; } = true;
     public bool ShowRateLimits { get; set; } = true;
+    public bool ShowContributionSummary { get; set; } = true;
     public bool EnablePullRequestNotifications { get; set; }
     public bool ShowActionsUsage { get; set; }
     public List<RepositoryRef> Repositories { get; set; } = [];

@@ -19,6 +19,7 @@ The Windows app currently provides:
 - native Preferences window for GitHub host, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
 - repository discovery from GitHub's accessible repository list
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
+- optional signed-in account contribution summary from GitHub GraphQL
 - optional GitHub API rate-limit row in the tray menu
 - optional Actions summary with latest workflow state, active queue counts, and self-hosted runner state per configured repository
 - optional pull request notifications through Windows tray balloons
@@ -84,6 +85,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "autoSyncLocalProjects": false,
   "enableResponseCache": true,
   "showRateLimits": true,
+  "showContributionSummary": true,
   "enablePullRequestNotifications": false,
   "showActionsUsage": false,
   "repositories": [

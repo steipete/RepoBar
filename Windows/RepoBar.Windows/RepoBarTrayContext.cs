@@ -15,6 +15,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private GitHubRepositoryClient _githubClient;
     private IReadOnlyList<RepositoryStatus> _statuses = [];
     private ActionsInsights _actionsInsights = ActionsInsights.Empty;
+    private GitHubAccountInsight? _accountInsight;
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
     private bool _isRefreshing;
     private string? _lastError;
@@ -73,6 +74,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _isRefreshing = true;
         _lastError = null;
         _actionsInsights = ActionsInsights.Empty;
+        _accountInsight = null;
         BuildMenu();
 
         try
@@ -87,6 +89,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             _actionsInsights = _settingsStore.Settings.ShowActionsUsage
                 ? await LoadActionsInsightsAsync(_settingsStore.VisibleRepositories, _shutdown.Token).ConfigureAwait(false)
                 : ActionsInsights.Empty;
+            _accountInsight = _settingsStore.Settings.ShowContributionSummary
+                ? await LoadAccountInsightAsync(_shutdown.Token).ConfigureAwait(false)
+                : null;
             ShowPullRequestNotifications(_statuses);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -145,6 +150,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         _menu.Items.Add(new ToolStripSeparator());
         _menu.Items.Add(new ToolStripMenuItem(_isRefreshing ? "Refreshing..." : "Refresh now", null, (_, _) => BeginRefresh()) { Enabled = !_isRefreshing });
+        if (_accountInsight != null)
+        {
+            AddAccountInsightItems(_menu.Items, _accountInsight);
+        }
         if (_settingsStore.Settings.ShowActionsUsage)
         {
             AddActionsUsageItems(_menu.Items);
@@ -158,6 +167,20 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _menu.Items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
         _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
         _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
+    }
+
+    private void AddAccountInsightItems(ToolStripItemCollection items, GitHubAccountInsight account)
+    {
+        var accountItem = new ToolStripMenuItem($"GitHub: {account.DisplayText}");
+        if (!string.IsNullOrWhiteSpace(account.Url))
+        {
+            accountItem.Click += (_, _) => OpenUrl(account.Url);
+        }
+        accountItem.DropDownItems.Add(new ToolStripMenuItem($"{account.CommitContributions:n0} commits") { Enabled = false });
+        accountItem.DropDownItems.Add(new ToolStripMenuItem($"{account.PullRequestContributions:n0} pull requests") { Enabled = false });
+        accountItem.DropDownItems.Add(new ToolStripMenuItem($"{account.PullRequestReviewContributions:n0} reviews") { Enabled = false });
+        accountItem.DropDownItems.Add(new ToolStripMenuItem($"{account.IssueContributions:n0} issues") { Enabled = false });
+        items.Add(accountItem);
     }
 
     private void AddActionsUsageItems(ToolStripItemCollection items)
@@ -228,6 +251,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         using var client = new GitHubActionsInsightClient(_settingsStore.Settings, _settingsStore.ResolveToken());
         return await client.LoadAsync(repositories, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<GitHubAccountInsight?> LoadAccountInsightAsync(CancellationToken cancellationToken)
+    {
+        using var client = new GitHubAccountInsightClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+        return await client.LoadAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private ToolStripMenuItem BuildRepositoryMenu(RepositoryStatus status)

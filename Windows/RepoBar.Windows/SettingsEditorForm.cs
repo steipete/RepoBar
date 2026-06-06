@@ -21,6 +21,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _autoSyncLocalProjects = new();
     private readonly CheckBox _enableResponseCache = new();
     private readonly CheckBox _showRateLimits = new();
+    private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
     private readonly CheckBox _enablePullRequestNotifications = new();
     private readonly BindingList<RepositoryRow> _repositories = [];
@@ -60,6 +61,7 @@ internal sealed class SettingsEditorForm : Form
         _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
         _enableResponseCache.Checked = settings.EnableResponseCache;
         _showRateLimits.Checked = settings.ShowRateLimits;
+        _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
         _enablePullRequestNotifications.Checked = settings.EnablePullRequestNotifications;
 
@@ -115,6 +117,7 @@ internal sealed class SettingsEditorForm : Form
         _autoSyncLocalProjects.Text = "Auto-sync clean behind repos";
         _enableResponseCache.Text = "Use response cache";
         _showRateLimits.Text = "Show rate limits";
+        _showContributionSummary.Text = "Show contribution summary";
         _showActionsUsage.Text = "Show Actions usage";
         _enablePullRequestNotifications.Text = "PR notifications";
 
@@ -125,6 +128,7 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_autoSyncLocalProjects);
         settingsGrid.Controls.Add(_enableResponseCache);
         settingsGrid.Controls.Add(_showRateLimits);
+        settingsGrid.Controls.Add(_showContributionSummary);
         settingsGrid.Controls.Add(_showActionsUsage);
         settingsGrid.Controls.Add(_enablePullRequestNotifications);
 
@@ -284,6 +288,7 @@ internal sealed class SettingsEditorForm : Form
         settings.AutoSyncLocalProjects = _autoSyncLocalProjects.Checked;
         settings.EnableResponseCache = _enableResponseCache.Checked;
         settings.ShowRateLimits = _showRateLimits.Checked;
+        settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
         settings.EnablePullRequestNotifications = _enablePullRequestNotifications.Checked;
 
