@@ -91,6 +91,55 @@ public sealed class GitHubActionsInsightClientTests
         Assert.Equal("idle", repository.DisplayText);
     }
 
+    [Fact]
+    public async Task LoadAsync_uses_configured_monitored_owners_for_owner_usage()
+    {
+        var handler = new StubHandler(request =>
+        {
+            var path = request.RequestUri?.PathAndQuery ?? "";
+            return path switch
+            {
+                "/repos/repo-owner/name/actions/runs?status=in_progress&per_page=1" => JsonResponse("""{"total_count":0}"""),
+                "/repos/repo-owner/name/actions/runs?status=queued&per_page=1" => JsonResponse("""{"total_count":0}"""),
+                "/repos/repo-owner/name/actions/runs?status=waiting&per_page=1" => JsonResponse("""{"total_count":0}"""),
+                "/repos/repo-owner/name/actions/runs?status=pending&per_page=1" => JsonResponse("""{"total_count":0}"""),
+                "/repos/repo-owner/name/actions/runners?per_page=100" => JsonResponse("""{"total_count":0,"runners":[]}"""),
+                "/users/actions-org/settings/billing/usage?product=actions" => new HttpResponseMessage(HttpStatusCode.NotFound),
+                "/organizations/actions-org/settings/billing/usage?product=actions" => JsonResponse("""
+                    {
+                      "usageItems": [
+                        {"date":"2026-06-01","sku":"ACTIONS_LINUX","quantity":42,"unitType":"minutes","netAmount":0,"organizationName":"actions-org","repositoryName":null}
+                      ]
+                    }
+                    """),
+                "/orgs/actions-org/actions/cache/usage" => JsonResponse("""
+                    {
+                      "total_active_caches_count": 1,
+                      "total_active_caches_size_in_bytes": 2097152
+                    }
+                    """),
+                var unexpected when unexpected.Contains("repo-owner", StringComparison.OrdinalIgnoreCase) &&
+                    (unexpected.Contains("billing", StringComparison.OrdinalIgnoreCase) || unexpected.Contains("cache", StringComparison.OrdinalIgnoreCase)) =>
+                    new HttpResponseMessage(HttpStatusCode.InternalServerError),
+                _ => new HttpResponseMessage(HttpStatusCode.NotFound),
+            };
+        });
+        using var client = new GitHubActionsInsightClient(
+            new WindowsSettings
+            {
+                ActionsMonitoredOwners = [" actions-org ", "actions-org"],
+            },
+            token: "token",
+            handler);
+
+        var insights = await client.LoadAsync([new RepositoryRef { Owner = "repo-owner", Name = "name" }], CancellationToken.None);
+
+        Assert.Equal(42, insights.Billing?.TotalMinutes);
+        var cacheUsage = Assert.Single(insights.CacheUsage);
+        Assert.Equal("actions-org", cacheUsage.Owner);
+        Assert.Equal(2d, cacheUsage.CacheSizeMb);
+    }
+
     private static HttpResponseMessage JsonResponse(string json)
     {
         var response = new HttpResponseMessage(HttpStatusCode.OK)

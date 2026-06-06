@@ -38,6 +38,7 @@ internal sealed class WindowsSettings
     public WindowsActivityScope ActivityScope { get; set; } = WindowsActivityScope.MyActivity;
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
+    public List<string> ActionsMonitoredOwners { get; set; } = [];
     public bool DiagnosticsEnabled { get; set; }
     public WindowsLogVerbosity LoggingVerbosity { get; set; } = WindowsLogVerbosity.Info;
     public bool FileLoggingEnabled { get; set; }
@@ -406,6 +407,7 @@ internal sealed class WindowsSettingsStore
         settings.LocalProjectsFetchIntervalMinutes = Math.Clamp(settings.LocalProjectsFetchIntervalMinutes, 1, 60);
         settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
         settings.RepositoryOwnerFilter = NormalizeRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
+        settings.ActionsMonitoredOwners = NormalizeRepositoryOwnerFilter(settings.ActionsMonitoredOwners);
         settings.LoggingVerbosity = Enum.IsDefined(settings.LoggingVerbosity) ? settings.LoggingVerbosity : WindowsLogVerbosity.Info;
         settings.MenuCustomization ??= new WindowsMenuCustomization();
         settings.MenuCustomization.Normalize();

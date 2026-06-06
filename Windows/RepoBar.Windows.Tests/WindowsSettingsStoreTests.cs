@@ -133,6 +133,19 @@ public sealed class WindowsSettingsStoreTests
         Assert.Empty(store.Settings.RepositoryOwnerFilter);
     }
 
+    [Fact]
+    public void NormalizeSettings_normalizes_actions_monitored_owners()
+    {
+        var settings = new WindowsSettings
+        {
+            ActionsMonitoredOwners = [" RepoBar ", "octocat", "repobar"],
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal(["octocat", "repobar"], settings.ActionsMonitoredOwners);
+    }
+
     private static WindowsSettingsStore CreateStore(WindowsSettings settings)
     {
         var settingsPath = Path.Combine(Path.GetTempPath(), $"repobar-settings-{Guid.NewGuid():N}.json");

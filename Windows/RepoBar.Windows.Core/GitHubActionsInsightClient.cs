@@ -8,6 +8,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
 {
     private static readonly string[] QueuedStatuses = ["queued", "waiting", "pending"];
     private readonly HttpClient _httpClient;
+    private readonly IReadOnlyList<string> _monitoredOwners;
     private readonly List<GitHubRateLimitSnapshot> _rateLimits = [];
 
     public GitHubActionsInsightClient(WindowsSettings settings, string? token)
@@ -30,6 +31,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         {
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
+        _monitoredOwners = WindowsSettingsStore.NormalizeRepositoryOwnerFilter(settings.ActionsMonitoredOwners);
     }
 
     public async Task<ActionsInsights> LoadAsync(
@@ -42,7 +44,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
             results.Add(await LoadRepositoryAsync(repository, cancellationToken).ConfigureAwait(false));
         }
 
-        var owners = UniqueOwners(repositories);
+        var owners = _monitoredOwners.Count > 0 ? _monitoredOwners : UniqueOwners(repositories);
         var billing = await LoadBillingUsageAsync(owners, cancellationToken).ConfigureAwait(false);
         var cacheUsage = await LoadCacheUsageAsync(owners, cancellationToken).ConfigureAwait(false);
         return new ActionsInsights(results, billing, cacheUsage, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));

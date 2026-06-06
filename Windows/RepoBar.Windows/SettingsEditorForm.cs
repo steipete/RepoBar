@@ -46,6 +46,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
+    private readonly TextBox _actionsMonitoredOwners = new();
     private readonly CheckBox _diagnosticsEnabled = new();
     private readonly ComboBox _loggingVerbosity = new();
     private readonly CheckBox _fileLoggingEnabled = new();
@@ -171,6 +172,7 @@ internal sealed class SettingsEditorForm : Form
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
+        _actionsMonitoredOwners.Text = FormatRepositoryOwnerFilter(settings.ActionsMonitoredOwners);
         _diagnosticsEnabled.Checked = settings.DiagnosticsEnabled;
         _loggingVerbosity.DropDownStyle = ComboBoxStyle.DropDownList;
         _loggingVerbosity.DataSource = Enum.GetValues<WindowsLogVerbosity>()
@@ -254,6 +256,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Repository heatmap", _heatmapDisplay);
         AddLabeledControl(settingsGrid, "Heatmap window", _heatmapSpan);
         AddLabeledControl(settingsGrid, "Activity feed", _activityScope);
+        AddLabeledControl(settingsGrid, "Actions owners", _actionsMonitoredOwners);
         AddLabeledControl(settingsGrid, "Log verbosity", _loggingVerbosity);
         AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
@@ -285,6 +288,7 @@ internal sealed class SettingsEditorForm : Form
         _showRateLimits.Text = "Show rate limits";
         _showContributionSummary.Text = "Show contribution summary";
         _showActionsUsage.Text = "Show Actions usage";
+        _actionsMonitoredOwners.PlaceholderText = "empty = auto";
         _diagnosticsEnabled.Text = "Enable diagnostics capture";
         _fileLoggingEnabled.Text = "Log to file";
         _enableGitHubReferenceMonitor.Text = "Watch clipboard references";
@@ -684,6 +688,7 @@ internal sealed class SettingsEditorForm : Form
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
+        settings.ActionsMonitoredOwners = ParseRepositoryOwnerFilter(_actionsMonitoredOwners.Text);
         settings.DiagnosticsEnabled = _diagnosticsEnabled.Checked;
         settings.LoggingVerbosity = _loggingVerbosity.SelectedValue is WindowsLogVerbosity verbosity
             ? verbosity
@@ -739,6 +744,7 @@ internal sealed class SettingsEditorForm : Form
             ActivityScope = _activityScope.SelectedValue is WindowsActivityScope activityScope
                 ? activityScope
                 : WindowsActivityScope.MyActivity,
+            ActionsMonitoredOwners = ParseRepositoryOwnerFilter(_actionsMonitoredOwners.Text),
             Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
         };
     }

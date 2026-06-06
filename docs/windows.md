@@ -18,7 +18,7 @@ The Windows app currently provides:
 - global Commits and Activity menus that combine recent commits and activity across displayed repositories
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus, including Mine and label filters for issues plus Mine/commented/reviewed filters for pull requests when viewer metadata is available
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, fork/archive inclusion, repository visibility, owner/status display filters with My repositories toggles in Preferences and the tray, display limit, and sort order
+- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, fork/archive inclusion, repository visibility, owner/status display filters with My repositories toggles in Preferences and the tray, display limit, sort order, and Actions owner monitoring
 - native menu customization for hiding and reordering main tray actions and repository submenu entries
 - filtered repository discovery from GitHub's accessible repository list
 - repository checkout from the tray into the configured local projects folder
@@ -27,7 +27,7 @@ The Windows app currently provides:
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
 - copyable Windows diagnostics with cache/archive state, active account, local repository inventory, compact tray tooltip rate-limit state, rate-limit snapshots, cache clearing, and forced refresh
-- optional Actions summary with latest workflow state, active queue counts, billing usage, cache usage, and self-hosted runner state per configured repository
+- optional Actions summary with latest workflow state, active queue counts, monitored-owner billing/cache usage, and self-hosted runner state per configured repository
 - optional pull request notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
@@ -123,6 +123,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "activityScope": "myActivity",
   "showRateLimits": true,
   "showContributionSummary": true,
+  "actionsMonitoredOwners": [],
   "diagnosticsEnabled": false,
   "loggingVerbosity": "info",
   "fileLoggingEnabled": false,
@@ -138,6 +139,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
       "rateLimits",
       "repositoryScope",
       "repositorySort",
+      "myRepositories",
       "diagnostics",
       "issueNavigator",
       "accountSwitcher",
@@ -193,6 +195,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Repository scope** from the tray menu or Preferences to switch between all repositories, pinned repositories, local repositories, or the work-focused view that keeps repositories with open issues or pull requests. Use **Owner filter** to limit normal displayed repositories to specific owners, and use **Only repos with issues** or **Only repos with PRs** to show only repositories with matching open work. Pinned repositories stay visible ahead of filtered normal repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** from the tray menu or Preferences to order normal visible repositories by latest activity, issues, PRs, stars, or name. Repository visibility controls in the tray can pin, hide, restore, or move repositories up and down within their current pinned/visible group.
 
 Use **Activity feed** to choose whether top-level **Commits** and **Activity** show all displayed repository events or only events by the signed-in account when viewer metadata is available. Repository submenus still keep their own per-repository Commit and Activity feeds.
+
+Use **Actions owners** to pin the owners Windows checks for Actions billing and cache usage. Leave it empty for Auto, which follows the owners of the visible repository list.
 
 Use **Repository heatmap** to hide heatmap summaries or show them in the tray row, repository submenu, or both. Use **Heatmap window** to choose the GitHub commit-activity window used for repository heatmap totals: 1, 3, 6, or 12 months. Hidden heatmaps skip the GitHub commit-activity request.
 
