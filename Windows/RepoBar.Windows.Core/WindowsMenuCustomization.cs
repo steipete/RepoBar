@@ -43,6 +43,7 @@ internal sealed class WindowsMenuCustomization
         WindowsRepositoryMenuItem.OpenTerminal,
         WindowsRepositoryMenuItem.Checkout,
         WindowsRepositoryMenuItem.LocalStatus,
+        WindowsRepositoryMenuItem.Worktrees,
         WindowsRepositoryMenuItem.RecentIssues,
         WindowsRepositoryMenuItem.RecentPullRequests,
         WindowsRepositoryMenuItem.Releases,
@@ -165,10 +166,12 @@ internal sealed class WindowsMenuCustomization
 
     private static List<WindowsRepositoryMenuItem> NormalizedRepositoryOrder(IEnumerable<WindowsRepositoryMenuItem>? order)
     {
+        var source = (order ?? []).ToList();
+        var hadWorktrees = source.Contains(WindowsRepositoryMenuItem.Worktrees);
         var allowed = DefaultRepositoryMenuOrder.ToHashSet();
         var seen = new HashSet<WindowsRepositoryMenuItem>();
         var result = new List<WindowsRepositoryMenuItem>();
-        foreach (var item in order ?? [])
+        foreach (var item in source)
         {
             if (item == WindowsRepositoryMenuItem.Visibility)
             {
@@ -183,6 +186,13 @@ internal sealed class WindowsMenuCustomization
         }
 
         AddMissing(DefaultRepositoryMenuOrder, seen, result);
+        if (!hadWorktrees)
+        {
+            MoveRepositoryMenuItem(
+                WindowsRepositoryMenuItem.Worktrees,
+                after: WindowsRepositoryMenuItem.LocalStatus,
+                result);
+        }
         return result;
     }
 
@@ -220,6 +230,23 @@ internal sealed class WindowsMenuCustomization
                 result.Add(item);
             }
         }
+    }
+
+    private static void MoveRepositoryMenuItem(
+        WindowsRepositoryMenuItem item,
+        WindowsRepositoryMenuItem after,
+        List<WindowsRepositoryMenuItem> result)
+    {
+        var itemIndex = result.IndexOf(item);
+        var anchorIndex = result.IndexOf(after);
+        if (itemIndex < 0 || anchorIndex < 0)
+        {
+            return;
+        }
+
+        result.RemoveAt(itemIndex);
+        var adjustedAnchorIndex = itemIndex < anchorIndex ? anchorIndex - 1 : anchorIndex;
+        result.Insert(Math.Min(adjustedAnchorIndex + 1, result.Count), item);
     }
 }
 
@@ -272,6 +299,7 @@ internal enum WindowsRepositoryMenuItem
     Heatmap,
     Changelog,
     LocalStatus,
+    Worktrees,
     PushedAt,
     PinToggle,
     SetVisible,
@@ -354,6 +382,7 @@ internal static class WindowsMenuCustomizationLabels
             WindowsRepositoryMenuItem.Heatmap => "Heatmap",
             WindowsRepositoryMenuItem.Changelog => "Changelog",
             WindowsRepositoryMenuItem.LocalStatus => "Local status",
+            WindowsRepositoryMenuItem.Worktrees => "Worktrees",
             WindowsRepositoryMenuItem.PushedAt => "Pushed at",
             WindowsRepositoryMenuItem.PinToggle => "Pin or unpin",
             WindowsRepositoryMenuItem.SetVisible => "Set visible",
@@ -378,7 +407,8 @@ internal static class WindowsMenuCustomizationLabels
             WindowsRepositoryMenuItem.OpenFolder or
                 WindowsRepositoryMenuItem.OpenTerminal or
                 WindowsRepositoryMenuItem.Checkout or
-                WindowsRepositoryMenuItem.LocalStatus => WindowsRepositoryMenuGroup.Local,
+                WindowsRepositoryMenuItem.LocalStatus or
+                WindowsRepositoryMenuItem.Worktrees => WindowsRepositoryMenuGroup.Local,
             WindowsRepositoryMenuItem.RecentIssues or
                 WindowsRepositoryMenuItem.RecentPullRequests or
                 WindowsRepositoryMenuItem.Releases or

@@ -746,7 +746,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.LocalStatus))
                 {
                     item.DropDownItems.Add(new ToolStripSeparator());
-                    AddLocalStatusItems(item.DropDownItems, status.LocalStatus, includeOpenActions: false);
+                    AddLocalStatusItems(item.DropDownItems, status.LocalStatus, includeOpenActions: false, includeWorktrees: false);
+                }
+                if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.Worktrees))
+                {
+                    AddRepositoryMenuSeparator(item.DropDownItems);
+                    AddWorktreesSubmenu(item.DropDownItems, status.LocalStatus);
                 }
             }
             else if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.Checkout))
@@ -878,7 +883,13 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsRepositoryMenuItem.LocalStatus:
                 if (status.LocalStatus != null)
                 {
-                    AddLocalStatusItems(items, status.LocalStatus, includeOpenActions: false);
+                    AddLocalStatusItems(items, status.LocalStatus, includeOpenActions: false, includeWorktrees: false);
+                }
+                break;
+            case WindowsRepositoryMenuItem.Worktrees:
+                if (status.LocalStatus != null)
+                {
+                    AddWorktreesSubmenu(items, status.LocalStatus);
                 }
                 break;
             case WindowsRepositoryMenuItem.PushedAt:
@@ -938,7 +949,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         foreach (var local in localOnly)
         {
             var item = new ToolStripMenuItem($"[git] {local.DisplayName}  {local.SyncDetail}");
-            AddLocalStatusItems(item.DropDownItems, local, includeOpenActions: true);
+            AddLocalStatusItems(item.DropDownItems, local, includeOpenActions: true, includeWorktrees: true);
             if (!string.IsNullOrWhiteSpace(local.FullName))
             {
                 item.DropDownItems.Add(new ToolStripSeparator());
@@ -973,7 +984,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private void AddLocalStatusItems(
         ToolStripItemCollection items,
         LocalGitRepositoryStatus local,
-        bool includeOpenActions)
+        bool includeOpenActions,
+        bool includeWorktrees)
     {
         items.Add(new ToolStripMenuItem($"Branch: {local.Branch}") { Enabled = false });
         if (!string.IsNullOrWhiteSpace(local.UpstreamBranch))
@@ -1011,7 +1023,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             Enabled = local.CanResetToUpstream,
         });
         AddBranchesSubmenu(items, local);
-        AddWorktreesSubmenu(items, local);
+        if (includeWorktrees)
+        {
+            AddWorktreesSubmenu(items, local);
+        }
         if (includeOpenActions)
         {
             items.Add(new ToolStripSeparator());
@@ -1064,6 +1079,14 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
         };
         items.Add(submenu);
+    }
+
+    private static void AddRepositoryMenuSeparator(ToolStripItemCollection items)
+    {
+        if (items.Count > 0 && items[items.Count - 1] is not ToolStripSeparator)
+        {
+            items.Add(new ToolStripSeparator());
+        }
     }
 
     private void AddWorktreesSubmenu(ToolStripItemCollection items, LocalGitRepositoryStatus local)

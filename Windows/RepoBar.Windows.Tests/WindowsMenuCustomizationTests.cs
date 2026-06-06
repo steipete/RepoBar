@@ -211,6 +211,7 @@ public sealed class WindowsMenuCustomizationTests
                 WindowsRepositoryMenuItem.OpenTerminal,
                 WindowsRepositoryMenuItem.Checkout,
                 WindowsRepositoryMenuItem.LocalStatus,
+                WindowsRepositoryMenuItem.Worktrees,
             ],
             localBlock.Items);
 
@@ -224,6 +225,26 @@ public sealed class WindowsMenuCustomizationTests
                 WindowsRepositoryMenuItem.MoveDown,
             ],
             manageBlock.Items);
+    }
+
+    [Fact]
+    public void Normalize_places_new_worktrees_item_after_legacy_local_status()
+    {
+        var customization = new WindowsMenuCustomization
+        {
+            RepositoryMenuOrder =
+            [
+                WindowsRepositoryMenuItem.OpenRepository,
+                WindowsRepositoryMenuItem.LocalStatus,
+                WindowsRepositoryMenuItem.PinToggle,
+            ],
+        };
+
+        customization.Normalize();
+
+        var localStatusIndex = customization.RepositoryMenuOrder.IndexOf(WindowsRepositoryMenuItem.LocalStatus);
+        Assert.True(localStatusIndex >= 0);
+        Assert.Equal(WindowsRepositoryMenuItem.Worktrees, customization.RepositoryMenuOrder[localStatusIndex + 1]);
     }
 
     [Fact]

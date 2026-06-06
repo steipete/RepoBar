@@ -168,6 +168,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
       "openTerminal",
       "checkout",
       "localStatus",
+      "worktrees",
       "recentIssues",
       "recentPullRequests",
       "releases",
@@ -217,7 +218,7 @@ Use **Actions owners** to pin the owners Windows checks for Actions billing, cac
 
 Use **Repository heatmap** to hide heatmap summaries or show them in the tray row, repository submenu, or both. Use **Heatmap window** to choose the GitHub commit-activity window used for repository heatmap totals: 1, 3, 6, or 12 months. Hidden heatmaps skip the GitHub commit-activity request.
 
-Use **Customize menu** in Preferences to hide or reorder main tray actions and repository submenu entries, including the local **Open folder** and **Open in terminal** actions plus individual repository **Pin/Unpin**, **Set visible**, **Hide**, **Move up**, and **Move down** controls. Legacy `visibility` customization settings are expanded into those individual manage actions when settings load. Preferences, About, and Quit remain required so a customized menu cannot trap the app without settings, support diagnostics, or exit controls. Use **Clear response cache** to remove the active account's persisted GitHub response bodies and ETags before the next refresh.
+Use **Customize menu** in Preferences to hide or reorder main tray actions and repository submenu entries, including the local **Open folder**, **Open in terminal**, and **Worktrees** actions plus individual repository **Pin/Unpin**, **Set visible**, **Hide**, **Move up**, and **Move down** controls. Legacy `visibility` customization settings are expanded into those individual manage actions when settings load. Preferences, About, and Quit remain required so a customized menu cannot trap the app without settings, support diagnostics, or exit controls. Use **Clear response cache** to remove the active account's persisted GitHub response bodies and ETags before the next refresh.
 
 Use **Watch clipboard references** to enable the clipboard-only GitHub reference monitor. Windows polls text copied to the clipboard, ignores the initial clipboard contents as a baseline, sends a tray balloon for newly copied issue or pull request references, and opens Issue Navigator with the copied text when the balloon is clicked.
 
