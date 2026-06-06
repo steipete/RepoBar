@@ -29,6 +29,7 @@ public sealed class WindowsMenuCustomizationTests
         Assert.Equal(WindowsMainMenuItem.RefreshNow, customization.MainMenuOrder[1]);
         Assert.Contains(WindowsMainMenuItem.GlobalCommits, customization.MainMenuOrder);
         Assert.Contains(WindowsMainMenuItem.GlobalActivity, customization.MainMenuOrder);
+        Assert.Contains(WindowsMainMenuItem.About, customization.MainMenuOrder);
         Assert.Equal(WindowsMenuCustomization.DefaultMainMenuOrder.Count, customization.MainMenuOrder.Count);
         Assert.Equal(WindowsRepositoryMenuItem.Visibility, customization.RepositoryMenuOrder[0]);
         Assert.Equal(WindowsRepositoryMenuItem.OpenRepository, customization.RepositoryMenuOrder[1]);

@@ -133,6 +133,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
       "issueNavigator",
       "logOut",
       "preferences",
+      "about",
       "checkForUpdates",
       "openSettingsFile",
       "quit"

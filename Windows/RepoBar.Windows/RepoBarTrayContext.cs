@@ -245,6 +245,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsMainMenuItem.Preferences:
                 items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
                 break;
+            case WindowsMainMenuItem.About:
+                items.Add(new ToolStripMenuItem("About RepoBar", null, (_, _) => ShowAbout()));
+                break;
             case WindowsMainMenuItem.CheckForUpdates:
                 items.Add(new ToolStripMenuItem("Check for updates", null, async (_, _) => await CheckForUpdatesAsync()));
                 break;
@@ -1223,6 +1226,15 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         using var form = new ReferenceNavigatorForm(_settingsStore.Settings, initialText);
         form.ShowDialog();
+    }
+
+    private static void ShowAbout()
+    {
+        MessageBox.Show(
+            $"RepoBar Windows\nVersion {WindowsUpdateChecker.CurrentVersion()}\n\nNative taskbar tray companion for GitHub repository status.",
+            "About RepoBar",
+            MessageBoxButtons.OK,
+            MessageBoxIcon.Information);
     }
 
     private static async Task CheckForUpdatesAsync()
