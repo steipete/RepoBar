@@ -13,6 +13,27 @@ public sealed class WindowsCredentialStoreTests
         Assert.Equal(expected, WindowsCredentialStore.BuildTargetName(host));
     }
 
+    [Theory]
+    [InlineData("github.com", "RepoBar.Windows.OAuth:github.com")]
+    [InlineData("https://github.example.com/org/repo", "RepoBar.Windows.OAuth:github.example.com")]
+    public void BuildOAuthTargetName_separates_oauth_tokens_from_pat_tokens(string host, string expected)
+    {
+        Assert.Equal(expected, WindowsCredentialStore.BuildOAuthTargetName(host));
+    }
+
+    [Fact]
+    public void OAuthTokenStore_serializes_access_refresh_and_expiry()
+    {
+        var expires = DateTimeOffset.Parse("2026-06-06T12:00:00Z");
+        var tokens = new WindowsOAuthTokens("access", "refresh", expires);
+
+        var roundTrip = WindowsOAuthTokenStore.Deserialize(WindowsOAuthTokenStore.Serialize(tokens));
+
+        Assert.Equal(tokens, roundTrip);
+        Assert.False(tokens.ShouldRefresh(expires.AddMinutes(-2)));
+        Assert.True(tokens.ShouldRefresh(expires.AddSeconds(-30)));
+    }
+
     [Fact]
     public void ReadToken_returns_null_off_windows()
     {

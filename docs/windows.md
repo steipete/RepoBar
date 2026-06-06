@@ -16,7 +16,7 @@ The Windows app currently provides:
 - optional traffic views/clones, commit activity summary, and changelog headline
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for GitHub host, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
+- native Preferences window for GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
 - repository discovery from GitHub's accessible repository list
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional signed-in account contribution summary from GitHub GraphQL
@@ -75,6 +75,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 {
   "githubHost": "github.com",
   "tokenEnvironmentVariable": "REPOBAR_GITHUB_TOKEN",
+  "gitHubOAuthClientId": "Iv23liGm2arUyotWSjwJ",
+  "gitHubOAuthClientSecretEnvironmentVariable": "REPOBAR_GITHUB_CLIENT_SECRET",
   "refreshIntervalMinutes": 5,
   "openMenuOnLeftClick": true,
   "launchAtLogin": false,
@@ -117,7 +119,15 @@ CRABBOX_PROVIDER=aws CRABBOX_TARGET=windows pnpm windows:crabbox
 
 ## Authentication
 
-Use **Preferences** to save a personal access token in Windows Credential Manager. RepoBar stores it under a per-host target such as:
+Use **Preferences > Sign in with GitHub** to authenticate through the RepoBar GitHub App browser flow. RepoBar listens on the same loopback callback as the macOS app, exchanges the PKCE code for GitHub user tokens, stores the OAuth token bundle in Windows Credential Manager, and refreshes it before GitHub requests when needed. The built-in RepoBar client ID is used by default; set `REPOBAR_GITHUB_CLIENT_SECRET` or the configured OAuth secret environment variable before signing in.
+
+OAuth tokens are stored under a per-host target such as:
+
+```text
+RepoBar.Windows.OAuth:github.com
+```
+
+You can also save a personal access token in Windows Credential Manager. RepoBar stores PATs separately under a per-host target such as:
 
 ```text
 RepoBar.Windows:github.com
@@ -129,7 +139,7 @@ Environment variables still work as bootstrap/fallback:
 $env:REPOBAR_GITHUB_TOKEN = "<token>"
 ```
 
-The app also checks `GITHUB_TOKEN` and `GH_TOKEN`. Tokens are not written to the settings file. Private repositories require a token with repository read access.
+The app also checks `GITHUB_TOKEN` and `GH_TOKEN`. Tokens are not written to the settings file. Private repositories require the RepoBar GitHub App to be installed for OAuth access, or a token with repository read access.
 
 ## Local Projects
 

@@ -17,6 +17,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private ActionsInsights _actionsInsights = ActionsInsights.Empty;
     private GitHubAccountInsight? _accountInsight;
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
+    private string? _resolvedToken;
     private string? _lastPullRequestNotificationUrl;
     private bool _isRefreshing;
     private string? _lastError;
@@ -81,6 +82,12 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         try
         {
+            _resolvedToken = await WindowsTokenResolver.ResolveAsync(
+                _settingsStore.Settings,
+                _settingsStore.ResolveToken(),
+                _shutdown.Token).ConfigureAwait(false);
+            _githubClient.Dispose();
+            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _resolvedToken);
             _localGitIndex = await _localGitService.LoadIndexAsync(
                 _settingsStore.Settings,
                 _shutdown.Token);
@@ -89,10 +96,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 _localGitIndex,
                 _shutdown.Token);
             _actionsInsights = _settingsStore.Settings.ShowActionsUsage
-                ? await LoadActionsInsightsAsync(_settingsStore.VisibleRepositories, _shutdown.Token).ConfigureAwait(false)
+                ? await LoadActionsInsightsAsync(_settingsStore.VisibleRepositories, _resolvedToken, _shutdown.Token).ConfigureAwait(false)
                 : ActionsInsights.Empty;
             _accountInsight = _settingsStore.Settings.ShowContributionSummary
-                ? await LoadAccountInsightAsync(_shutdown.Token).ConfigureAwait(false)
+                ? await LoadAccountInsightAsync(_resolvedToken, _shutdown.Token).ConfigureAwait(false)
                 : null;
             ShowPullRequestNotifications(_statuses);
         }
@@ -284,15 +291,16 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private async Task<ActionsInsights> LoadActionsInsightsAsync(
         IReadOnlyList<RepositoryRef> repositories,
+        string? token,
         CancellationToken cancellationToken)
     {
-        using var client = new GitHubActionsInsightClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+        using var client = new GitHubActionsInsightClient(_settingsStore.Settings, token);
         return await client.LoadAsync(repositories, cancellationToken).ConfigureAwait(false);
     }
 
-    private async Task<GitHubAccountInsight?> LoadAccountInsightAsync(CancellationToken cancellationToken)
+    private async Task<GitHubAccountInsight?> LoadAccountInsightAsync(string? token, CancellationToken cancellationToken)
     {
-        using var client = new GitHubAccountInsightClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+        using var client = new GitHubAccountInsightClient(_settingsStore.Settings, token);
         return await client.LoadAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -508,7 +516,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private string BuildHeaderText()
     {
         var repoCount = _settingsStore.VisibleRepositories.Count;
-        var tokenState = _settingsStore.ResolveToken() == null ? "no token" : "token";
+        var tokenState = (_resolvedToken ?? _settingsStore.ResolveToken()) == null ? "no token" : "token";
         var cacheState = _settingsStore.Settings.EnableResponseCache ? "cache" : "no cache";
         var refreshState = _isRefreshing ? "refreshing" : "ready";
         return $"RepoBar Windows - {repoCount} repos - {_localGitIndex.Repositories.Count} local - {tokenState} - {cacheState} - {refreshState}";
@@ -616,6 +624,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             _refreshTimer.Interval = Math.Clamp(_settingsStore.Settings.RefreshIntervalMinutes, 1, 60) * 60 * 1000;
             _githubClient.Dispose();
+            _resolvedToken = null;
             _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
             BeginRefresh();
         }

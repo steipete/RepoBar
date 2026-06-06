@@ -7,6 +7,8 @@ internal sealed class WindowsSettings
 {
     public string GitHubHost { get; set; } = "github.com";
     public string TokenEnvironmentVariable { get; set; } = "REPOBAR_GITHUB_TOKEN";
+    public string GitHubOAuthClientId { get; set; } = WindowsOAuthClient.DefaultClientId;
+    public string GitHubOAuthClientSecretEnvironmentVariable { get; set; } = WindowsOAuthClient.DefaultClientSecretEnvironmentVariable;
     public int RefreshIntervalMinutes { get; set; } = 5;
     public bool OpenMenuOnLeftClick { get; set; } = true;
     public bool LaunchAtLogin { get; set; }
@@ -93,6 +95,14 @@ internal sealed class WindowsSettingsStore
         var rawSettings = File.ReadAllText(settingsPath);
         var settings = JsonSerializer.Deserialize<WindowsSettings>(rawSettings, JsonOptions) ?? new WindowsSettings();
         settings.GitHubHost = GitHubHost.Normalize(settings.GitHubHost);
+        if (string.IsNullOrWhiteSpace(settings.GitHubOAuthClientId))
+        {
+            settings.GitHubOAuthClientId = WindowsOAuthClient.DefaultClientId;
+        }
+        if (string.IsNullOrWhiteSpace(settings.GitHubOAuthClientSecretEnvironmentVariable))
+        {
+            settings.GitHubOAuthClientSecretEnvironmentVariable = WindowsOAuthClient.DefaultClientSecretEnvironmentVariable;
+        }
         if (string.IsNullOrWhiteSpace(settings.LocalProjectsRoot))
         {
             settings.LocalProjectsRoot = Path.Combine(

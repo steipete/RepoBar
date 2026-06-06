@@ -10,7 +10,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Repository rows | Issue/PR counts, stars, forks, CI, release, activity, traffic, heatmap | Same repository status signals, rendered in native tray/flyout | Partial |
 | Repository submenu | GitHub links, local state, worktrees, issues, PRs, releases, changelog, CI runs, discussions, tags, branches, contributors, commits, activity, pin/hide | Same actions where GitHub APIs support them; Windows shell opens folders/terminal | Partial |
 | Local projects | Scan project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Finder/Terminal, sync actions | Scan Windows project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Explorer/Terminal, safe fast-forward sync actions | Partial |
-| Auth/accounts | GitHub App OAuth, PAT fallback, GitHub Enterprise, multi-account storage | PAT/env bootstrap plus Windows Credential Manager; OAuth/multi-account later | Partial |
+| Auth/accounts | GitHub App OAuth, PAT fallback, GitHub Enterprise, multi-account storage | GitHub App browser OAuth with refresh, PAT/env fallback, GitHub Enterprise host support; multi-account later | Mostly |
 | Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with accessible repo discovery and visibility controls | Partial |
 | Cache/offline | SQLite cache, ETags, archive fallback | Shared cache schema or Windows-owned equivalent with ETags/offline reads | Partial |
 | Contribution header | Signed-in account contribution heatmap | Signed-in account contribution totals in the tray menu; heatmap later | Partial |
@@ -39,6 +39,7 @@ Feature parity is not complete until the Windows target has:
 - A Crabbox Windows run proving build and tests against the dirty checkout.
 - A Crabbox desktop smoke that launches the tray, captures the notification-area process, and verifies the generated settings file.
 - A manual or automated proof artifact for at least one repository with GitHub status and local git status shown together.
+- GitHub App OAuth proof against GitHub.com or a stubbed loopback/token exchange plus refresh coverage.
 
 ## Current Validation Commands
 

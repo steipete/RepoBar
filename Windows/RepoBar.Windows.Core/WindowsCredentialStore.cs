@@ -8,20 +8,46 @@ internal sealed class WindowsCredentialStore
     private const int CredTypeGeneric = 1;
     private const int CredPersistLocalMachine = 2;
     private const string TargetPrefix = "RepoBar.Windows";
+    private const string OAuthTargetPrefix = "RepoBar.Windows.OAuth";
 
     public string TargetName { get; }
 
     public WindowsCredentialStore(string gitHubHost)
+        : this(BuildTargetName(gitHubHost), TargetNameMode.AlreadyBuilt)
     {
-        TargetName = BuildTargetName(gitHubHost);
+    }
+
+    private WindowsCredentialStore(string targetName, TargetNameMode _)
+    {
+        TargetName = targetName;
     }
 
     public static string BuildTargetName(string gitHubHost)
     {
+        return BuildTargetName(gitHubHost, TargetPrefix);
+    }
+
+    public static string BuildOAuthTargetName(string gitHubHost)
+    {
+        return BuildTargetName(gitHubHost, OAuthTargetPrefix);
+    }
+
+    public static WindowsCredentialStore CreateOAuthStore(string gitHubHost)
+    {
+        return new WindowsCredentialStore(BuildOAuthTargetName(gitHubHost), TargetNameMode.AlreadyBuilt);
+    }
+
+    private enum TargetNameMode
+    {
+        AlreadyBuilt,
+    }
+
+    private static string BuildTargetName(string gitHubHost, string prefix)
+    {
         var host = GitHubHost.Normalize(gitHubHost);
         var safeHost = string.Concat(host.Select(character =>
             char.IsAsciiLetterOrDigit(character) || character is '.' or '-' ? character : '-'));
-        return $"{TargetPrefix}:{safeHost}";
+        return $"{prefix}:{safeHost}";
     }
 
     public bool HasToken()
