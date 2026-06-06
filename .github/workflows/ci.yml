@@ -118,6 +118,16 @@ jobs:
           name: repobar-windows-win-x64-unsigned
           path: dist/windows/publish/win-x64
 
+      - name: Package ARM64 tray layout
+        shell: pwsh
+        run: ./Scripts/package_windows.ps1 -Runtime win-arm64 -SkipInstaller
+
+      - name: Upload unsigned ARM64 tray layout
+        uses: actions/upload-artifact@v7
+        with:
+          name: repobar-windows-win-arm64-unsigned
+          path: dist/windows/publish/win-arm64
+
   windows-signing:
     name: Windows signing
     needs: windows

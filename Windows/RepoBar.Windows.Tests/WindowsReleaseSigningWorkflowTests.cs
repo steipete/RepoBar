@@ -72,6 +72,13 @@ public sealed class WindowsReleaseSigningWorkflowTests
         Assert.Contains("name: Upload Windows smoke artifacts", workflow);
         Assert.Contains("name: repobar-windows-smoke", workflow);
         Assert.Contains("path: dist/windows/smoke", workflow);
+        Assert.Contains("name: repobar-windows-win-x64-unsigned", workflow);
+        Assert.Contains("path: dist/windows/publish/win-x64", workflow);
+        Assert.Contains("name: Package ARM64 tray layout", workflow);
+        Assert.Contains("run: ./Scripts/package_windows.ps1 -Runtime win-arm64 -SkipInstaller", workflow);
+        Assert.Contains("name: Upload unsigned ARM64 tray layout", workflow);
+        Assert.Contains("name: repobar-windows-win-arm64-unsigned", workflow);
+        Assert.Contains("path: dist/windows/publish/win-arm64", workflow);
 
         Assert.True(
             workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal) <
@@ -88,6 +95,12 @@ public sealed class WindowsReleaseSigningWorkflowTests
         Assert.True(
             workflow.IndexOf("name: Upload Windows smoke artifacts", StringComparison.Ordinal) <
             workflow.IndexOf("name: Package tray layout", StringComparison.Ordinal));
+        Assert.True(
+            workflow.IndexOf("name: Package tray layout", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Package ARM64 tray layout", StringComparison.Ordinal));
+        Assert.True(
+            workflow.IndexOf("name: Upload unsigned ARM64 tray layout", StringComparison.Ordinal) <
+            workflow.IndexOf("windows-signing:", StringComparison.Ordinal));
     }
 
     private static string GetRepositoryRoot()
