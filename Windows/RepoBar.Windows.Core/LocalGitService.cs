@@ -158,6 +158,30 @@ internal sealed class LocalGitService
         return await RunGitAsync(repoRoot, ["switch", branch], cancellationToken).ConfigureAwait(false);
     }
 
+    internal async Task<LocalGitActionResult> CloneRepositoryAsync(string remoteUrl, string destination, CancellationToken cancellationToken)
+    {
+        var parent = Path.GetDirectoryName(destination);
+        if (string.IsNullOrWhiteSpace(parent))
+        {
+            return new LocalGitActionResult(false, "", "Checkout destination is invalid.");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(parent);
+            if (Directory.Exists(destination) || File.Exists(destination))
+            {
+                return new LocalGitActionResult(false, "", $"{destination} already exists.");
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return new LocalGitActionResult(false, "", exception.Message);
+        }
+
+        return await RunGitAsync(parent, ["clone", remoteUrl, destination], cancellationToken).ConfigureAwait(false);
+    }
+
     private static async Task<string?> TryGitAsync(string workingDirectory, string[] arguments, CancellationToken cancellationToken)
     {
         var result = await RunGitAsync(workingDirectory, arguments, cancellationToken).ConfigureAwait(false);
@@ -261,6 +285,17 @@ internal sealed class LocalGitService
             .OrderByDescending(branch => branch.IsCurrent)
             .ThenBy(branch => branch.Name, StringComparer.OrdinalIgnoreCase)
             .ToArray();
+    }
+
+    internal static string CheckoutDestination(string localProjectsRoot, string repositoryName)
+    {
+        var safeName = string.Join("_", repositoryName.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Trim();
+        if (string.IsNullOrWhiteSpace(safeName))
+        {
+            safeName = "repository";
+        }
+
+        return Path.Combine(ExpandPath(localProjectsRoot), safeName);
     }
 
     internal static string? TryParseGitHubFullName(string remote)
@@ -422,7 +457,7 @@ internal sealed class LocalGitService
         return name is ".git" or ".build" or ".swiftpm" or "node_modules" or ".cache" or ".Trash";
     }
 
-    private static string ExpandPath(string path)
+    internal static string ExpandPath(string path)
     {
         if (path == "~")
         {

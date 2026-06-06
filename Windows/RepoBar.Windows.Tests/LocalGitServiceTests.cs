@@ -84,6 +84,15 @@ public sealed class LocalGitServiceTests
     }
 
     [Fact]
+    public void CheckoutDestination_expands_root_and_sanitizes_repository_name()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "RepoBar Projects");
+        var destination = LocalGitService.CheckoutDestination(root, "Repo/Bar");
+
+        Assert.Equal(Path.Combine(root, "Repo_Bar"), destination);
+    }
+
+    [Fact]
     public void Local_status_can_fast_forward_only_when_clean_and_behind()
     {
         var cleanBehind = new LocalGitRepositoryStatus(

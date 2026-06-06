@@ -368,6 +368,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 item.DropDownItems.Add(new ToolStripSeparator());
                 AddLocalStatusItems(item.DropDownItems, status.LocalStatus);
             }
+            else
+            {
+                AddCheckoutItem(item.DropDownItems, status.Repository);
+            }
             AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
             return item;
         }
@@ -376,6 +380,10 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         item.DropDownItems.Add(new ToolStripMenuItem("Open issues", null, (_, _) => OpenRepository(status.Repository, "issues")));
         item.DropDownItems.Add(new ToolStripMenuItem("Open pull requests", null, (_, _) => OpenRepository(status.Repository, "pulls")));
         item.DropDownItems.Add(new ToolStripMenuItem("Open Actions", null, (_, _) => OpenRepository(status.Repository, "actions")));
+        if (status.LocalStatus == null)
+        {
+            AddCheckoutItem(item.DropDownItems, status.Repository);
+        }
         AddRecentItemsSubmenu(item.DropDownItems, "Issues", status.RecentLists.Issues);
         AddRecentItemsSubmenu(item.DropDownItems, "Pull Requests", status.RecentLists.Pulls);
         AddRecentItemsSubmenu(item.DropDownItems, "Releases", status.RecentLists.Releases);
@@ -420,6 +428,17 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
 
         return item;
+    }
+
+    private void AddCheckoutItem(ToolStripItemCollection items, RepositoryRef repository)
+    {
+        if (string.IsNullOrWhiteSpace(_settingsStore.Settings.LocalProjectsRoot))
+        {
+            items.Add(new ToolStripMenuItem("Set local projects folder...", null, (_, _) => ShowPreferences()));
+            return;
+        }
+
+        items.Add(new ToolStripMenuItem("Checkout locally", null, async (_, _) => await CheckoutRepositoryAsync(repository)));
     }
 
     private void AddLocalOnlyRepositories()
@@ -654,6 +673,43 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private void OpenRepository(RepositoryRef repository, string? path = null)
     {
         OpenUrl(_githubClient.BuildWebUri(repository, path).ToString());
+    }
+
+    private async Task CheckoutRepositoryAsync(RepositoryRef repository)
+    {
+        var root = _settingsStore.Settings.LocalProjectsRoot;
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            ShowPreferences();
+            return;
+        }
+
+        var destination = LocalGitService.CheckoutDestination(root, repository.Name);
+        if (Directory.Exists(destination) || File.Exists(destination))
+        {
+            MessageBox.Show($"{destination} already exists.", "RepoBar Checkout", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            return;
+        }
+
+        var result = await _localGitService.CloneRepositoryAsync(
+            BuildCloneUrl(repository),
+            destination,
+            _shutdown.Token).ConfigureAwait(true);
+        if (!result.Success)
+        {
+            MessageBox.Show(result.DisplayText, "RepoBar Checkout", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
+
+        _notifyIcon.ShowBalloonTip(5000, "RepoBar Checkout", $"Checked out {repository.FullName}", ToolTipIcon.Info);
+        OpenFile(destination);
+        BeginRefresh();
+    }
+
+    private string BuildCloneUrl(RepositoryRef repository)
+    {
+        var host = GitHubHost.Normalize(_settingsStore.Settings.GitHubHost);
+        return $"https://{host}/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}.git";
     }
 
     private void SetVisibility(string fullName, RepositoryVisibility visibility)
