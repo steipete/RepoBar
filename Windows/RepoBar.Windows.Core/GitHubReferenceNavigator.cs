@@ -20,6 +20,7 @@ internal static partial class GitHubReferenceNavigator
         var uniqueRepositoriesByName = UniqueRepositoriesByName(defaultRepositoryFullName, knownRepositoryFullNames);
         AddRepositoryHeadingReferences(text, matches, claimedSpans);
         AddPrimaryUrlListShortcutClaims(text, claimedSpans);
+        AddPrimaryListReferences(text, defaultRepositoryFullName, matches, claimedSpans);
         AddNormalRepositoryContextReferences(text, matches, claimedSpans);
 
         foreach (Match match in GitHubCommitUrlRegex().Matches(text))
@@ -573,6 +574,110 @@ internal static partial class GitHubReferenceNavigator
                     claimedSpans.Add(new RangeSpan(lineInfo.Start + match.Index, lineInfo.Start + match.Index + match.Length));
                 }
             }
+        }
+    }
+
+    private static void AddPrimaryListReferences(
+        string text,
+        string? defaultRepositoryFullName,
+        List<GitHubReferenceCandidate> matches,
+        List<RangeSpan> claimedSpans)
+    {
+        var lines = EnumerateLines(text);
+        var repositoryHeadingLines = RepositoryHeadingLineIndexes(lines);
+        var repositoryFullName = NormalRepositoryContext(lines, repositoryHeadingLines) ?? defaultRepositoryFullName;
+        if (string.IsNullOrWhiteSpace(repositoryFullName))
+        {
+            return;
+        }
+
+        var primaryReferenceCount = 0;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (repositoryHeadingLines.Contains(i))
+            {
+                continue;
+            }
+
+            var lineInfo = lines[i];
+            var match = PrimaryListIssueSeriesRegex().Match(lineInfo.Text);
+            if (!match.Success || claimedSpans.Any(span => span.Contains(lineInfo.Start + match.Groups["number"].Index)))
+            {
+                continue;
+            }
+
+            primaryReferenceCount++;
+            primaryReferenceCount += ExpandSeriesNumbers(match.Groups["tail"], long.Parse(match.Groups["number"].Value)).Count();
+            if (primaryReferenceCount >= 2)
+            {
+                break;
+            }
+        }
+
+        if (primaryReferenceCount < 2)
+        {
+            return;
+        }
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (repositoryHeadingLines.Contains(i))
+            {
+                continue;
+            }
+
+            var lineInfo = lines[i];
+            var match = PrimaryListIssueSeriesRegex().Match(lineInfo.Text);
+            if (!match.Success || claimedSpans.Any(span => span.Contains(lineInfo.Start + match.Groups["number"].Index)))
+            {
+                continue;
+            }
+
+            var startNumber = long.Parse(match.Groups["number"].Value);
+            matches.Add(new GitHubReferenceCandidate(
+                lineInfo.Start + match.Groups["number"].Index,
+                new GitHubReferenceMatch(
+                    repositoryFullName,
+                    startNumber,
+                    "issues",
+                    match.Groups["number"].Value)));
+
+            foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    lineInfo.Start + number.Index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        number.Value,
+                        number.Kind ?? "issues",
+                        number.Value.ToString())));
+            }
+
+            claimedSpans.Add(new RangeSpan(lineInfo.Start + match.Groups["number"].Index, lineInfo.Start + lineInfo.Text.Length));
+            ClaimPrimaryListItemChildren(lines, i, claimedSpans);
+        }
+    }
+
+    private static void ClaimPrimaryListItemChildren(
+        IReadOnlyList<LineInfo> lines,
+        int primaryLineIndex,
+        List<RangeSpan> claimedSpans)
+    {
+        var primaryLine = lines[primaryLineIndex];
+        for (var i = primaryLineIndex + 1; i < lines.Count; i++)
+        {
+            var lineInfo = lines[i];
+            if (string.IsNullOrWhiteSpace(lineInfo.Text))
+            {
+                break;
+            }
+
+            if (lineInfo.Indent <= primaryLine.Indent)
+            {
+                break;
+            }
+
+            claimedSpans.Add(new RangeSpan(lineInfo.Start, lineInfo.Start + lineInfo.Text.Length));
         }
     }
 
@@ -1239,6 +1344,9 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"^\s*(?:(?:[-*]|\d+[.)])\s*)?(?<ref>#(?<number>\d+))\b")]
     private static partial Regex PrimaryUrlListItemRegex();
+
+    [GeneratedRegex(@"^\s*(?:(?:[-*]|\d+[.)])\s*)#(?<number>\d+)(?<tail>(?:\s*(?:-|/|,|and)\s*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex PrimaryListIssueSeriesRegex();
 
     [GeneratedRegex(@"\b(?:prs?|issues?|pull)\b", RegexOptions.IgnoreCase)]
     private static partial Regex IssueReferenceContextRegex();

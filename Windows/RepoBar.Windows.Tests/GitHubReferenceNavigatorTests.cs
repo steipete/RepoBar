@@ -1136,6 +1136,48 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_prioritizes_leading_triage_list_references()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            State: main, clean, pulled. Open PRs: none. Open issues: 12.
+
+            - #597 keyring locking. Foundation for #596.
+            - #461/#460 People API disabled. PR #462 closed unmerged.
+              Next fix #461, close #460 as duplicate/noisy repro.
+            - #596 store Google OAuth client_secret in keyring.
+            """,
+            "github.com",
+            "openclaw/gogcli");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/gogcli", 597L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 461L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 460L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 596L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_scopes_primary_triage_list_references_to_normal_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            Found in openclaw/gogcli.
+
+            - #597 keyring locking. Foundation for #596.
+            - #620 Gmail search attachments JSON.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/gogcli", 597L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 620L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
     public void FindReferences_resolves_unique_repository_name_shorthand()
     {
         var references = GitHubReferenceNavigator.FindReferences(
