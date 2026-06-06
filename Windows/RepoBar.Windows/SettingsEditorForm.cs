@@ -49,6 +49,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
     private readonly TextBox _actionsMonitoredOwners = new();
+    private readonly ComboBox _actionsPlanTier = new();
     private readonly CheckBox _diagnosticsEnabled = new();
     private readonly ComboBox _loggingVerbosity = new();
     private readonly CheckBox _fileLoggingEnabled = new();
@@ -175,6 +176,13 @@ internal sealed class SettingsEditorForm : Form
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
         _actionsMonitoredOwners.Text = FormatRepositoryOwnerFilter(settings.ActionsMonitoredOwners);
+        _actionsPlanTier.DropDownStyle = ComboBoxStyle.DropDownList;
+        _actionsPlanTier.DataSource = Enum.GetValues<WindowsActionsPlanTier>()
+            .Select(ActionsPlanTierRow.FromTier)
+            .ToArray();
+        _actionsPlanTier.DisplayMember = nameof(ActionsPlanTierRow.DisplayName);
+        _actionsPlanTier.ValueMember = nameof(ActionsPlanTierRow.Tier);
+        _actionsPlanTier.SelectedValue = settings.ActionsPlanTier;
         _diagnosticsEnabled.Checked = settings.DiagnosticsEnabled;
         _loggingVerbosity.DropDownStyle = ComboBoxStyle.DropDownList;
         _loggingVerbosity.DataSource = Enum.GetValues<WindowsLogVerbosity>()
@@ -259,6 +267,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Heatmap window", _heatmapSpan);
         AddLabeledControl(settingsGrid, "Activity feed", _activityScope);
         AddLabeledControl(settingsGrid, "Actions owners", _actionsMonitoredOwners);
+        AddLabeledControl(settingsGrid, "Actions plan", _actionsPlanTier);
         AddLabeledControl(settingsGrid, "Log verbosity", _loggingVerbosity);
         AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
@@ -707,6 +716,9 @@ internal sealed class SettingsEditorForm : Form
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
         settings.ActionsMonitoredOwners = ParseRepositoryOwnerFilter(_actionsMonitoredOwners.Text);
+        settings.ActionsPlanTier = _actionsPlanTier.SelectedValue is WindowsActionsPlanTier planTier
+            ? planTier
+            : WindowsActionsPlanTier.Free;
         settings.DiagnosticsEnabled = _diagnosticsEnabled.Checked;
         settings.LoggingVerbosity = _loggingVerbosity.SelectedValue is WindowsLogVerbosity verbosity
             ? verbosity
@@ -763,6 +775,9 @@ internal sealed class SettingsEditorForm : Form
                 ? activityScope
                 : WindowsActivityScope.MyActivity,
             ActionsMonitoredOwners = ParseRepositoryOwnerFilter(_actionsMonitoredOwners.Text),
+            ActionsPlanTier = _actionsPlanTier.SelectedValue is WindowsActionsPlanTier planTier
+                ? planTier
+                : WindowsActionsPlanTier.Free,
             Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
         };
     }
@@ -1085,6 +1100,14 @@ internal sealed class SettingsEditorForm : Form
         public static ActivityScopeRow FromScope(WindowsActivityScope scope)
         {
             return new ActivityScopeRow(scope, scope.DisplayName());
+        }
+    }
+
+    private sealed record ActionsPlanTierRow(WindowsActionsPlanTier Tier, string DisplayName)
+    {
+        public static ActionsPlanTierRow FromTier(WindowsActionsPlanTier tier)
+        {
+            return new ActionsPlanTierRow(tier, tier.DisplayName());
         }
     }
 

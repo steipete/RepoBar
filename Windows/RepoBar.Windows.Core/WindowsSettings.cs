@@ -39,6 +39,7 @@ internal sealed class WindowsSettings
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public List<string> ActionsMonitoredOwners { get; set; } = [];
+    public WindowsActionsPlanTier ActionsPlanTier { get; set; } = WindowsActionsPlanTier.Free;
     public bool DiagnosticsEnabled { get; set; }
     public WindowsLogVerbosity LoggingVerbosity { get; set; } = WindowsLogVerbosity.Info;
     public bool FileLoggingEnabled { get; set; }
@@ -147,6 +148,14 @@ internal enum WindowsActivityScope
     MyActivity,
 }
 
+internal enum WindowsActionsPlanTier
+{
+    Free,
+    Pro,
+    Team,
+    Enterprise,
+}
+
 internal enum WindowsTerminalPreference
 {
     Auto,
@@ -209,6 +218,56 @@ internal static class WindowsActivityScopeLabels
         {
             WindowsActivityScope.AllActivity => "All activity",
             _ => "My activity",
+        };
+    }
+}
+
+internal static class WindowsActionsPlanTierLabels
+{
+    public static string DisplayName(this WindowsActionsPlanTier tier)
+    {
+        return tier switch
+        {
+            WindowsActionsPlanTier.Pro => "Pro",
+            WindowsActionsPlanTier.Team => "Team",
+            WindowsActionsPlanTier.Enterprise => "Enterprise",
+            _ => "Free",
+        };
+    }
+
+    public static int IncludedMinutesPerMonth(this WindowsActionsPlanTier tier)
+    {
+        return tier switch
+        {
+            WindowsActionsPlanTier.Free => 2000,
+            WindowsActionsPlanTier.Pro => 3000,
+            WindowsActionsPlanTier.Team => 3000,
+            WindowsActionsPlanTier.Enterprise => 50000,
+            _ => 2000,
+        };
+    }
+
+    public static double IncludedStorageGb(this WindowsActionsPlanTier tier)
+    {
+        return tier switch
+        {
+            WindowsActionsPlanTier.Free => 0.5,
+            WindowsActionsPlanTier.Pro => 1,
+            WindowsActionsPlanTier.Team => 2,
+            WindowsActionsPlanTier.Enterprise => 50,
+            _ => 0.5,
+        };
+    }
+
+    public static int ConcurrentJobs(this WindowsActionsPlanTier tier)
+    {
+        return tier switch
+        {
+            WindowsActionsPlanTier.Free => 20,
+            WindowsActionsPlanTier.Pro => 40,
+            WindowsActionsPlanTier.Team => 60,
+            WindowsActionsPlanTier.Enterprise => 500,
+            _ => 20,
         };
     }
 }
@@ -408,6 +467,7 @@ internal sealed class WindowsSettingsStore
         settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
         settings.RepositoryOwnerFilter = NormalizeRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
         settings.ActionsMonitoredOwners = NormalizeRepositoryOwnerFilter(settings.ActionsMonitoredOwners);
+        settings.ActionsPlanTier = Enum.IsDefined(settings.ActionsPlanTier) ? settings.ActionsPlanTier : WindowsActionsPlanTier.Free;
         settings.LoggingVerbosity = Enum.IsDefined(settings.LoggingVerbosity) ? settings.LoggingVerbosity : WindowsLogVerbosity.Info;
         settings.MenuCustomization ??= new WindowsMenuCustomization();
         settings.MenuCustomization.Normalize();

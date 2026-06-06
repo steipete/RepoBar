@@ -44,7 +44,13 @@ public sealed class GitHubActionsInsightClientTests
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound),
             };
         });
-        using var client = new GitHubActionsInsightClient(new WindowsSettings(), token: "token", handler);
+        using var client = new GitHubActionsInsightClient(
+            new WindowsSettings
+            {
+                ActionsPlanTier = WindowsActionsPlanTier.Team,
+            },
+            token: "token",
+            handler);
 
         var insights = await client.LoadAsync([new RepositoryRef { Owner = "owner", Name = "name" }], CancellationToken.None);
 
@@ -58,8 +64,12 @@ public sealed class GitHubActionsInsightClientTests
         Assert.Contains("2 running", insights.DisplayText);
         Assert.Contains("4 queued", insights.DisplayText);
         Assert.Contains("1/2 runners", insights.DisplayText);
+        Assert.Contains("Team plan", insights.DisplayText);
         Assert.NotNull(insights.Billing);
         Assert.Equal(150.5, insights.Billing.TotalMinutes);
+        Assert.Equal(3000, insights.IncludedMinutesPerMonth);
+        Assert.Equal(2850, insights.RemainingIncludedMinutes);
+        Assert.Equal(60, insights.ConcurrentJobs);
         Assert.Equal(1.25, insights.Billing.TotalNetAmount);
         Assert.Equal(120.5, insights.Billing.MinutesByOs["Windows"]);
         Assert.Contains("$1.25", insights.DisplayText);

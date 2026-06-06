@@ -97,6 +97,19 @@ public sealed class WindowsSettingsStoreTests
     }
 
     [Fact]
+    public void NormalizeSettings_resets_unknown_actions_plan_tier()
+    {
+        var settings = new WindowsSettings
+        {
+            ActionsPlanTier = (WindowsActionsPlanTier)999,
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal(WindowsActionsPlanTier.Free, settings.ActionsPlanTier);
+    }
+
+    [Fact]
     public void SetRepositoryMenuScope_persists_scope_changes()
     {
         var store = CreateStore(new WindowsSettings());

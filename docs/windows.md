@@ -124,6 +124,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "showRateLimits": true,
   "showContributionSummary": true,
   "actionsMonitoredOwners": [],
+  "actionsPlanTier": "free",
   "diagnosticsEnabled": false,
   "loggingVerbosity": "info",
   "fileLoggingEnabled": false,
@@ -196,7 +197,7 @@ Use **Include forked repos** and **Include archived repos** to decide whether Gi
 
 Use **Activity feed** to choose whether top-level **Commits** and **Activity** show all displayed repository events or only events by the signed-in account when viewer metadata is available. Repository submenus still keep their own per-repository Commit and Activity feeds.
 
-Use **Actions owners** to pin the owners Windows checks for Actions billing and cache usage. Leave it empty for Auto, which follows the owners of the visible repository list.
+Use **Actions owners** to pin the owners Windows checks for Actions billing and cache usage. Leave it empty for Auto, which follows the owners of the visible repository list. Use **Actions plan** to match the GitHub plan tier used for included monthly minutes and concurrent job allowance in the Actions summary.
 
 Use **Repository heatmap** to hide heatmap summaries or show them in the tray row, repository submenu, or both. Use **Heatmap window** to choose the GitHub commit-activity window used for repository heatmap totals: 1, 3, 6, or 12 months. Hidden heatmaps skip the GitHub commit-activity request.
 

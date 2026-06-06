@@ -9,6 +9,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
     private static readonly string[] QueuedStatuses = ["queued", "waiting", "pending"];
     private readonly HttpClient _httpClient;
     private readonly IReadOnlyList<string> _monitoredOwners;
+    private readonly WindowsActionsPlanTier _planTier;
     private readonly List<GitHubRateLimitSnapshot> _rateLimits = [];
 
     public GitHubActionsInsightClient(WindowsSettings settings, string? token)
@@ -32,6 +33,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
             _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
         _monitoredOwners = WindowsSettingsStore.NormalizeRepositoryOwnerFilter(settings.ActionsMonitoredOwners);
+        _planTier = Enum.IsDefined(settings.ActionsPlanTier) ? settings.ActionsPlanTier : WindowsActionsPlanTier.Free;
     }
 
     public async Task<ActionsInsights> LoadAsync(
@@ -47,7 +49,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         var owners = _monitoredOwners.Count > 0 ? _monitoredOwners : UniqueOwners(repositories);
         var billing = await LoadBillingUsageAsync(owners, cancellationToken).ConfigureAwait(false);
         var cacheUsage = await LoadCacheUsageAsync(owners, cancellationToken).ConfigureAwait(false);
-        return new ActionsInsights(results, billing, cacheUsage, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
+        return new ActionsInsights(results, billing, cacheUsage, _planTier, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
     }
 
     private async Task<RepositoryActionsInsight> LoadRepositoryAsync(
@@ -320,10 +322,11 @@ internal sealed record ActionsInsights(
     IReadOnlyList<RepositoryActionsInsight> Repositories,
     ActionsBillingUsage? Billing,
     IReadOnlyList<ActionsOwnerCacheUsage> CacheUsage,
+    WindowsActionsPlanTier PlanTier,
     DateTimeOffset FetchedAt,
     IReadOnlyList<GitHubRateLimitSnapshot> RateLimits)
 {
-    public static readonly ActionsInsights Empty = new([], null, [], DateTimeOffset.MinValue, []);
+    public static readonly ActionsInsights Empty = new([], null, [], WindowsActionsPlanTier.Free, DateTimeOffset.MinValue, []);
 
     public int RunningCount => Repositories.Sum(repository => repository.Queue.InProgressCount);
     public int QueuedCount => Repositories.Sum(repository => repository.Queue.QueuedCount);
@@ -331,6 +334,9 @@ internal sealed record ActionsInsights(
     public int OnlineRunnerCount => Repositories.Sum(repository => repository.Runners.OnlineCount);
     public int BusyRunnerCount => Repositories.Sum(repository => repository.Runners.BusyCount);
     public bool HasData => Repositories.Count > 0;
+    public int IncludedMinutesPerMonth => PlanTier.IncludedMinutesPerMonth();
+    public int RemainingIncludedMinutes => Math.Max(0, IncludedMinutesPerMonth - (int)Math.Round(Billing?.TotalMinutes ?? 0));
+    public int ConcurrentJobs => PlanTier.ConcurrentJobs();
 
     public string DisplayText
     {
@@ -345,9 +351,11 @@ internal sealed record ActionsInsights(
             var runners = RunnerCount > 0
                 ? $"  {OnlineRunnerCount:n0}/{RunnerCount:n0} runners"
                 : "";
-            var billing = Billing == null ? "" : $"  {Billing.DisplayText}";
+            var billing = Billing == null
+                ? ""
+                : $"  {Billing.DisplayText}  {RemainingIncludedMinutes:n0}m left";
             var cache = CacheUsage.Count == 0 ? "" : $"  {CacheUsage.Sum(usage => usage.CacheSizeMb):n0} MB cache";
-            return $"Actions: {queue}{runners}{billing}{cache}";
+            return $"Actions: {queue}{runners}{billing}{cache}  {PlanTier.DisplayName()} plan";
         }
     }
 }
