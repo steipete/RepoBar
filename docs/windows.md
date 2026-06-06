@@ -59,7 +59,10 @@ Use `-SkipInstaller` to validate the publish layout without requiring the Inno c
 
 ```powershell
 .\Scripts\package_windows.ps1 -Runtime win-x64 -SkipInstaller
+.\Scripts\package_windows.ps1 -Runtime win-arm64 -SkipInstaller
 ```
+
+The matching pnpm wrappers are `pnpm windows:package` for the default `win-x64` path and `pnpm windows:package:arm64` for the unsigned ARM64 layout.
 
 The installer can optionally create a desktop shortcut and a current-user startup entry.
 
@@ -247,6 +250,8 @@ Run the launch smoke on Windows:
 ```
 
 The smoke publishes the app, creates a local Git fixture for `steipete/RepoBar`, writes a two-account smoke settings file with a smoke archive database, launches `RepoBar.Windows.exe`, verifies the settings file, waits for the app's runtime summary, and writes a JSON proof summary under `dist\windows\smoke\`. The summary records the running process, executable path, active account, scoped credential targets, sample repository, local Git attachment, archive-backed issue/PR fallback rows, refresh/update settings, repository scope/sort/display settings, local scan/fetch/sync settings, Actions/clipboard/PR-notification settings, diagnostics logging state and log-file creation, rendered tray/support menu items, rendered repository submenu items, and screenshot status. `Test-WindowsValidationArtifacts.ps1` verifies the TRX counters plus required smoke proof booleans and writes `repobar-windows-validation.json` beside the smoke summaries. When a desktop surface is available, the smoke also writes a PNG screenshot next to the JSON summary. The Windows CI job uploads this directory as the `repobar-windows-smoke` artifact.
+
+Use `pnpm windows:validate-artifacts` to run the same artifact validator through the package script entrypoint.
 
 ![RepoBar Windows tray menu](assets/repobar-windows-tray-menu.png)
 

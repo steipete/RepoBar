@@ -170,7 +170,9 @@ pnpm windows:build
 pnpm windows:test
 pnpm windows:publish
 pnpm windows:package
+pnpm windows:package:arm64
 pnpm windows:smoke
+pnpm windows:validate-artifacts
 pnpm windows:crabbox
 pnpm start     # build, package, sign, and launch the app
 pnpm restart   # relaunch the app from this checkout
