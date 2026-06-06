@@ -16,7 +16,7 @@ The Windows app currently provides:
 - optional traffic views/clones, commit activity summary, and changelog headline
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
+- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
 - repository discovery from GitHub's accessible repository list
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional signed-in account contribution summary from GitHub GraphQL
@@ -77,6 +77,17 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "tokenEnvironmentVariable": "REPOBAR_GITHUB_TOKEN",
   "gitHubOAuthClientId": "Iv23liGm2arUyotWSjwJ",
   "gitHubOAuthClientSecretEnvironmentVariable": "REPOBAR_GITHUB_CLIENT_SECRET",
+  "activeAccountId": "default",
+  "accounts": [
+    {
+      "id": "default",
+      "label": "Default",
+      "githubHost": "github.com",
+      "tokenEnvironmentVariable": "REPOBAR_GITHUB_TOKEN",
+      "gitHubOAuthClientId": "Iv23liGm2arUyotWSjwJ",
+      "gitHubOAuthClientSecretEnvironmentVariable": "REPOBAR_GITHUB_CLIENT_SECRET"
+    }
+  ],
   "refreshIntervalMinutes": 5,
   "openMenuOnLeftClick": true,
   "launchAtLogin": false,
@@ -119,18 +130,22 @@ CRABBOX_PROVIDER=aws CRABBOX_TARGET=windows pnpm windows:crabbox
 
 ## Authentication
 
-Use **Preferences > Sign in with GitHub** to authenticate through the RepoBar GitHub App browser flow. RepoBar listens on the same loopback callback as the macOS app, exchanges the PKCE code for GitHub user tokens, stores the OAuth token bundle in Windows Credential Manager, and refreshes it before GitHub requests when needed. The built-in RepoBar client ID is used by default; set `REPOBAR_GITHUB_CLIENT_SECRET` or the configured OAuth secret environment variable before signing in.
+Use **Preferences** to add named account profiles and choose the active account. Each account stores its GitHub host, token environment variable, OAuth client ID, and OAuth secret environment variable. The active account drives repository discovery, refreshes, Actions insight, contribution summaries, and Credential Manager target names.
+
+Use **Sign in with GitHub** to authenticate the active account through the RepoBar GitHub App browser flow. RepoBar listens on the same loopback callback as the macOS app, exchanges the PKCE code for GitHub user tokens, stores the OAuth token bundle in Windows Credential Manager, and refreshes it before GitHub requests when needed. The built-in RepoBar client ID is used by default; set `REPOBAR_GITHUB_CLIENT_SECRET` or the configured OAuth secret environment variable before signing in.
 
 OAuth tokens are stored under a per-host target such as:
 
 ```text
 RepoBar.Windows.OAuth:github.com
+RepoBar.Windows.OAuth:github.com:work-account
 ```
 
 You can also save a personal access token in Windows Credential Manager. RepoBar stores PATs separately under a per-host target such as:
 
 ```text
 RepoBar.Windows:github.com
+RepoBar.Windows:github.com:work-account
 ```
 
 Environment variables still work as bootstrap/fallback:

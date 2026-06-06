@@ -39,6 +39,7 @@ internal sealed class WindowsOAuthClient : IDisposable
 
     public async Task<WindowsOAuthTokens> LoginAsync(WindowsSettings settings, CancellationToken cancellationToken)
     {
+        var account = settings.GetActiveAccount();
         var verifier = CreateCodeVerifier();
         var state = CreateCodeVerifier();
         var redirect = new Uri($"http://127.0.0.1:{DefaultLoopbackPort}/callback");
@@ -47,7 +48,7 @@ internal sealed class WindowsOAuthClient : IDisposable
         listener.Prefixes.Add($"http://127.0.0.1:{DefaultLoopbackPort}/");
         listener.Start();
 
-        _openBrowser(BuildAuthorizeUri(settings.GitHubHost, redirect, state, CreateCodeChallenge(verifier), scope: null, credentials.ClientId));
+        _openBrowser(BuildAuthorizeUri(account.GitHubHost, redirect, state, CreateCodeChallenge(verifier), scope: null, credentials.ClientId));
 
         var context = await listener.GetContextAsync().WaitAsync(cancellationToken).ConfigureAwait(false);
         try
@@ -68,7 +69,7 @@ internal sealed class WindowsOAuthClient : IDisposable
                 throw new InvalidOperationException("GitHub OAuth did not return an authorization code.");
             }
 
-            var tokens = await ExchangeCodeAsync(settings.GitHubHost, credentials, code, redirect, verifier, cancellationToken).ConfigureAwait(false);
+            var tokens = await ExchangeCodeAsync(account.GitHubHost, credentials, code, redirect, verifier, cancellationToken).ConfigureAwait(false);
             await WriteBrowserResponseAsync(context.Response, "RepoBar sign-in complete. You can close this tab.", cancellationToken)
                 .ConfigureAwait(false);
             return tokens;
@@ -95,6 +96,7 @@ internal sealed class WindowsOAuthClient : IDisposable
             return tokens;
         }
 
+        var account = settings.GetActiveAccount();
         var credentials = _credentialsProvider(settings);
         var values = new Dictionary<string, string>
         {
@@ -103,7 +105,7 @@ internal sealed class WindowsOAuthClient : IDisposable
             ["grant_type"] = "refresh_token",
             ["refresh_token"] = tokens.RefreshToken,
         };
-        using var request = new HttpRequestMessage(HttpMethod.Post, BuildTokenUri(settings.GitHubHost))
+        using var request = new HttpRequestMessage(HttpMethod.Post, BuildTokenUri(account.GitHubHost))
         {
             Content = new FormUrlEncodedContent(values),
         };
@@ -266,12 +268,13 @@ internal sealed class WindowsOAuthClient : IDisposable
 
     internal static WindowsOAuthClientCredentials ResolveCredentials(WindowsSettings settings)
     {
-        var clientId = string.IsNullOrWhiteSpace(settings.GitHubOAuthClientId)
+        var account = settings.GetActiveAccount();
+        var clientId = string.IsNullOrWhiteSpace(account.GitHubOAuthClientId)
             ? DefaultClientId
-            : settings.GitHubOAuthClientId.Trim();
-        var secretEnv = string.IsNullOrWhiteSpace(settings.GitHubOAuthClientSecretEnvironmentVariable)
+            : account.GitHubOAuthClientId.Trim();
+        var secretEnv = string.IsNullOrWhiteSpace(account.GitHubOAuthClientSecretEnvironmentVariable)
             ? DefaultClientSecretEnvironmentVariable
-            : settings.GitHubOAuthClientSecretEnvironmentVariable.Trim();
+            : account.GitHubOAuthClientSecretEnvironmentVariable.Trim();
         var clientSecret = Environment.GetEnvironmentVariable(secretEnv);
         if (string.IsNullOrWhiteSpace(clientSecret) && !string.Equals(secretEnv, DefaultClientSecretEnvironmentVariable, StringComparison.Ordinal))
         {

@@ -13,7 +13,12 @@ internal sealed class WindowsCredentialStore
     public string TargetName { get; }
 
     public WindowsCredentialStore(string gitHubHost)
-        : this(BuildTargetName(gitHubHost), TargetNameMode.AlreadyBuilt)
+        : this(gitHubHost, WindowsAccountProfile.DefaultId)
+    {
+    }
+
+    public WindowsCredentialStore(string gitHubHost, string accountId)
+        : this(BuildTargetName(gitHubHost, accountId), TargetNameMode.AlreadyBuilt)
     {
     }
 
@@ -24,17 +29,32 @@ internal sealed class WindowsCredentialStore
 
     public static string BuildTargetName(string gitHubHost)
     {
-        return BuildTargetName(gitHubHost, TargetPrefix);
+        return BuildTargetName(gitHubHost, WindowsAccountProfile.DefaultId);
+    }
+
+    public static string BuildTargetName(string gitHubHost, string accountId)
+    {
+        return BuildTargetName(gitHubHost, TargetPrefix, accountId);
     }
 
     public static string BuildOAuthTargetName(string gitHubHost)
     {
-        return BuildTargetName(gitHubHost, OAuthTargetPrefix);
+        return BuildOAuthTargetName(gitHubHost, WindowsAccountProfile.DefaultId);
+    }
+
+    public static string BuildOAuthTargetName(string gitHubHost, string accountId)
+    {
+        return BuildTargetName(gitHubHost, OAuthTargetPrefix, accountId);
     }
 
     public static WindowsCredentialStore CreateOAuthStore(string gitHubHost)
     {
-        return new WindowsCredentialStore(BuildOAuthTargetName(gitHubHost), TargetNameMode.AlreadyBuilt);
+        return CreateOAuthStore(gitHubHost, WindowsAccountProfile.DefaultId);
+    }
+
+    public static WindowsCredentialStore CreateOAuthStore(string gitHubHost, string accountId)
+    {
+        return new WindowsCredentialStore(BuildOAuthTargetName(gitHubHost, accountId), TargetNameMode.AlreadyBuilt);
     }
 
     private enum TargetNameMode
@@ -42,12 +62,15 @@ internal sealed class WindowsCredentialStore
         AlreadyBuilt,
     }
 
-    private static string BuildTargetName(string gitHubHost, string prefix)
+    private static string BuildTargetName(string gitHubHost, string prefix, string accountId)
     {
         var host = GitHubHost.Normalize(gitHubHost);
         var safeHost = string.Concat(host.Select(character =>
             char.IsAsciiLetterOrDigit(character) || character is '.' or '-' ? character : '-'));
-        return $"{prefix}:{safeHost}";
+        var safeAccount = WindowsSettingsStore.SanitizeAccountId(accountId);
+        return string.Equals(safeAccount, WindowsAccountProfile.DefaultId, StringComparison.OrdinalIgnoreCase)
+            ? $"{prefix}:{safeHost}"
+            : $"{prefix}:{safeHost}:{safeAccount}";
     }
 
     public bool HasToken()

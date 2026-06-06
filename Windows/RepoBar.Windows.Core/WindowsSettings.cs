@@ -9,6 +9,8 @@ internal sealed class WindowsSettings
     public string TokenEnvironmentVariable { get; set; } = "REPOBAR_GITHUB_TOKEN";
     public string GitHubOAuthClientId { get; set; } = WindowsOAuthClient.DefaultClientId;
     public string GitHubOAuthClientSecretEnvironmentVariable { get; set; } = WindowsOAuthClient.DefaultClientSecretEnvironmentVariable;
+    public string ActiveAccountId { get; set; } = WindowsAccountProfile.DefaultId;
+    public List<WindowsAccountProfile> Accounts { get; set; } = [];
     public int RefreshIntervalMinutes { get; set; } = 5;
     public bool OpenMenuOnLeftClick { get; set; } = true;
     public bool LaunchAtLogin { get; set; }
@@ -23,6 +25,41 @@ internal sealed class WindowsSettings
     public bool EnablePullRequestNotifications { get; set; }
     public bool ShowActionsUsage { get; set; }
     public List<RepositoryRef> Repositories { get; set; } = [];
+
+    internal WindowsAccountProfile GetActiveAccount()
+    {
+        return Accounts.FirstOrDefault(account => string.Equals(account.Id, ActiveAccountId, StringComparison.OrdinalIgnoreCase)) ??
+            Accounts.FirstOrDefault() ??
+            WindowsAccountProfile.FromLegacy(this);
+    }
+}
+
+internal sealed class WindowsAccountProfile
+{
+    public const string DefaultId = "default";
+
+    public string Id { get; set; } = DefaultId;
+    public string Label { get; set; } = "Default";
+    public string GitHubHost { get; set; } = "github.com";
+    public string TokenEnvironmentVariable { get; set; } = "REPOBAR_GITHUB_TOKEN";
+    public string GitHubOAuthClientId { get; set; } = WindowsOAuthClient.DefaultClientId;
+    public string GitHubOAuthClientSecretEnvironmentVariable { get; set; } = WindowsOAuthClient.DefaultClientSecretEnvironmentVariable;
+
+    public string DisplayName => string.IsNullOrWhiteSpace(Label) ? Id : Label;
+    public bool IsValid => !string.IsNullOrWhiteSpace(Id);
+
+    public static WindowsAccountProfile FromLegacy(WindowsSettings settings)
+    {
+        return new WindowsAccountProfile
+        {
+            Id = DefaultId,
+            Label = "Default",
+            GitHubHost = settings.GitHubHost,
+            TokenEnvironmentVariable = settings.TokenEnvironmentVariable,
+            GitHubOAuthClientId = settings.GitHubOAuthClientId,
+            GitHubOAuthClientSecretEnvironmentVariable = settings.GitHubOAuthClientSecretEnvironmentVariable,
+        };
+    }
 }
 
 internal sealed class RepositoryRef
@@ -88,12 +125,19 @@ internal sealed class WindowsSettingsStore
                     new RepositoryRef { Owner = "steipete", Name = "RepoBar", Visibility = RepositoryVisibility.Pinned },
                 ],
             };
+            NormalizeSettings(sampleSettings);
             File.WriteAllText(settingsPath, JsonSerializer.Serialize(sampleSettings, JsonOptions));
             return new WindowsSettingsStore(settingsPath, sampleSettings);
         }
 
         var rawSettings = File.ReadAllText(settingsPath);
         var settings = JsonSerializer.Deserialize<WindowsSettings>(rawSettings, JsonOptions) ?? new WindowsSettings();
+        NormalizeSettings(settings);
+        return new WindowsSettingsStore(settingsPath, settings);
+    }
+
+    internal static void NormalizeSettings(WindowsSettings settings)
+    {
         settings.GitHubHost = GitHubHost.Normalize(settings.GitHubHost);
         if (string.IsNullOrWhiteSpace(settings.GitHubOAuthClientId))
         {
@@ -103,6 +147,33 @@ internal sealed class WindowsSettingsStore
         {
             settings.GitHubOAuthClientSecretEnvironmentVariable = WindowsOAuthClient.DefaultClientSecretEnvironmentVariable;
         }
+        settings.Accounts ??= [];
+        if (settings.Accounts.Count == 0)
+        {
+            settings.Accounts.Add(WindowsAccountProfile.FromLegacy(settings));
+        }
+
+        settings.Accounts = settings.Accounts
+            .Where(account => account.IsValid)
+            .Select(NormalizeAccount)
+            .GroupBy(account => account.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
+        if (settings.Accounts.Count == 0)
+        {
+            settings.Accounts.Add(WindowsAccountProfile.FromLegacy(settings));
+        }
+        if (settings.Accounts.All(account => !string.Equals(account.Id, settings.ActiveAccountId, StringComparison.OrdinalIgnoreCase)))
+        {
+            settings.ActiveAccountId = settings.Accounts[0].Id;
+        }
+
+        var active = settings.GetActiveAccount();
+        settings.GitHubHost = active.GitHubHost;
+        settings.TokenEnvironmentVariable = active.TokenEnvironmentVariable;
+        settings.GitHubOAuthClientId = active.GitHubOAuthClientId;
+        settings.GitHubOAuthClientSecretEnvironmentVariable = active.GitHubOAuthClientSecretEnvironmentVariable;
+
         if (string.IsNullOrWhiteSpace(settings.LocalProjectsRoot))
         {
             settings.LocalProjectsRoot = Path.Combine(
@@ -121,8 +192,32 @@ internal sealed class WindowsSettingsStore
                 Visibility = repository.Visibility,
             })
             .ToList();
+    }
 
-        return new WindowsSettingsStore(settingsPath, settings);
+    private static WindowsAccountProfile NormalizeAccount(WindowsAccountProfile account)
+    {
+        return new WindowsAccountProfile
+        {
+            Id = SanitizeAccountId(account.Id),
+            Label = string.IsNullOrWhiteSpace(account.Label) ? account.Id.Trim() : account.Label.Trim(),
+            GitHubHost = GitHubHost.Normalize(account.GitHubHost),
+            TokenEnvironmentVariable = string.IsNullOrWhiteSpace(account.TokenEnvironmentVariable)
+                ? "REPOBAR_GITHUB_TOKEN"
+                : account.TokenEnvironmentVariable.Trim(),
+            GitHubOAuthClientId = string.IsNullOrWhiteSpace(account.GitHubOAuthClientId)
+                ? WindowsOAuthClient.DefaultClientId
+                : account.GitHubOAuthClientId.Trim(),
+            GitHubOAuthClientSecretEnvironmentVariable = string.IsNullOrWhiteSpace(account.GitHubOAuthClientSecretEnvironmentVariable)
+                ? WindowsOAuthClient.DefaultClientSecretEnvironmentVariable
+                : account.GitHubOAuthClientSecretEnvironmentVariable.Trim(),
+        };
+    }
+
+    internal static string SanitizeAccountId(string value)
+    {
+        var candidate = string.Concat(value.Trim().ToLowerInvariant().Select(character =>
+            char.IsAsciiLetterOrDigit(character) || character is '-' or '_' ? character : '-')).Trim('-');
+        return string.IsNullOrWhiteSpace(candidate) ? WindowsAccountProfile.DefaultId : candidate;
     }
 
     public void SetVisibility(string fullName, RepositoryVisibility visibility)
@@ -170,15 +265,16 @@ internal sealed class WindowsSettingsStore
 
     public string? ResolveToken()
     {
-        var credentialToken = new WindowsCredentialStore(Settings.GitHubHost).ReadToken();
+        var account = Settings.GetActiveAccount();
+        var credentialToken = new WindowsCredentialStore(account.GitHubHost, account.Id).ReadToken();
         if (!string.IsNullOrWhiteSpace(credentialToken))
         {
             return credentialToken;
         }
 
-        if (!string.IsNullOrWhiteSpace(Settings.TokenEnvironmentVariable))
+        if (!string.IsNullOrWhiteSpace(account.TokenEnvironmentVariable))
         {
-            var configuredToken = Environment.GetEnvironmentVariable(Settings.TokenEnvironmentVariable);
+            var configuredToken = Environment.GetEnvironmentVariable(account.TokenEnvironmentVariable);
             if (!string.IsNullOrWhiteSpace(configuredToken))
             {
                 return configuredToken;

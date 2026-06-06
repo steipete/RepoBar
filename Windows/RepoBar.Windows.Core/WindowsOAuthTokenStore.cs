@@ -21,8 +21,13 @@ internal sealed class WindowsOAuthTokenStore
     private readonly WindowsCredentialStore _credentialStore;
 
     public WindowsOAuthTokenStore(string gitHubHost)
+        : this(gitHubHost, WindowsAccountProfile.DefaultId)
     {
-        _credentialStore = WindowsCredentialStore.CreateOAuthStore(gitHubHost);
+    }
+
+    public WindowsOAuthTokenStore(string gitHubHost, string accountId)
+    {
+        _credentialStore = WindowsCredentialStore.CreateOAuthStore(gitHubHost, accountId);
     }
 
     public string TargetName => _credentialStore.TargetName;

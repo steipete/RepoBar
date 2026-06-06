@@ -7,7 +7,8 @@ internal static class WindowsTokenResolver
         string? fallbackToken,
         CancellationToken cancellationToken)
     {
-        var oauthStore = new WindowsOAuthTokenStore(settings.GitHubHost);
+        var account = settings.GetActiveAccount();
+        var oauthStore = new WindowsOAuthTokenStore(account.GitHubHost, account.Id);
         var tokens = oauthStore.ReadTokens();
         if (tokens != null)
         {

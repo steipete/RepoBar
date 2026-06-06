@@ -13,12 +13,28 @@ public sealed class WindowsCredentialStoreTests
         Assert.Equal(expected, WindowsCredentialStore.BuildTargetName(host));
     }
 
+    [Fact]
+    public void BuildTargetName_includes_non_default_account_id()
+    {
+        Assert.Equal(
+            "RepoBar.Windows:github.com:work-account",
+            WindowsCredentialStore.BuildTargetName("github.com", "Work Account"));
+    }
+
     [Theory]
     [InlineData("github.com", "RepoBar.Windows.OAuth:github.com")]
     [InlineData("https://github.example.com/org/repo", "RepoBar.Windows.OAuth:github.example.com")]
     public void BuildOAuthTargetName_separates_oauth_tokens_from_pat_tokens(string host, string expected)
     {
         Assert.Equal(expected, WindowsCredentialStore.BuildOAuthTargetName(host));
+    }
+
+    [Fact]
+    public void BuildOAuthTargetName_includes_non_default_account_id()
+    {
+        Assert.Equal(
+            "RepoBar.Windows.OAuth:github.com:work",
+            WindowsCredentialStore.BuildOAuthTargetName("github.com", "work"));
     }
 
     [Fact]
@@ -53,5 +69,39 @@ public sealed class WindowsCredentialStoreTests
     public void Normalize_host_accepts_urls_and_plain_hosts(string? host, string expected)
     {
         Assert.Equal(expected, GitHubHost.Normalize(host));
+    }
+
+    [Fact]
+    public void NormalizeSettings_migrates_legacy_account_fields_and_mirrors_active_account()
+    {
+        var settings = new WindowsSettings
+        {
+            GitHubHost = "GitHub.EXAMPLE.com/",
+            TokenEnvironmentVariable = "LEGACY_TOKEN",
+            GitHubOAuthClientId = "legacy-client",
+            GitHubOAuthClientSecretEnvironmentVariable = "LEGACY_SECRET",
+            Accounts =
+            [
+                new WindowsAccountProfile
+                {
+                    Id = "Work Account",
+                    Label = "Work",
+                    GitHubHost = "https://github.enterprise.test/org",
+                    TokenEnvironmentVariable = "WORK_TOKEN",
+                    GitHubOAuthClientId = "work-client",
+                    GitHubOAuthClientSecretEnvironmentVariable = "WORK_SECRET",
+                },
+            ],
+            ActiveAccountId = "work-account",
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal("work-account", settings.ActiveAccountId);
+        Assert.Equal("github.enterprise.test", settings.GitHubHost);
+        Assert.Equal("WORK_TOKEN", settings.TokenEnvironmentVariable);
+        Assert.Equal("work-client", settings.GitHubOAuthClientId);
+        Assert.Equal("WORK_SECRET", settings.GitHubOAuthClientSecretEnvironmentVariable);
+        Assert.Equal("work-account", settings.GetActiveAccount().Id);
     }
 }

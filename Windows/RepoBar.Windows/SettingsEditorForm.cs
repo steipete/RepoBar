@@ -9,6 +9,9 @@ internal sealed class SettingsEditorForm : Form
     private readonly WindowsSettingsStore _settingsStore;
     private readonly Label _credentialState = new();
     private readonly Label _oauthState = new();
+    private readonly BindingList<AccountRow> _accounts = [];
+    private readonly ComboBox _accountSelector = new();
+    private readonly TextBox _accountLabelTextBox = new();
     private readonly TextBox _hostTextBox = new();
     private readonly TextBox _tokenEnvironmentTextBox = new();
     private readonly TextBox _oauthClientIdTextBox = new();
@@ -29,6 +32,8 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _enablePullRequestNotifications = new();
     private readonly BindingList<RepositoryRow> _repositories = [];
     private readonly DataGridView _repositoriesGrid = new();
+    private AccountRow? _selectedAccount;
+    private bool _loadingAccount;
 
     public SettingsEditorForm(WindowsSettingsStore settingsStore)
     {
@@ -47,6 +52,16 @@ internal sealed class SettingsEditorForm : Form
     private void LoadSettings()
     {
         var settings = _settingsStore.Settings;
+        foreach (var account in settings.Accounts)
+        {
+            _accounts.Add(AccountRow.FromProfile(account));
+        }
+
+        if (_accounts.Count == 0)
+        {
+            _accounts.Add(AccountRow.FromProfile(WindowsAccountProfile.FromLegacy(settings)));
+        }
+
         _hostTextBox.Text = settings.GitHubHost;
         _tokenEnvironmentTextBox.Text = settings.TokenEnvironmentVariable;
         _oauthClientIdTextBox.Text = settings.GitHubOAuthClientId;
@@ -105,6 +120,12 @@ internal sealed class SettingsEditorForm : Form
         root.Controls.Add(settingsGrid);
 
         _hostTextBox.TextChanged += (_, _) => UpdateCredentialState();
+        _accountSelector.DropDownStyle = ComboBoxStyle.DropDownList;
+        _accountSelector.DataSource = _accounts;
+        _accountSelector.DisplayMember = nameof(AccountRow.DisplayName);
+        _accountSelector.SelectedIndexChanged += (_, _) => SelectAccountFromCombo();
+        AddLabeledControl(settingsGrid, "Active account", _accountSelector);
+        AddLabeledControl(settingsGrid, "Account label", _accountLabelTextBox);
         AddLabeledControl(settingsGrid, "GitHub host", _hostTextBox);
         AddLabeledControl(settingsGrid, "Token env var", _tokenEnvironmentTextBox);
         AddLabeledControl(settingsGrid, "OAuth client ID", _oauthClientIdTextBox);
@@ -176,8 +197,14 @@ internal sealed class SettingsEditorForm : Form
         signInButton.Click += async (_, _) => await SignInWithGitHubAsync();
         var clearOAuthButton = new Button { Text = "Clear OAuth" };
         clearOAuthButton.Click += (_, _) => ClearOAuthToken();
+        var addAccountButton = new Button { Text = "Add account" };
+        addAccountButton.Click += (_, _) => AddAccount();
+        var removeAccountButton = new Button { Text = "Remove account" };
+        removeAccountButton.Click += (_, _) => RemoveSelectedAccount();
         footer.Controls.Add(saveButton);
         footer.Controls.Add(cancelButton);
+        footer.Controls.Add(removeAccountButton);
+        footer.Controls.Add(addAccountButton);
         footer.Controls.Add(clearOAuthButton);
         footer.Controls.Add(signInButton);
         footer.Controls.Add(clearTokenButton);
@@ -188,6 +215,13 @@ internal sealed class SettingsEditorForm : Form
 
         AcceptButton = saveButton;
         CancelButton = cancelButton;
+
+        var activeIndex = _accounts
+            .Select((account, index) => (account, index))
+            .FirstOrDefault(pair => string.Equals(pair.account.Id, _settingsStore.Settings.ActiveAccountId, StringComparison.OrdinalIgnoreCase))
+            .index;
+        _accountSelector.SelectedIndex = activeIndex < 0 ? 0 : activeIndex;
+        SelectAccountFromCombo();
     }
 
     private static void AddLabeledControl(TableLayoutPanel table, string label, Control control)
@@ -195,6 +229,101 @@ internal sealed class SettingsEditorForm : Form
         table.Controls.Add(new Label { Text = label, AutoSize = true, Anchor = AnchorStyles.Left });
         control.Anchor = AnchorStyles.Left | AnchorStyles.Right;
         table.Controls.Add(control);
+    }
+
+    private void SelectAccountFromCombo()
+    {
+        if (_loadingAccount)
+        {
+            return;
+        }
+
+        if (_selectedAccount != null)
+        {
+            SaveAccountFields(_selectedAccount);
+        }
+
+        if (_accountSelector.SelectedItem is AccountRow selected)
+        {
+            LoadAccountFields(selected);
+        }
+    }
+
+    private void LoadAccountFields(AccountRow account)
+    {
+        _loadingAccount = true;
+        _selectedAccount = account;
+        _accountLabelTextBox.Text = account.Label;
+        _hostTextBox.Text = account.GitHubHost;
+        _tokenEnvironmentTextBox.Text = account.TokenEnvironmentVariable;
+        _oauthClientIdTextBox.Text = account.GitHubOAuthClientId;
+        _oauthSecretEnvironmentTextBox.Text = account.GitHubOAuthClientSecretEnvironmentVariable;
+        _loadingAccount = false;
+        UpdateCredentialState();
+    }
+
+    private void SaveAccountFields(AccountRow account)
+    {
+        account.Label = string.IsNullOrWhiteSpace(_accountLabelTextBox.Text) ? account.Id : _accountLabelTextBox.Text.Trim();
+        account.GitHubHost = GitHubHost.Normalize(_hostTextBox.Text);
+        account.TokenEnvironmentVariable = _tokenEnvironmentTextBox.Text.Trim();
+        account.GitHubOAuthClientId = string.IsNullOrWhiteSpace(_oauthClientIdTextBox.Text)
+            ? WindowsOAuthClient.DefaultClientId
+            : _oauthClientIdTextBox.Text.Trim();
+        account.GitHubOAuthClientSecretEnvironmentVariable = string.IsNullOrWhiteSpace(_oauthSecretEnvironmentTextBox.Text)
+            ? WindowsOAuthClient.DefaultClientSecretEnvironmentVariable
+            : _oauthSecretEnvironmentTextBox.Text.Trim();
+        _accountSelector.Refresh();
+    }
+
+    private void AddAccount()
+    {
+        SaveSelectedAccountFields();
+        var id = NextAccountId();
+        var account = new AccountRow(
+            id,
+            $"Account {_accounts.Count + 1}",
+            GitHubHost.Normalize(_hostTextBox.Text),
+            _tokenEnvironmentTextBox.Text.Trim(),
+            _oauthClientIdTextBox.Text.Trim(),
+            _oauthSecretEnvironmentTextBox.Text.Trim());
+        _accounts.Add(account);
+        _accountSelector.SelectedItem = account;
+    }
+
+    private void RemoveSelectedAccount()
+    {
+        if (_accounts.Count <= 1 || _accountSelector.SelectedItem is not AccountRow account)
+        {
+            return;
+        }
+
+        var index = _accountSelector.SelectedIndex;
+        _accounts.Remove(account);
+        _selectedAccount = null;
+        _accountSelector.SelectedIndex = Math.Clamp(index - 1, 0, _accounts.Count - 1);
+        SelectAccountFromCombo();
+    }
+
+    private void SaveSelectedAccountFields()
+    {
+        if (_selectedAccount != null)
+        {
+            SaveAccountFields(_selectedAccount);
+        }
+    }
+
+    private string NextAccountId()
+    {
+        var used = _accounts.Select(account => account.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        for (var index = _accounts.Count + 1; ; index++)
+        {
+            var id = $"account-{index}";
+            if (!used.Contains(id))
+            {
+                return id;
+            }
+        }
     }
 
     private void ConfigureRepositoryGrid()
@@ -289,18 +418,15 @@ internal sealed class SettingsEditorForm : Form
     private void SaveSettings()
     {
         _repositoriesGrid.EndEdit();
+        SaveSelectedAccountFields();
         var settings = _settingsStore.Settings;
-        settings.GitHubHost = GitHubHost.Normalize(_hostTextBox.Text);
-        _hostTextBox.Text = settings.GitHubHost;
-        settings.TokenEnvironmentVariable = _tokenEnvironmentTextBox.Text.Trim();
-        settings.GitHubOAuthClientId = string.IsNullOrWhiteSpace(_oauthClientIdTextBox.Text)
-            ? WindowsOAuthClient.DefaultClientId
-            : _oauthClientIdTextBox.Text.Trim();
-        _oauthClientIdTextBox.Text = settings.GitHubOAuthClientId;
-        settings.GitHubOAuthClientSecretEnvironmentVariable = string.IsNullOrWhiteSpace(_oauthSecretEnvironmentTextBox.Text)
-            ? WindowsOAuthClient.DefaultClientSecretEnvironmentVariable
-            : _oauthSecretEnvironmentTextBox.Text.Trim();
-        _oauthSecretEnvironmentTextBox.Text = settings.GitHubOAuthClientSecretEnvironmentVariable;
+        var activeAccount = CurrentAccountRow();
+        settings.Accounts = _accounts.Select(account => account.ToProfile()).ToList();
+        settings.ActiveAccountId = activeAccount.Id;
+        settings.GitHubHost = activeAccount.GitHubHost;
+        settings.TokenEnvironmentVariable = activeAccount.TokenEnvironmentVariable;
+        settings.GitHubOAuthClientId = activeAccount.GitHubOAuthClientId;
+        settings.GitHubOAuthClientSecretEnvironmentVariable = activeAccount.GitHubOAuthClientSecretEnvironmentVariable;
         settings.RefreshIntervalMinutes = (int)_refreshMinutes.Value;
         settings.OpenMenuOnLeftClick = _openMenuOnLeftClick.Checked;
         settings.LaunchAtLogin = _launchAtLogin.Checked;
@@ -315,6 +441,7 @@ internal sealed class SettingsEditorForm : Form
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
         settings.EnablePullRequestNotifications = _enablePullRequestNotifications.Checked;
+        WindowsSettingsStore.NormalizeSettings(settings);
 
         _settingsStore.ReplaceRepositories(_repositories
             .Where(repository => !string.IsNullOrWhiteSpace(repository.Owner) && !string.IsNullOrWhiteSpace(repository.Name))
@@ -330,23 +457,24 @@ internal sealed class SettingsEditorForm : Form
 
     private WindowsSettings CurrentSettingsSnapshot()
     {
+        SaveSelectedAccountFields();
+        var activeAccount = CurrentAccountRow();
         return new WindowsSettings
         {
-            GitHubHost = GitHubHost.Normalize(_hostTextBox.Text),
-            TokenEnvironmentVariable = _tokenEnvironmentTextBox.Text.Trim(),
-            GitHubOAuthClientId = string.IsNullOrWhiteSpace(_oauthClientIdTextBox.Text)
-                ? WindowsOAuthClient.DefaultClientId
-                : _oauthClientIdTextBox.Text.Trim(),
-            GitHubOAuthClientSecretEnvironmentVariable = string.IsNullOrWhiteSpace(_oauthSecretEnvironmentTextBox.Text)
-                ? WindowsOAuthClient.DefaultClientSecretEnvironmentVariable
-                : _oauthSecretEnvironmentTextBox.Text.Trim(),
+            ActiveAccountId = activeAccount.Id,
+            GitHubHost = activeAccount.GitHubHost,
+            TokenEnvironmentVariable = activeAccount.TokenEnvironmentVariable,
+            GitHubOAuthClientId = activeAccount.GitHubOAuthClientId,
+            GitHubOAuthClientSecretEnvironmentVariable = activeAccount.GitHubOAuthClientSecretEnvironmentVariable,
+            Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
         };
     }
 
     private string? ResolveTokenForSnapshot()
     {
         var snapshot = CurrentSettingsSnapshot();
-        var oauthToken = new WindowsOAuthTokenStore(snapshot.GitHubHost).ReadTokens()?.AccessToken;
+        var account = snapshot.GetActiveAccount();
+        var oauthToken = new WindowsOAuthTokenStore(account.GitHubHost, account.Id).ReadTokens()?.AccessToken;
         if (!string.IsNullOrWhiteSpace(oauthToken))
         {
             return oauthToken;
@@ -357,15 +485,15 @@ internal sealed class SettingsEditorForm : Form
             return _personalAccessTokenTextBox.Text;
         }
 
-        var credentialToken = new WindowsCredentialStore(snapshot.GitHubHost).ReadToken();
+        var credentialToken = new WindowsCredentialStore(account.GitHubHost, account.Id).ReadToken();
         if (!string.IsNullOrWhiteSpace(credentialToken))
         {
             return credentialToken;
         }
 
-        if (!string.IsNullOrWhiteSpace(snapshot.TokenEnvironmentVariable))
+        if (!string.IsNullOrWhiteSpace(account.TokenEnvironmentVariable))
         {
-            var configuredToken = Environment.GetEnvironmentVariable(snapshot.TokenEnvironmentVariable);
+            var configuredToken = Environment.GetEnvironmentVariable(account.TokenEnvironmentVariable);
             if (!string.IsNullOrWhiteSpace(configuredToken))
             {
                 return configuredToken;
@@ -386,7 +514,9 @@ internal sealed class SettingsEditorForm : Form
 
         try
         {
-            new WindowsCredentialStore(_hostTextBox.Text).SaveToken(_personalAccessTokenTextBox.Text);
+            var snapshot = CurrentSettingsSnapshot();
+            var account = snapshot.GetActiveAccount();
+            new WindowsCredentialStore(account.GitHubHost, account.Id).SaveToken(_personalAccessTokenTextBox.Text);
             _personalAccessTokenTextBox.Clear();
             UpdateCredentialState();
         }
@@ -400,7 +530,9 @@ internal sealed class SettingsEditorForm : Form
     {
         try
         {
-            new WindowsCredentialStore(_hostTextBox.Text).ClearToken();
+            var snapshot = CurrentSettingsSnapshot();
+            var account = snapshot.GetActiveAccount();
+            new WindowsCredentialStore(account.GitHubHost, account.Id).ClearToken();
             _personalAccessTokenTextBox.Clear();
             UpdateCredentialState();
         }
@@ -415,9 +547,10 @@ internal sealed class SettingsEditorForm : Form
         try
         {
             var snapshot = CurrentSettingsSnapshot();
+            var account = snapshot.GetActiveAccount();
             using var client = new WindowsOAuthClient();
             var tokens = await client.LoginAsync(snapshot, CancellationToken.None).ConfigureAwait(true);
-            new WindowsOAuthTokenStore(snapshot.GitHubHost).SaveTokens(tokens);
+            new WindowsOAuthTokenStore(account.GitHubHost, account.Id).SaveTokens(tokens);
             UpdateCredentialState();
             MessageBox.Show("GitHub sign-in complete.", "RepoBar GitHub Sign-In", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
@@ -431,7 +564,9 @@ internal sealed class SettingsEditorForm : Form
     {
         try
         {
-            new WindowsOAuthTokenStore(_hostTextBox.Text).ClearTokens();
+            var snapshot = CurrentSettingsSnapshot();
+            var account = snapshot.GetActiveAccount();
+            new WindowsOAuthTokenStore(account.GitHubHost, account.Id).ClearTokens();
             UpdateCredentialState();
         }
         catch (Exception exception)
@@ -442,14 +577,26 @@ internal sealed class SettingsEditorForm : Form
 
     private void UpdateCredentialState()
     {
-        var store = new WindowsCredentialStore(_hostTextBox.Text);
+        var account = _selectedAccount ?? CurrentAccountRow();
+        var store = new WindowsCredentialStore(account.GitHubHost, account.Id);
         _credentialState.Text = store.HasToken()
             ? $"PAT stored as {store.TargetName}"
             : $"No PAT stored ({store.TargetName})";
-        var oauthStore = new WindowsOAuthTokenStore(_hostTextBox.Text);
+        var oauthStore = new WindowsOAuthTokenStore(account.GitHubHost, account.Id);
         _oauthState.Text = oauthStore.ReadTokens() == null
             ? $"No OAuth token ({oauthStore.TargetName})"
             : $"OAuth stored as {oauthStore.TargetName}";
+    }
+
+    private AccountRow CurrentAccountRow()
+    {
+        if (_accountSelector.SelectedItem is AccountRow row)
+        {
+            return row;
+        }
+        return _accounts.Count == 0
+            ? AccountRow.FromProfile(WindowsAccountProfile.FromLegacy(_settingsStore.Settings))
+            : _accounts[0];
     }
 
     private sealed class RepositoryRow
@@ -464,5 +611,58 @@ internal sealed class SettingsEditorForm : Form
         public string Owner { get; set; }
         public string Name { get; set; }
         public RepositoryVisibility Visibility { get; set; }
+    }
+
+    private sealed class AccountRow
+    {
+        public AccountRow(
+            string id,
+            string label,
+            string gitHubHost,
+            string tokenEnvironmentVariable,
+            string gitHubOAuthClientId,
+            string gitHubOAuthClientSecretEnvironmentVariable)
+        {
+            Id = WindowsSettingsStore.SanitizeAccountId(id);
+            Label = label;
+            GitHubHost = RepoBar.Windows.GitHubHost.Normalize(gitHubHost);
+            TokenEnvironmentVariable = string.IsNullOrWhiteSpace(tokenEnvironmentVariable) ? "REPOBAR_GITHUB_TOKEN" : tokenEnvironmentVariable;
+            GitHubOAuthClientId = string.IsNullOrWhiteSpace(gitHubOAuthClientId) ? WindowsOAuthClient.DefaultClientId : gitHubOAuthClientId;
+            GitHubOAuthClientSecretEnvironmentVariable = string.IsNullOrWhiteSpace(gitHubOAuthClientSecretEnvironmentVariable)
+                ? WindowsOAuthClient.DefaultClientSecretEnvironmentVariable
+                : gitHubOAuthClientSecretEnvironmentVariable;
+        }
+
+        public string Id { get; }
+        public string Label { get; set; }
+        public string GitHubHost { get; set; }
+        public string TokenEnvironmentVariable { get; set; }
+        public string GitHubOAuthClientId { get; set; }
+        public string GitHubOAuthClientSecretEnvironmentVariable { get; set; }
+        public string DisplayName => $"{Label} ({GitHubHost})";
+
+        public static AccountRow FromProfile(WindowsAccountProfile profile)
+        {
+            return new AccountRow(
+                profile.Id,
+                profile.DisplayName,
+                profile.GitHubHost,
+                profile.TokenEnvironmentVariable,
+                profile.GitHubOAuthClientId,
+                profile.GitHubOAuthClientSecretEnvironmentVariable);
+        }
+
+        public WindowsAccountProfile ToProfile()
+        {
+            return new WindowsAccountProfile
+            {
+                Id = Id,
+                Label = Label,
+                GitHubHost = GitHubHost,
+                TokenEnvironmentVariable = TokenEnvironmentVariable,
+                GitHubOAuthClientId = GitHubOAuthClientId,
+                GitHubOAuthClientSecretEnvironmentVariable = GitHubOAuthClientSecretEnvironmentVariable,
+            };
+        }
     }
 }
