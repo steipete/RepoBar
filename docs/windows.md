@@ -17,7 +17,7 @@ The Windows app currently provides:
 - optional traffic views/clones, commit activity summary, and changelog headline
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus, including Mine and label filters for issues plus Mine/commented/reviewed filters for pull requests when viewer metadata is available
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, fork/archive inclusion, repository visibility, display limit, and sort order
+- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, fork/archive inclusion, repository visibility, owner/status display filters, display limit, and sort order
 - native menu customization for hiding and reordering main tray actions and repository submenu entries
 - filtered repository discovery from GitHub's accessible repository list
 - repository checkout from the tray into the configured local projects folder
@@ -108,6 +108,9 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "repositorySortKey": "activity",
   "includeForkedRepositories": false,
   "includeArchivedRepositories": false,
+  "repositoryOwnerFilter": [],
+  "showOnlyRepositoriesWithIssues": false,
+  "showOnlyRepositoriesWithPullRequests": false,
   "heatmapDisplay": "rowAndSubmenu",
   "heatmapSpan": "twelveMonths",
   "showRateLimits": true,
@@ -167,7 +170,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 }
 ```
 
-Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name; pinned repositories stay ahead of the normal sorted list.
+Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Owner filter** to limit normal displayed repositories to specific owners, and use **Only repos with issues** or **Only repos with PRs** to show only repositories with matching open work. Pinned repositories stay visible ahead of filtered normal repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name.
 
 Use **Repository heatmap** to hide heatmap summaries or show them in the tray row, repository submenu, or both. Use **Heatmap window** to choose the GitHub commit-activity window used for repository heatmap totals: 1, 3, 6, or 12 months. Hidden heatmaps skip the GitHub commit-activity request.
 

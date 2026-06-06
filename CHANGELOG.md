@@ -242,6 +242,7 @@
 - Include organization and collaborator repositories in repo lists.
 - CLI: add `--owner`/`--mine` filters for repos list.
 - Windows: filter repository discovery by forked and archived repository settings.
+- Windows: add owner and issue/PR status filters for displayed repositories.
 
 ## 0.1.0 - 2025-12-31
 

@@ -32,6 +32,9 @@ internal sealed class SettingsEditorForm : Form
     private readonly ComboBox _repositorySortKey = new();
     private readonly CheckBox _includeForkedRepositories = new();
     private readonly CheckBox _includeArchivedRepositories = new();
+    private readonly TextBox _repositoryOwnerFilter = new();
+    private readonly CheckBox _showOnlyRepositoriesWithIssues = new();
+    private readonly CheckBox _showOnlyRepositoriesWithPullRequests = new();
     private readonly ComboBox _heatmapDisplay = new();
     private readonly ComboBox _heatmapSpan = new();
     private readonly CheckBox _showRateLimits = new();
@@ -110,6 +113,9 @@ internal sealed class SettingsEditorForm : Form
         _repositorySortKey.SelectedValue = settings.RepositorySortKey;
         _includeForkedRepositories.Checked = settings.IncludeForkedRepositories;
         _includeArchivedRepositories.Checked = settings.IncludeArchivedRepositories;
+        _repositoryOwnerFilter.Text = FormatRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
+        _showOnlyRepositoriesWithIssues.Checked = settings.ShowOnlyRepositoriesWithIssues;
+        _showOnlyRepositoriesWithPullRequests.Checked = settings.ShowOnlyRepositoriesWithPullRequests;
         _heatmapDisplay.DropDownStyle = ComboBoxStyle.DropDownList;
         _heatmapDisplay.DataSource = Enum.GetValues<WindowsHeatmapDisplay>()
             .Select(HeatmapDisplayRow.FromDisplay)
@@ -194,6 +200,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
         AddLabeledControl(settingsGrid, "Repository limit", _repositoryDisplayLimit);
         AddLabeledControl(settingsGrid, "Repository sort", _repositorySortKey);
+        AddLabeledControl(settingsGrid, "Owner filter", _repositoryOwnerFilter);
         AddLabeledControl(settingsGrid, "Repository heatmap", _heatmapDisplay);
         AddLabeledControl(settingsGrid, "Heatmap window", _heatmapSpan);
         AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
@@ -214,6 +221,8 @@ internal sealed class SettingsEditorForm : Form
         _enableResponseCache.Text = "Use response cache";
         _includeForkedRepositories.Text = "Include forked repos";
         _includeArchivedRepositories.Text = "Include archived repos";
+        _showOnlyRepositoriesWithIssues.Text = "Only repos with issues";
+        _showOnlyRepositoriesWithPullRequests.Text = "Only repos with PRs";
         _showRateLimits.Text = "Show rate limits";
         _showContributionSummary.Text = "Show contribution summary";
         _showActionsUsage.Text = "Show Actions usage";
@@ -232,6 +241,8 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_enableResponseCache);
         settingsGrid.Controls.Add(_includeForkedRepositories);
         settingsGrid.Controls.Add(_includeArchivedRepositories);
+        settingsGrid.Controls.Add(_showOnlyRepositoriesWithIssues);
+        settingsGrid.Controls.Add(_showOnlyRepositoriesWithPullRequests);
         settingsGrid.Controls.Add(_showRateLimits);
         settingsGrid.Controls.Add(_showContributionSummary);
         settingsGrid.Controls.Add(_showActionsUsage);
@@ -551,6 +562,9 @@ internal sealed class SettingsEditorForm : Form
             : RepositorySortKey.Activity;
         settings.IncludeForkedRepositories = _includeForkedRepositories.Checked;
         settings.IncludeArchivedRepositories = _includeArchivedRepositories.Checked;
+        settings.RepositoryOwnerFilter = ParseRepositoryOwnerFilter(_repositoryOwnerFilter.Text);
+        settings.ShowOnlyRepositoriesWithIssues = _showOnlyRepositoriesWithIssues.Checked;
+        settings.ShowOnlyRepositoriesWithPullRequests = _showOnlyRepositoriesWithPullRequests.Checked;
         settings.HeatmapDisplay = _heatmapDisplay.SelectedValue is WindowsHeatmapDisplay heatmapDisplay
             ? heatmapDisplay
             : WindowsHeatmapDisplay.RowAndSubmenu;
@@ -600,8 +614,22 @@ internal sealed class SettingsEditorForm : Form
                 : _gitHubArchiveDatabasePath.Text.Trim(),
             IncludeForkedRepositories = _includeForkedRepositories.Checked,
             IncludeArchivedRepositories = _includeArchivedRepositories.Checked,
+            RepositoryOwnerFilter = ParseRepositoryOwnerFilter(_repositoryOwnerFilter.Text),
+            ShowOnlyRepositoriesWithIssues = _showOnlyRepositoriesWithIssues.Checked,
+            ShowOnlyRepositoriesWithPullRequests = _showOnlyRepositoriesWithPullRequests.Checked,
             Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
         };
+    }
+
+    private static string FormatRepositoryOwnerFilter(IEnumerable<string> owners)
+    {
+        return string.Join(", ", WindowsSettingsStore.NormalizeRepositoryOwnerFilter(owners));
+    }
+
+    private static List<string> ParseRepositoryOwnerFilter(string value)
+    {
+        return WindowsSettingsStore.NormalizeRepositoryOwnerFilter(
+            value.Split([',', ';', ' ', '\r', '\n', '\t'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
     }
 
     private string? ResolveTokenForSnapshot()

@@ -59,18 +59,52 @@ public sealed class WindowsRepositoryDisplayTests
     }
 
     [Fact]
-    public void NormalizeSettings_clamps_repository_display_limit_and_preserves_sort_key()
+    public void Apply_filters_normal_repositories_by_owner_and_issue_or_pull_state()
+    {
+        var settings = new WindowsSettings
+        {
+            RepositoryDisplayLimit = 10,
+            RepositoryOwnerFilter = ["target"],
+            ShowOnlyRepositoriesWithIssues = true,
+            ShowOnlyRepositoriesWithPullRequests = true,
+            Repositories =
+            [
+                new RepositoryRef { Owner = "other", Name = "pinned", Visibility = RepositoryVisibility.Pinned },
+                new RepositoryRef { Owner = "target", Name = "issues", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "target", Name = "pulls", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "target", Name = "quiet", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "other", Name = "issues", Visibility = RepositoryVisibility.Visible },
+            ],
+        };
+        var statuses = new[]
+        {
+            Status("target/quiet"),
+            Status("other/issues", issues: 4),
+            Status("target/pulls", pulls: 2),
+            Status("target/issues", issues: 3),
+            Status("other/pinned"),
+        };
+
+        var displayed = WindowsRepositoryDisplay.Apply(statuses, settings);
+
+        Assert.Equal(["other/pinned", "target/issues", "target/pulls"], displayed.Select(status => status.Repository.FullName));
+    }
+
+    [Fact]
+    public void NormalizeSettings_clamps_repository_display_limit_normalizes_owner_filter_and_preserves_sort_key()
     {
         var settings = new WindowsSettings
         {
             RepositoryDisplayLimit = 0,
             RepositorySortKey = RepositorySortKey.Stars,
+            RepositoryOwnerFilter = [" Beta ", "alpha", "", "ALPHA"],
         };
 
         WindowsSettingsStore.NormalizeSettings(settings);
 
         Assert.Equal(1, settings.RepositoryDisplayLimit);
         Assert.Equal(RepositorySortKey.Stars, settings.RepositorySortKey);
+        Assert.Equal(["alpha", "beta"], settings.RepositoryOwnerFilter);
     }
 
     private static RepositoryStatus Status(

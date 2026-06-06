@@ -26,6 +26,9 @@ internal sealed class WindowsSettings
     public RepositorySortKey RepositorySortKey { get; set; } = RepositorySortKey.Activity;
     public bool IncludeForkedRepositories { get; set; }
     public bool IncludeArchivedRepositories { get; set; }
+    public List<string> RepositoryOwnerFilter { get; set; } = [];
+    public bool ShowOnlyRepositoriesWithIssues { get; set; }
+    public bool ShowOnlyRepositoriesWithPullRequests { get; set; }
     public WindowsHeatmapDisplay HeatmapDisplay { get; set; } = WindowsHeatmapDisplay.RowAndSubmenu;
     public WindowsHeatmapSpan HeatmapSpan { get; set; } = WindowsHeatmapSpan.TwelveMonths;
     public bool ShowRateLimits { get; set; } = true;
@@ -305,6 +308,7 @@ internal sealed class WindowsSettingsStore
             : settings.LocalWorktreeFolderName.Trim();
         settings.RefreshIntervalMinutes = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
         settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
+        settings.RepositoryOwnerFilter = NormalizeRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
         settings.MenuCustomization ??= new WindowsMenuCustomization();
         settings.MenuCustomization.Normalize();
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
@@ -346,6 +350,16 @@ internal sealed class WindowsSettingsStore
         var candidate = string.Concat(value.Trim().ToLowerInvariant().Select(character =>
             char.IsAsciiLetterOrDigit(character) || character is '-' or '_' ? character : '-')).Trim('-');
         return string.IsNullOrWhiteSpace(candidate) ? WindowsAccountProfile.DefaultId : candidate;
+    }
+
+    internal static List<string> NormalizeRepositoryOwnerFilter(IEnumerable<string>? owners)
+    {
+        return (owners ?? Enumerable.Empty<string>())
+            .Select(owner => owner.Trim().ToLowerInvariant())
+            .Where(owner => !string.IsNullOrWhiteSpace(owner))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(owner => owner, StringComparer.OrdinalIgnoreCase)
+            .ToList();
     }
 
     public void SetVisibility(string fullName, RepositoryVisibility visibility)
@@ -459,7 +473,11 @@ internal static class WindowsRepositoryDisplay
         var pinned = statuses
             .Where(status => pinnedOrder.ContainsKey(status.Repository.FullName))
             .OrderBy(status => pinnedOrder[status.Repository.FullName]);
-        var normal = Sort(statuses.Where(status => !pinnedOrder.ContainsKey(status.Repository.FullName)), settings.RepositorySortKey);
+        var normal = Sort(
+            statuses
+                .Where(status => !pinnedOrder.ContainsKey(status.Repository.FullName))
+                .Where(status => MatchesDisplayFilter(status, settings)),
+            settings.RepositorySortKey);
 
         return pinned
             .Concat(normal)
@@ -486,5 +504,24 @@ internal static class WindowsRepositoryDisplay
                 .OrderByDescending(status => status.PushedAt ?? DateTimeOffset.MinValue)
                 .ThenBy(status => status.Repository.FullName, StringComparer.OrdinalIgnoreCase),
         };
+    }
+
+    private static bool MatchesDisplayFilter(RepositoryStatus status, WindowsSettings settings)
+    {
+        if (settings.RepositoryOwnerFilter.Count > 0 &&
+            !settings.RepositoryOwnerFilter.Contains(status.Repository.Owner, StringComparer.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var onlyWithIssues = settings.ShowOnlyRepositoriesWithIssues;
+        var onlyWithPullRequests = settings.ShowOnlyRepositoriesWithPullRequests;
+        if (!onlyWithIssues && !onlyWithPullRequests)
+        {
+            return true;
+        }
+
+        return (onlyWithIssues && status.IssueCount > 0) ||
+            (onlyWithPullRequests && status.PullRequestCount > 0);
     }
 }
