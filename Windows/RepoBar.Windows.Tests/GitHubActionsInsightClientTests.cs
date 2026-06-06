@@ -27,6 +27,14 @@ public sealed class GitHubActionsInsightClientTests
                       ]
                     }
                     """),
+                "/users/owner/settings/billing/usage?product=actions" => JsonResponse("""
+                    {
+                      "usageItems": [
+                        {"date":"2026-06-01","sku":"ACTIONS_WINDOWS","quantity":120.5,"unitType":"minutes","netAmount":1.25,"organizationName":null,"repositoryName":"owner/name"},
+                        {"date":"2026-06-01","sku":"ACTIONS_LINUX","quantity":30,"unitType":"minutes","netAmount":0,"organizationName":null,"repositoryName":"owner/name"}
+                      ]
+                    }
+                    """),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound),
             };
         });
@@ -44,6 +52,11 @@ public sealed class GitHubActionsInsightClientTests
         Assert.Contains("2 running", insights.DisplayText);
         Assert.Contains("4 queued", insights.DisplayText);
         Assert.Contains("1/2 runners", insights.DisplayText);
+        Assert.NotNull(insights.Billing);
+        Assert.Equal(150.5, insights.Billing.TotalMinutes);
+        Assert.Equal(1.25, insights.Billing.TotalNetAmount);
+        Assert.Equal(120.5, insights.Billing.MinutesByOs["Windows"]);
+        Assert.Contains("$1.25", insights.DisplayText);
     }
 
     [Fact]

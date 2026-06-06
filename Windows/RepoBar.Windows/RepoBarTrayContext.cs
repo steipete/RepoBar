@@ -204,6 +204,16 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             : $"Actions: {running} running  {failing} failing  {healthy} healthy");
         if (_actionsInsights.HasData)
         {
+            if (_actionsInsights.Billing != null)
+            {
+                actions.DropDownItems.Add(new ToolStripMenuItem($"Billing: {_actionsInsights.Billing.DisplayText}") { Enabled = false });
+                foreach (var entry in _actionsInsights.Billing.MinutesByOs.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase))
+                {
+                    actions.DropDownItems.Add(new ToolStripMenuItem($"{entry.Key}: {entry.Value:n0} minutes") { Enabled = false });
+                }
+                actions.DropDownItems.Add(new ToolStripSeparator());
+            }
+
             foreach (var insight in _actionsInsights.Repositories)
             {
                 var repositoryItem = new ToolStripMenuItem($"{insight.Repository.FullName}: {insight.DisplayText}");

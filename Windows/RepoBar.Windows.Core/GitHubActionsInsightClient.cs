@@ -41,7 +41,8 @@ internal sealed class GitHubActionsInsightClient : IDisposable
             results.Add(await LoadRepositoryAsync(repository, cancellationToken).ConfigureAwait(false));
         }
 
-        return new ActionsInsights(results, DateTimeOffset.UtcNow);
+        var billing = await LoadBillingUsageAsync(repositories, cancellationToken).ConfigureAwait(false);
+        return new ActionsInsights(results, billing, DateTimeOffset.UtcNow);
     }
 
     private async Task<RepositoryActionsInsight> LoadRepositoryAsync(
@@ -114,6 +115,68 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         return new ActionsRunnerFleet(totalCount, runners);
     }
 
+    private async Task<ActionsBillingUsage?> LoadBillingUsageAsync(
+        IReadOnlyList<RepositoryRef> repositories,
+        CancellationToken cancellationToken)
+    {
+        var owners = repositories
+            .Select(repository => repository.Owner)
+            .Where(owner => !string.IsNullOrWhiteSpace(owner))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Take(8)
+            .ToArray();
+        if (owners.Length == 0)
+        {
+            return null;
+        }
+
+        var items = new List<ActionsBillingUsageItem>();
+        foreach (var owner in owners)
+        {
+            var ownerItems = await TryLoadBillingUsageForOwnerAsync(owner, isOrg: false, cancellationToken).ConfigureAwait(false) ??
+                await TryLoadBillingUsageForOwnerAsync(owner, isOrg: true, cancellationToken).ConfigureAwait(false);
+            if (ownerItems != null)
+            {
+                items.AddRange(ownerItems);
+            }
+        }
+
+        return items.Count == 0 ? null : new ActionsBillingUsage(items);
+    }
+
+    private async Task<IReadOnlyList<ActionsBillingUsageItem>?> TryLoadBillingUsageForOwnerAsync(
+        string owner,
+        bool isOrg,
+        CancellationToken cancellationToken)
+    {
+        var pathPrefix = isOrg ? "organizations" : "users";
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"{pathPrefix}/{Uri.EscapeDataString(owner)}/settings/billing/usage?product=actions");
+        request.Headers.TryAddWithoutValidation("X-GitHub-Api-Version", "2026-03-10");
+
+        using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        using var document = JsonDocument.Parse(json);
+        if (!document.RootElement.TryGetProperty("usageItems", out var usageItems) ||
+            usageItems.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return usageItems.EnumerateArray()
+            .Select(ParseBillingUsageItem)
+            .Where(item => item != null)
+            .Cast<ActionsBillingUsageItem>()
+            .ToArray();
+    }
+
     private static ActionsRunnerSummary? ParseRunner(JsonElement runner)
     {
         if (!runner.TryGetProperty("id", out var idProperty) ||
@@ -147,15 +210,45 @@ internal sealed class GitHubActionsInsightClient : IDisposable
             : null;
     }
 
+    private static double TryGetDouble(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Number
+            ? property.GetDouble()
+            : 0;
+    }
+
+    private static ActionsBillingUsageItem? ParseBillingUsageItem(JsonElement item)
+    {
+        var date = TryGetString(item, "date");
+        var sku = TryGetString(item, "sku") ?? "";
+        var unitType = TryGetString(item, "unitType") ?? "";
+        if (string.IsNullOrWhiteSpace(date) && string.IsNullOrWhiteSpace(sku))
+        {
+            return null;
+        }
+
+        return new ActionsBillingUsageItem(
+            date ?? "",
+            sku,
+            TryGetDouble(item, "quantity"),
+            unitType,
+            TryGetDouble(item, "netAmount"),
+            TryGetString(item, "organizationName"),
+            TryGetString(item, "repositoryName"));
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();
     }
 }
 
-internal sealed record ActionsInsights(IReadOnlyList<RepositoryActionsInsight> Repositories, DateTimeOffset FetchedAt)
+internal sealed record ActionsInsights(
+    IReadOnlyList<RepositoryActionsInsight> Repositories,
+    ActionsBillingUsage? Billing,
+    DateTimeOffset FetchedAt)
 {
-    public static readonly ActionsInsights Empty = new([], DateTimeOffset.MinValue);
+    public static readonly ActionsInsights Empty = new([], null, DateTimeOffset.MinValue);
 
     public int RunningCount => Repositories.Sum(repository => repository.Queue.InProgressCount);
     public int QueuedCount => Repositories.Sum(repository => repository.Queue.QueuedCount);
@@ -177,7 +270,8 @@ internal sealed record ActionsInsights(IReadOnlyList<RepositoryActionsInsight> R
             var runners = RunnerCount > 0
                 ? $"  {OnlineRunnerCount:n0}/{RunnerCount:n0} runners"
                 : "";
-            return $"Actions: {queue}{runners}";
+            var billing = Billing == null ? "" : $"  {Billing.DisplayText}";
+            return $"Actions: {queue}{runners}{billing}";
         }
     }
 }
@@ -241,3 +335,49 @@ internal sealed record ActionsRunnerSummary(long Id, string Name, string Os, str
         }
     }
 }
+
+internal sealed record ActionsBillingUsage(IReadOnlyList<ActionsBillingUsageItem> Items)
+{
+    public double TotalMinutes => Items
+        .Where(item => string.Equals(item.UnitType, "minutes", StringComparison.OrdinalIgnoreCase))
+        .Sum(item => item.Quantity);
+
+    public double TotalNetAmount => Items.Sum(item => item.NetAmount);
+
+    public string DisplayText => TotalNetAmount > 0
+        ? $"{TotalMinutes:n0}m  ${TotalNetAmount:n2}"
+        : $"{TotalMinutes:n0}m";
+
+    public IReadOnlyDictionary<string, double> MinutesByOs => Items
+        .Where(item => string.Equals(item.UnitType, "minutes", StringComparison.OrdinalIgnoreCase))
+        .GroupBy(item => OsLabel(item.Sku), StringComparer.OrdinalIgnoreCase)
+        .ToDictionary(group => group.Key, group => group.Sum(item => item.Quantity), StringComparer.OrdinalIgnoreCase);
+
+    private static string OsLabel(string sku)
+    {
+        var upper = sku.ToUpperInvariant();
+        if (upper.Contains("MACOS", StringComparison.Ordinal) || upper.Contains("MAC_OS", StringComparison.Ordinal))
+        {
+            return "macOS";
+        }
+        if (upper.Contains("WINDOWS", StringComparison.Ordinal))
+        {
+            return "Windows";
+        }
+        if (upper.Contains("LINUX", StringComparison.Ordinal) || upper.Contains("UBUNTU", StringComparison.Ordinal))
+        {
+            return "Linux";
+        }
+
+        return string.IsNullOrWhiteSpace(sku) ? "Other" : sku;
+    }
+}
+
+internal sealed record ActionsBillingUsageItem(
+    string Date,
+    string Sku,
+    double Quantity,
+    string UnitType,
+    double NetAmount,
+    string? OrganizationName,
+    string? RepositoryName);
