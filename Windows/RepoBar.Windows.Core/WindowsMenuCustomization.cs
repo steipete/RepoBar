@@ -21,6 +21,7 @@ internal sealed class WindowsMenuCustomization
         WindowsMainMenuItem.About,
         WindowsMainMenuItem.CheckForUpdates,
         WindowsMainMenuItem.OpenSettingsFile,
+        WindowsMainMenuItem.ClearResponseCache,
         WindowsMainMenuItem.Quit,
     ];
 
@@ -148,6 +149,7 @@ internal enum WindowsMainMenuItem
     About,
     CheckForUpdates,
     OpenSettingsFile,
+    ClearResponseCache,
     Quit,
 }
 
@@ -196,6 +198,7 @@ internal static class WindowsMenuCustomizationLabels
             WindowsMainMenuItem.About => "About RepoBar",
             WindowsMainMenuItem.CheckForUpdates => "Check for updates",
             WindowsMainMenuItem.OpenSettingsFile => "Open settings file",
+            WindowsMainMenuItem.ClearResponseCache => "Clear response cache",
             WindowsMainMenuItem.Quit => "Quit RepoBar",
             _ => item.ToString(),
         };

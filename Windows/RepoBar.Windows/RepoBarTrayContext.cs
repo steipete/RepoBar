@@ -254,6 +254,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsMainMenuItem.OpenSettingsFile:
                 items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
                 break;
+            case WindowsMainMenuItem.ClearResponseCache:
+                items.Add(new ToolStripMenuItem("Clear response cache", null, (_, _) => ClearResponseCache()));
+                break;
             case WindowsMainMenuItem.Quit:
                 items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
                 break;
@@ -1235,6 +1238,22 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             "About RepoBar",
             MessageBoxButtons.OK,
             MessageBoxIcon.Information);
+    }
+
+    private void ClearResponseCache()
+    {
+        try
+        {
+            var count = GitHubResponseCache.ClearDefault();
+            _githubClient.Dispose();
+            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _resolvedToken ?? _settingsStore.ResolveToken());
+            _notifyIcon.ShowBalloonTip(5000, "RepoBar Cache", $"Cleared {count:n0} response cache entr{(count == 1 ? "y" : "ies")}.", ToolTipIcon.Info);
+            BeginRefresh();
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Cache", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private static async Task CheckForUpdatesAsync()

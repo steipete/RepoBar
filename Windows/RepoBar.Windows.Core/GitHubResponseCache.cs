@@ -30,6 +30,35 @@ internal sealed class GitHubResponseCache
         return new GitHubResponseCache(directory);
     }
 
+    public static int ClearDefault()
+    {
+        return CreateDefault().Clear();
+    }
+
+    public int Clear()
+    {
+        if (!Directory.Exists(_cacheDirectory))
+        {
+            return 0;
+        }
+
+        var deleted = 0;
+        foreach (var path in Directory.EnumerateFiles(_cacheDirectory, "*.json"))
+        {
+            try
+            {
+                File.Delete(path);
+                deleted++;
+            }
+            catch
+            {
+                // Best-effort cleanup; stale locked entries can be retried later.
+            }
+        }
+
+        return deleted;
+    }
+
     public GitHubCachedResponse? Read(string key)
     {
         var path = PathForKey(key);

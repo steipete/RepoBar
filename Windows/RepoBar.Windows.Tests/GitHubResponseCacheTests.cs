@@ -31,6 +31,33 @@ public sealed class GitHubResponseCacheTests
     }
 
     [Fact]
+    public void Cache_clear_removes_only_cache_json_entries()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"repobar-cache-{Guid.NewGuid():N}");
+        try
+        {
+            var cache = new GitHubResponseCache(directory);
+            cache.Write("repos/owner/one", "\"etag-1\"", """{"ok":1}""");
+            cache.Write("repos/owner/two", "\"etag-2\"", """{"ok":2}""");
+            File.WriteAllText(Path.Combine(directory, "notes.txt"), "keep");
+
+            var deleted = cache.Clear();
+
+            Assert.Equal(2, deleted);
+            Assert.Null(cache.Read("repos/owner/one"));
+            Assert.Null(cache.Read("repos/owner/two"));
+            Assert.True(File.Exists(Path.Combine(directory, "notes.txt")));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public async Task Repository_client_combines_github_and_local_status_with_rate_limit_headers()
     {
         var handler = new StubHandler(request =>
