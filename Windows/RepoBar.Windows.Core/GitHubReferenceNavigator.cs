@@ -223,6 +223,8 @@ internal static partial class GitHubReferenceNavigator
         var headingIndent = 0;
         var previousHeadingChildHadCommitContext = false;
         var previousHeadingChildHadIssueReferenceContext = false;
+        string? pendingHeadingRepository = null;
+        var pendingHeadingIndent = 0;
         var lineStart = 0;
         while (lineStart <= text.Length)
         {
@@ -253,7 +255,36 @@ internal static partial class GitHubReferenceNavigator
                 }
             }
 
-            if (!string.IsNullOrWhiteSpace(headingRepository) && indent > headingIndent)
+            if (!string.IsNullOrWhiteSpace(pendingHeadingRepository))
+            {
+                if (string.IsNullOrWhiteSpace(line) || indent <= pendingHeadingIndent)
+                {
+                    pendingHeadingRepository = null;
+                }
+                else if (RepositoryCountSummaryLineRegex().IsMatch(line))
+                {
+                    headingRepository = pendingHeadingRepository;
+                    headingIndent = pendingHeadingIndent;
+                    pendingHeadingRepository = null;
+                    previousHeadingChildHadCommitContext = false;
+                    previousHeadingChildHadIssueReferenceContext = false;
+
+                    if (lineEnd == text.Length)
+                    {
+                        break;
+                    }
+
+                    lineStart = lineEnd + 1;
+                    continue;
+                }
+                else
+                {
+                    pendingHeadingRepository = null;
+                }
+            }
+
+            var isHeadingChild = !string.IsNullOrWhiteSpace(headingRepository) && indent > headingIndent;
+            if (isHeadingChild)
             {
                 var headingChildHasCommitContext = HasCommitContext(line);
                 var headingChildHasIssueReferenceContext = HeadingChildHasIssueReferenceContext(line);
@@ -395,7 +426,20 @@ internal static partial class GitHubReferenceNavigator
                 headingIndent = indent;
                 previousHeadingChildHadCommitContext = false;
                 previousHeadingChildHadIssueReferenceContext = false;
+                pendingHeadingRepository = null;
                 claimedSpans.Add(new RangeSpan(lineStart + heading.Index, lineStart + heading.Index + heading.Length));
+            }
+            else if (!isHeadingChild)
+            {
+                var repositoryOnlyHeading = RepositoryOnlyHeadingRegex().Match(line);
+                if (repositoryOnlyHeading.Success)
+                {
+                    headingRepository = null;
+                    pendingHeadingRepository = $"{repositoryOnlyHeading.Groups["owner"].Value}/{repositoryOnlyHeading.Groups["repo"].Value}";
+                    pendingHeadingIndent = indent;
+                    previousHeadingChildHadCommitContext = false;
+                    previousHeadingChildHadIssueReferenceContext = false;
+                }
             }
 
             if (lineEnd == text.Length)
@@ -583,7 +627,8 @@ internal static partial class GitHubReferenceNavigator
 
     private static bool IsIssueCountSummary(string text)
     {
-        return IssueCountSummaryRegex().IsMatch(text);
+        return IssueCountSummaryRegex().IsMatch(text) ||
+            RepositoryCountSummaryLineRegex().IsMatch(text);
     }
 
     private static string NormalizeHash(string value)
@@ -597,8 +642,14 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):\s*(?<refs>#\d+(?:\s*(?:,|and)\s*#?\d+)*)\b", RegexOptions.IgnoreCase)]
     private static partial Regex GroupedRepositoryLineRegex();
 
-    [GeneratedRegex(@"^\s*(?:[-*]\s*)?(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):\s*(?:(?:\d+\s+(?:issues?|PRs?|pull requests?))(?:\s*/\s*)?)+$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*(?:(?:[-*]|\d+[.)])\s*)?(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):\s*(?:(?:\d+\s+(?:issues?|PRs?|pull requests?))(?:\s*/\s*)?)+$", RegexOptions.IgnoreCase)]
     private static partial Regex RepositoryCountHeadingRegex();
+
+    [GeneratedRegex(@"^\s*(?:(?:[-*]|\d+[.)])\s*)?(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex RepositoryOnlyHeadingRegex();
+
+    [GeneratedRegex(@"^\s*(?:[-*]\s*)?(?:(?:\d+\s+(?:issues?|PRs?|pull requests?))(?:\s*/\s*)?)+$", RegexOptions.IgnoreCase)]
+    private static partial Regex RepositoryCountSummaryLineRegex();
 
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/actions/runs/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubActionsRunUrlRegex();

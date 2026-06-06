@@ -461,6 +461,68 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_numbered_repository_heading_after_nested_count_summary()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+              1. steipete/birdclaw
+                  - 0 issues / 1 PR
+                  - PR #44: clean, one green GitGuardian check
+              2. openclaw/wacli
+                  - 1 issue / 1 PR
+                  - PR #267: CI green
+                  - issue #268 needs product decision
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("steipete/birdclaw", 44L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/wacli", 267L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/wacli", 268L, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_numbered_repository_heading_sibling_contexts_separate()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+              1. steipete/birdclaw
+                  - 0 issues / 1 PR
+                  - PR #44
+              2. openclaw/clawsweeper-state
+                  - 0 issues / 1 PR
+                  - PR #3
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("steipete/birdclaw", 44L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/clawsweeper-state", 3L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_clears_pending_repository_only_heading_for_normal_headings()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. old/repo
+            2. new/repo: 0 issues / 1 PR
+               - 0 issues / 1 PR
+               - PR #3
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("new/repo", reference.RepositoryFullName);
+        Assert.Equal(3L, reference.Number);
+    }
+
+    [Fact]
     public void FindReferences_resolves_repository_heading_child_commit_hashes()
     {
         var references = GitHubReferenceNavigator.FindReferences(
