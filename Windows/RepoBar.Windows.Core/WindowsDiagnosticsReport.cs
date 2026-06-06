@@ -122,8 +122,8 @@ internal sealed record WindowsDiagnosticsReport(
             settings.FileLoggingEnabled,
             WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath(),
             File.Exists(WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath()),
-            GitHubResponseCache.DefaultDirectory(),
-            GitHubResponseCache.DefaultEntryCount(),
+            GitHubResponseCache.DirectoryForSettings(settings),
+            GitHubResponseCache.EntryCountForSettings(settings),
             archivePath,
             archivePath != null && File.Exists(archivePath),
             rateLimits.ToArray());

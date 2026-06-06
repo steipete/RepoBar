@@ -156,6 +156,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             var displayedStatuses = WindowsRepositoryDisplay.Apply(_statuses, _settingsStore.Settings);
             var activeAccount = _settingsStore.Settings.GetActiveAccount();
             var logFilePath = WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath();
+            var responseCacheDirectory = GitHubResponseCache.DirectoryForSettings(_settingsStore.Settings);
             WindowsDiagnosticsLogger.Log(
                 WindowsLogVerbosity.Debug,
                 "smoke",
@@ -176,6 +177,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 fileLoggingEnabled = _settingsStore.Settings.FileLoggingEnabled,
                 logFilePath,
                 logFileExists = File.Exists(logFilePath),
+                responseCacheDirectory,
+                responseCacheEntryCount = GitHubResponseCache.EntryCountForSettings(_settingsStore.Settings),
                 localRepositories = _localGitIndex.Repositories.Select(repository => new
                 {
                     repository.DisplayName,
@@ -1536,7 +1539,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         try
         {
-            var count = GitHubResponseCache.ClearDefault();
+            var count = GitHubResponseCache.ClearForSettings(_settingsStore.Settings);
             _githubClient.Dispose();
             _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _resolvedToken ?? _settingsStore.ResolveToken());
             _notifyIcon.ShowBalloonTip(5000, "RepoBar Cache", $"Cleared {count:n0} response cache entr{(count == 1 ? "y" : "ies")}.", ToolTipIcon.Info);
@@ -1552,7 +1555,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         using var form = new DiagnosticsForm(
             () => WindowsDiagnosticsReport.Capture(_settingsStore, _statuses, _localGitIndex, _rateLimits, _lastError),
-            GitHubResponseCache.ClearDefault,
+            () => GitHubResponseCache.ClearForSettings(_settingsStore.Settings),
             BeginRefresh);
         form.ShowDialog();
     }

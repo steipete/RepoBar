@@ -25,6 +25,11 @@ internal sealed class GitHubResponseCache
         return new GitHubResponseCache(DefaultDirectory());
     }
 
+    public static GitHubResponseCache CreateForSettings(WindowsSettings settings)
+    {
+        return new GitHubResponseCache(DirectoryForSettings(settings));
+    }
+
     public static string DefaultDirectory()
     {
         return Path.Combine(
@@ -36,7 +41,30 @@ internal sealed class GitHubResponseCache
 
     public static int DefaultEntryCount()
     {
-        var directory = DefaultDirectory();
+        return EntryCount(DefaultDirectory());
+    }
+
+    public static string DirectoryForSettings(WindowsSettings settings)
+    {
+        var account = settings.GetActiveAccount();
+        return Path.Combine(
+            DefaultDirectory(),
+            "accounts",
+            SafeScope(account.GitHubHost, account.Id));
+    }
+
+    public static int EntryCountForSettings(WindowsSettings settings)
+    {
+        return EntryCount(DirectoryForSettings(settings));
+    }
+
+    public static int ClearForSettings(WindowsSettings settings)
+    {
+        return CreateForSettings(settings).Clear();
+    }
+
+    private static int EntryCount(string directory)
+    {
         return Directory.Exists(directory)
             ? Directory.EnumerateFiles(directory, "*.json").Count()
             : 0;
@@ -106,6 +134,14 @@ internal sealed class GitHubResponseCache
         var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(key));
         var fileName = Convert.ToHexString(bytes).ToLowerInvariant() + ".json";
         return Path.Combine(_cacheDirectory, fileName);
+    }
+
+    internal static string SafeScope(string host, string accountId)
+    {
+        var normalizedHost = GitHubHost.Normalize(host);
+        var normalizedAccount = WindowsSettingsStore.SanitizeAccountId(accountId);
+        var bytes = Encoding.UTF8.GetBytes($"{normalizedHost}#{normalizedAccount}");
+        return "v2-" + Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }
 

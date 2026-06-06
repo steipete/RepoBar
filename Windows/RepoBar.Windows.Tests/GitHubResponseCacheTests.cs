@@ -58,6 +58,70 @@ public sealed class GitHubResponseCacheTests
     }
 
     [Fact]
+    public void Account_scoped_cache_directory_uses_host_and_account()
+    {
+        var github = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts = [Account("work", "github.com")],
+        };
+        var enterprise = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts = [Account("work", "ghe.example.com")],
+        };
+        WindowsSettingsStore.NormalizeSettings(github);
+        WindowsSettingsStore.NormalizeSettings(enterprise);
+
+        var githubDirectory = GitHubResponseCache.DirectoryForSettings(github);
+        var enterpriseDirectory = GitHubResponseCache.DirectoryForSettings(enterprise);
+
+        Assert.Contains($"{Path.DirectorySeparatorChar}accounts{Path.DirectorySeparatorChar}", githubDirectory);
+        Assert.NotEqual(githubDirectory, enterpriseDirectory);
+        Assert.Contains(GitHubResponseCache.SafeScope("github.com", "work"), githubDirectory);
+        Assert.Contains(GitHubResponseCache.SafeScope("ghe.example.com", "work"), enterpriseDirectory);
+    }
+
+    [Fact]
+    public void Clear_for_settings_removes_only_active_account_cache_entries()
+    {
+        var settings = new WindowsSettings
+        {
+            ActiveAccountId = "default",
+            Accounts =
+            [
+                Account("default", "github.com"),
+                Account("work", "github.com"),
+            ],
+        };
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        var defaultDirectory = GitHubResponseCache.DirectoryForSettings(settings);
+        var defaultCache = GitHubResponseCache.CreateForSettings(settings);
+        defaultCache.Write("repos/personal/project", "\"etag-default\"", """{"owner":"personal"}""");
+
+        settings.ActiveAccountId = "work";
+        WindowsSettingsStore.NormalizeSettings(settings);
+        var workDirectory = GitHubResponseCache.DirectoryForSettings(settings);
+        var workCache = GitHubResponseCache.CreateForSettings(settings);
+        workCache.Write("repos/work/project", "\"etag-work\"", """{"owner":"work"}""");
+
+        try
+        {
+            var deleted = GitHubResponseCache.ClearForSettings(settings);
+
+            Assert.Equal(1, deleted);
+            Assert.Null(workCache.Read("repos/work/project"));
+            Assert.NotNull(defaultCache.Read("repos/personal/project"));
+        }
+        finally
+        {
+            DeleteDirectory(defaultDirectory);
+            DeleteDirectory(workDirectory);
+        }
+    }
+
+    [Fact]
     public async Task Repository_client_combines_github_and_local_status_with_rate_limit_headers()
     {
         var handler = new StubHandler(request =>
@@ -421,6 +485,24 @@ public sealed class GitHubResponseCacheTests
     {
         var content = Convert.ToBase64String(Encoding.UTF8.GetBytes(markdown));
         return JsonResponse($$"""{"encoding":"base64","content":"{{content}}"}""");
+    }
+
+    private static WindowsAccountProfile Account(string id, string host)
+    {
+        return new WindowsAccountProfile
+        {
+            Id = id,
+            Label = id,
+            GitHubHost = host,
+        };
+    }
+
+    private static void DeleteDirectory(string directory)
+    {
+        if (Directory.Exists(directory))
+        {
+            Directory.Delete(directory, recursive: true);
+        }
     }
 
     private sealed class StubHandler : HttpMessageHandler

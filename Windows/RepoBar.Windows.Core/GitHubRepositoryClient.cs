@@ -26,7 +26,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
             token,
             new HttpClientHandler(),
             new HttpClientHandler(),
-            settings.EnableResponseCache ? GitHubResponseCache.CreateDefault() : null)
+            settings.EnableResponseCache ? GitHubResponseCache.CreateForSettings(settings) : null)
     {
     }
 
