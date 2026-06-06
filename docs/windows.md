@@ -75,7 +75,7 @@ The first run creates:
 %APPDATA%\RepoBar\windows-settings.json
 ```
 
-Use **Preferences** from the tray menu to choose repositories and local project settings. The same values are stored in JSON for scriptable setup:
+Use **Preferences** from the tray menu to choose repositories and local project settings. Use **Account** from the tray menu to switch between named GitHub profiles without opening Preferences. The same values are stored in JSON for scriptable setup:
 
 ```json
 {
@@ -131,6 +131,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
       "actionsUsage",
       "rateLimits",
       "issueNavigator",
+      "accountSwitcher",
       "logOut",
       "preferences",
       "about",
@@ -222,7 +223,7 @@ CRABBOX_PROVIDER=aws CRABBOX_TARGET=windows pnpm windows:crabbox
 
 ## Authentication
 
-Use **Preferences** to add named account profiles and choose the active account. Each account stores its GitHub host, token environment variable, OAuth client ID, and OAuth secret environment variable. The active account drives repository discovery, refreshes, Actions insight, contribution summaries, and Credential Manager target names. Use **Log out** from the tray menu to clear the active account's stored OAuth and PAT credentials.
+Use **Preferences** to add named account profiles and choose the active account. Use **Account** from the tray menu to switch active accounts directly. Each account stores its GitHub host, token environment variable, OAuth client ID, and OAuth secret environment variable. The active account drives repository discovery, refreshes, Actions insight, contribution summaries, and Credential Manager target names. Use **Log out** from the tray menu to clear the active account's stored OAuth and PAT credentials.
 
 Use **Sign in with GitHub** to authenticate the active account through the RepoBar GitHub App browser flow. RepoBar listens on the same loopback callback as the macOS app, exchanges the PKCE code for GitHub user tokens, stores the OAuth token bundle in Windows Credential Manager, and refreshes it before GitHub requests when needed. The built-in RepoBar client ID is used by default; set `REPOBAR_GITHUB_CLIENT_SECRET` or the configured OAuth secret environment variable before signing in.
 

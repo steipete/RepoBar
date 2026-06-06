@@ -466,6 +466,27 @@ internal sealed class WindowsSettingsStore
         Save();
     }
 
+    public bool SetActiveAccount(string accountId)
+    {
+        var normalizedId = SanitizeAccountId(accountId);
+        var account = Settings.Accounts.FirstOrDefault(existing =>
+            string.Equals(existing.Id, normalizedId, StringComparison.OrdinalIgnoreCase));
+        if (account == null)
+        {
+            return false;
+        }
+
+        if (string.Equals(Settings.ActiveAccountId, account.Id, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        Settings.ActiveAccountId = account.Id;
+        NormalizeSettings(Settings);
+        Save();
+        return true;
+    }
+
     public void Save()
     {
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(Settings, JsonOptions));

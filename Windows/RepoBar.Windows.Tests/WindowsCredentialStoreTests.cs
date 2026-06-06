@@ -152,4 +152,54 @@ public sealed class WindowsCredentialStoreTests
         Assert.Equal("work-account", settings.GetActiveAccount().Id);
         Assert.Equal(".work", settings.LocalWorktreeFolderName);
     }
+
+    [Fact]
+    public void SetActiveAccount_persists_active_profile_and_mirrors_legacy_fields()
+    {
+        var settingsPath = Path.Combine(Path.GetTempPath(), $"repobar-settings-{Guid.NewGuid():N}.json");
+        try
+        {
+            var settings = new WindowsSettings
+            {
+                ActiveAccountId = "default",
+                Accounts =
+                [
+                    new WindowsAccountProfile
+                    {
+                        Id = "default",
+                        Label = "Default",
+                        GitHubHost = "github.com",
+                        TokenEnvironmentVariable = "DEFAULT_TOKEN",
+                    },
+                    new WindowsAccountProfile
+                    {
+                        Id = "Work Account",
+                        Label = "Work",
+                        GitHubHost = "https://github.enterprise.test/org",
+                        TokenEnvironmentVariable = "WORK_TOKEN",
+                        GitHubOAuthClientId = "work-client",
+                        GitHubOAuthClientSecretEnvironmentVariable = "WORK_SECRET",
+                    },
+                ],
+            };
+            WindowsSettingsStore.NormalizeSettings(settings);
+            var store = new WindowsSettingsStore(settingsPath, settings);
+
+            Assert.True(store.SetActiveAccount("work account"));
+
+            Assert.Equal("work-account", settings.ActiveAccountId);
+            Assert.Equal("github.enterprise.test", settings.GitHubHost);
+            Assert.Equal("WORK_TOKEN", settings.TokenEnvironmentVariable);
+            Assert.Equal("work-client", settings.GitHubOAuthClientId);
+            Assert.Equal("WORK_SECRET", settings.GitHubOAuthClientSecretEnvironmentVariable);
+            Assert.Contains("\"activeAccountId\": \"work-account\"", File.ReadAllText(settingsPath));
+        }
+        finally
+        {
+            if (File.Exists(settingsPath))
+            {
+                File.Delete(settingsPath);
+            }
+        }
+    }
 }

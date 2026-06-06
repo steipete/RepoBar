@@ -239,6 +239,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsMainMenuItem.IssueNavigator:
                 items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
                 break;
+            case WindowsMainMenuItem.AccountSwitcher:
+                AddAccountSwitcherItem(items);
+                break;
             case WindowsMainMenuItem.LogOut:
                 items.Add(new ToolStripMenuItem("Log out", null, (_, _) => LogOut()));
                 break;
@@ -261,6 +264,34 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
                 break;
         }
+    }
+
+    private void AddAccountSwitcherItem(ToolStripItemCollection items)
+    {
+        var accounts = _settingsStore.Settings.Accounts;
+        var active = _settingsStore.Settings.GetActiveAccount();
+        var accountMenu = new ToolStripMenuItem($"Account: {active.DisplayName}");
+        if (accounts.Count <= 1)
+        {
+            accountMenu.Enabled = false;
+            items.Add(accountMenu);
+            return;
+        }
+
+        foreach (var account in accounts)
+        {
+            var label = string.Equals(account.GitHubHost, active.GitHubHost, StringComparison.OrdinalIgnoreCase)
+                ? account.DisplayName
+                : $"{account.DisplayName} ({account.GitHubHost})";
+            accountMenu.DropDownItems.Add(new ToolStripMenuItem(label, null, (_, _) => SwitchAccount(account.Id))
+            {
+                Checked = string.Equals(account.Id, active.Id, StringComparison.OrdinalIgnoreCase),
+            });
+        }
+
+        accountMenu.DropDownItems.Add(new ToolStripSeparator());
+        accountMenu.DropDownItems.Add(new ToolStripMenuItem("Manage accounts...", null, (_, _) => ShowPreferences()));
+        items.Add(accountMenu);
     }
 
     private static void AddRateLimitItems(ToolStripItemCollection items, IReadOnlyList<GitHubRateLimitSnapshot> snapshots)
@@ -1222,6 +1253,27 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         catch (Exception exception)
         {
             MessageBox.Show(exception.Message, "RepoBar Log Out", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void SwitchAccount(string accountId)
+    {
+        try
+        {
+            if (!_settingsStore.SetActiveAccount(accountId))
+            {
+                return;
+            }
+
+            _resolvedToken = null;
+            _githubClient.Dispose();
+            _githubClient = new GitHubRepositoryClient(_settingsStore.Settings, _settingsStore.ResolveToken());
+            _notifyIcon.ShowBalloonTip(5000, "RepoBar Account", $"Using {_settingsStore.Settings.GetActiveAccount().DisplayName}.", ToolTipIcon.Info);
+            BeginRefresh();
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(exception.Message, "RepoBar Account", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 
