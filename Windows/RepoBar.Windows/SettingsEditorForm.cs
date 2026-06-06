@@ -704,6 +704,8 @@ internal sealed class SettingsEditorForm : Form
         _repositoriesGrid.EndEdit();
         SaveSelectedAccountFields();
         var settings = _settingsStore.Settings;
+        var shouldResetPullRequestNotificationSnapshots =
+            !settings.EnablePullRequestNotifications && _enablePullRequestNotifications.Checked;
         var activeAccount = CurrentAccountRow();
         SaveRepositoryRows(activeAccount.Id);
         settings.Accounts = _accounts.Select(account => account.ToProfile()).ToList();
@@ -782,6 +784,10 @@ internal sealed class SettingsEditorForm : Form
             StringComparer.OrdinalIgnoreCase);
         settings.Repositories = RepositoryRefsForAccount(activeAccount.Id);
         WindowsSettingsStore.NormalizeSettings(settings);
+        if (shouldResetPullRequestNotificationSnapshots)
+        {
+            PullRequestNotificationTracker.ClearForSettings(settings);
+        }
         _settingsStore.Save();
 
         SaveCredentialTokenIfNeeded();

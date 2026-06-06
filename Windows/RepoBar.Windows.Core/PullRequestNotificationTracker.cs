@@ -61,6 +61,16 @@ internal sealed class PullRequestNotificationTracker
             "pull-request-notifications.json");
     }
 
+    public static void ClearForSettings(WindowsSettings settings)
+    {
+        ClearState(StatePathForSettings(settings));
+    }
+
+    internal static void ClearForSettings(WindowsSettings settings, string rootDirectory)
+    {
+        ClearState(StatePathForSettings(settings, rootDirectory));
+    }
+
     public IReadOnlyList<PullRequestNotificationEvent> DetectEvents(
         string repositoryFullName,
         IReadOnlyList<GitHubListItem> currentPulls,
@@ -182,6 +192,27 @@ internal sealed class PullRequestNotificationTracker
         File.WriteAllText(
             _statePath,
             JsonSerializer.Serialize(new PullRequestNotificationState(_snapshotsByRepository), JsonOptions));
+    }
+
+    public void Clear()
+    {
+        _snapshotsByRepository.Clear();
+        ClearState(_statePath);
+    }
+
+    private static void ClearState(string statePath)
+    {
+        try
+        {
+            if (File.Exists(statePath))
+            {
+                File.Delete(statePath);
+            }
+        }
+        catch
+        {
+            // Best-effort reset; stale locked state can be overwritten on the next save.
+        }
     }
 
     private static Dictionary<string, Dictionary<string, PullRequestNotificationSnapshot>> LoadState(string statePath)

@@ -81,6 +81,51 @@ public sealed class PullRequestNotificationTrackerTests
     }
 
     [Fact]
+    public void ClearForSettings_removes_only_active_account_notification_state()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
+        try
+        {
+            var settings = new WindowsSettings
+            {
+                ActiveAccountId = "default",
+                Accounts =
+                [
+                    Account("default", "github.com"),
+                    Account("work", "github.com"),
+                ],
+            };
+            WindowsSettingsStore.NormalizeSettings(settings);
+
+            var defaultPath = PullRequestNotificationTracker.StatePathForSettings(settings, root);
+            var defaultTracker = new PullRequestNotificationTracker(defaultPath);
+            defaultTracker.DetectEvents("steipete/RepoBar", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z"),
+            ], NotificationSettings());
+
+            settings.ActiveAccountId = "work";
+            WindowsSettingsStore.NormalizeSettings(settings);
+            var workPath = PullRequestNotificationTracker.StatePathForSettings(settings, root);
+            var workTracker = new PullRequestNotificationTracker(workPath);
+            workTracker.DetectEvents("steipete/RepoBar", [
+                Pull("#2 Second", 2, "2026-06-06T10:00:00Z"),
+            ], NotificationSettings());
+
+            PullRequestNotificationTracker.ClearForSettings(settings, root);
+
+            Assert.True(File.Exists(defaultPath));
+            Assert.False(File.Exists(workPath));
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void DetectNewPullRequests_seeds_then_reports_only_new_items()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
