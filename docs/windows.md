@@ -24,7 +24,7 @@ The Windows app currently provides:
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
 - optional Actions summary with latest workflow state, active queue counts, billing usage, cache usage, and self-hosted runner state per configured repository
-- optional pull request notifications through Windows tray balloons with click-through and persistent duplicate suppression
+- optional pull request notifications through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
 - optional launch-at-login registration for the current Windows user
@@ -146,6 +146,8 @@ CRABBOX_PROVIDER=aws CRABBOX_TARGET=windows pnpm windows:crabbox
 Use **Preferences** to add named account profiles and choose the active account. Each account stores its GitHub host, token environment variable, OAuth client ID, and OAuth secret environment variable. The active account drives repository discovery, refreshes, Actions insight, contribution summaries, and Credential Manager target names. Use **Log out** from the tray menu to clear the active account's stored OAuth and PAT credentials.
 
 Use **Sign in with GitHub** to authenticate the active account through the RepoBar GitHub App browser flow. RepoBar listens on the same loopback callback as the macOS app, exchanges the PKCE code for GitHub user tokens, stores the OAuth token bundle in Windows Credential Manager, and refreshes it before GitHub requests when needed. The built-in RepoBar client ID is used by default; set `REPOBAR_GITHUB_CLIENT_SECRET` or the configured OAuth secret environment variable before signing in.
+
+Use **PR notification click** in Preferences to choose whether pull request notification clicks open the default browser or seed the clicked pull request in Issue Navigator.
 
 OAuth tokens are stored under a per-host target such as:
 

@@ -20,7 +20,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private IReadOnlyList<GitHubRateLimitSnapshot> _rateLimits = [];
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
     private string? _resolvedToken;
-    private string? _lastPullRequestNotificationUrl;
+    private PullRequestNotificationClickTarget? _lastPullRequestNotificationTarget;
     private bool _isRefreshing;
     private string? _lastError;
 
@@ -599,7 +599,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             return;
         }
 
-        _lastPullRequestNotificationUrl = null;
+        _lastPullRequestNotificationTarget = null;
         _notifyIcon.ShowBalloonTip(5000, $"RepoBar {actionName}", result.DisplayText, ToolTipIcon.Info);
         BeginRefresh();
     }
@@ -810,10 +810,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 status.RecentLists.Pulls);
             foreach (var pull in newPulls.Take(3))
             {
-                if (!string.IsNullOrWhiteSpace(pull.Url))
-                {
-                    _lastPullRequestNotificationUrl = pull.Url;
-                }
+                _lastPullRequestNotificationTarget = PullRequestNotificationClickTarget.From(status.Repository.FullName, pull);
                 _notifyIcon.ShowBalloonTip(
                     timeout: 8000,
                     tipTitle: $"{status.Repository.FullName} pull request",
@@ -825,9 +822,20 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private void OpenLastPullRequestNotification()
     {
-        if (!string.IsNullOrWhiteSpace(_lastPullRequestNotificationUrl))
+        if (_lastPullRequestNotificationTarget == null)
         {
-            OpenUrl(_lastPullRequestNotificationUrl);
+            return;
+        }
+
+        if (_settingsStore.Settings.PullRequestNotificationClickAction == PullRequestNotificationClickAction.OpenIssueNavigator)
+        {
+            ShowIssueNavigator(_lastPullRequestNotificationTarget.IssueNavigatorText);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(_lastPullRequestNotificationTarget.Url))
+        {
+            OpenUrl(_lastPullRequestNotificationTarget.Url);
         }
     }
 
@@ -861,9 +869,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
     }
 
-    private void ShowIssueNavigator()
+    private void ShowIssueNavigator(string? initialText = null)
     {
-        using var form = new ReferenceNavigatorForm(_settingsStore.Settings);
+        using var form = new ReferenceNavigatorForm(_settingsStore.Settings, initialText);
         form.ShowDialog();
     }
 
@@ -938,4 +946,14 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
     }
 
+    private sealed record PullRequestNotificationClickTarget(string? Url, string IssueNavigatorText)
+    {
+        public static PullRequestNotificationClickTarget From(string repositoryFullName, GitHubListItem pull)
+        {
+            var issueNavigatorText = string.IsNullOrWhiteSpace(pull.Url)
+                ? $"{repositoryFullName} {pull.Title}"
+                : pull.Url;
+            return new PullRequestNotificationClickTarget(pull.Url, issueNavigatorText);
+        }
+    }
 }

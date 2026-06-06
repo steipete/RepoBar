@@ -32,6 +32,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
     private readonly CheckBox _enablePullRequestNotifications = new();
+    private readonly ComboBox _pullRequestNotificationClickAction = new();
     private readonly BindingList<RepositoryRow> _repositories = [];
     private readonly DataGridView _repositoriesGrid = new();
     private readonly TextBox _repositoryFilterTextBox = new();
@@ -89,6 +90,13 @@ internal sealed class SettingsEditorForm : Form
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
         _enablePullRequestNotifications.Checked = settings.EnablePullRequestNotifications;
+        _pullRequestNotificationClickAction.DropDownStyle = ComboBoxStyle.DropDownList;
+        _pullRequestNotificationClickAction.DataSource = Enum.GetValues<PullRequestNotificationClickAction>()
+            .Select(NotificationClickActionRow.FromAction)
+            .ToArray();
+        _pullRequestNotificationClickAction.DisplayMember = nameof(NotificationClickActionRow.DisplayName);
+        _pullRequestNotificationClickAction.ValueMember = nameof(NotificationClickActionRow.Action);
+        _pullRequestNotificationClickAction.SelectedValue = settings.PullRequestNotificationClickAction;
 
         foreach (var repository in settings.Repositories)
         {
@@ -140,6 +148,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Local scan depth", _localProjectsDepth);
         AddLabeledControl(settingsGrid, "Worktree folder", _localWorktreeFolderName);
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
+        AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
         _credentialState.AutoSize = true;
         UpdateCredentialState();
@@ -469,6 +478,9 @@ internal sealed class SettingsEditorForm : Form
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
         settings.EnablePullRequestNotifications = _enablePullRequestNotifications.Checked;
+        settings.PullRequestNotificationClickAction = _pullRequestNotificationClickAction.SelectedValue is PullRequestNotificationClickAction action
+            ? action
+            : PullRequestNotificationClickAction.OpenInBrowser;
         WindowsSettingsStore.NormalizeSettings(settings);
 
         _settingsStore.ReplaceRepositories(_repositories
@@ -694,6 +706,14 @@ internal sealed class SettingsEditorForm : Form
                 GitHubOAuthClientId = GitHubOAuthClientId,
                 GitHubOAuthClientSecretEnvironmentVariable = GitHubOAuthClientSecretEnvironmentVariable,
             };
+        }
+    }
+
+    private sealed record NotificationClickActionRow(PullRequestNotificationClickAction Action, string DisplayName)
+    {
+        public static NotificationClickActionRow FromAction(PullRequestNotificationClickAction action)
+        {
+            return new NotificationClickActionRow(action, action.DisplayName());
         }
     }
 }

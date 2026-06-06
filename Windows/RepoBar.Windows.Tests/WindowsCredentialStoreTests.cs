@@ -97,6 +97,16 @@ public sealed class WindowsCredentialStoreTests
         Assert.Null(exception);
     }
 
+    [Fact]
+    public void PullRequestNotificationClickAction_defaults_to_browser_and_labels_for_preferences()
+    {
+        var settings = new WindowsSettings();
+
+        Assert.Equal(PullRequestNotificationClickAction.OpenInBrowser, settings.PullRequestNotificationClickAction);
+        Assert.Equal("Default browser", PullRequestNotificationClickAction.OpenInBrowser.DisplayName());
+        Assert.Equal("Issue Navigator", PullRequestNotificationClickAction.OpenIssueNavigator.DisplayName());
+    }
+
     [Theory]
     [InlineData(null, "github.com")]
     [InlineData("", "github.com")]

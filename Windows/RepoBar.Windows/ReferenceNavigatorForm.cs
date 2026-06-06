@@ -14,7 +14,7 @@ internal sealed class ReferenceNavigatorForm : Form
     private readonly DataGridView _referenceGrid = new();
     private readonly WebBrowser _preview = new();
 
-    public ReferenceNavigatorForm(WindowsSettings settings)
+    public ReferenceNavigatorForm(WindowsSettings settings, string? initialText = null)
     {
         _settings = settings;
         Text = "RepoBar Issue Navigator";
@@ -23,7 +23,14 @@ internal sealed class ReferenceNavigatorForm : Form
         MinimumSize = new Size(760, 480);
 
         BuildControls();
-        TrySeedClipboard();
+        if (string.IsNullOrWhiteSpace(initialText))
+        {
+            TrySeedClipboard();
+        }
+        else
+        {
+            _input.Text = initialText;
+        }
         RefreshReferences();
     }
 

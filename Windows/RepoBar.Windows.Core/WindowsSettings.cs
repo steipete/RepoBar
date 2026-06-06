@@ -25,6 +25,7 @@ internal sealed class WindowsSettings
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public bool EnablePullRequestNotifications { get; set; }
+    public PullRequestNotificationClickAction PullRequestNotificationClickAction { get; set; } = PullRequestNotificationClickAction.OpenInBrowser;
     public bool ShowActionsUsage { get; set; }
     public List<RepositoryRef> Repositories { get; set; } = [];
 
@@ -81,6 +82,24 @@ internal enum RepositoryVisibility
     Visible,
     Pinned,
     Hidden,
+}
+
+internal enum PullRequestNotificationClickAction
+{
+    OpenInBrowser,
+    OpenIssueNavigator,
+}
+
+internal static class PullRequestNotificationClickActionLabels
+{
+    public static string DisplayName(this PullRequestNotificationClickAction action)
+    {
+        return action switch
+        {
+            PullRequestNotificationClickAction.OpenIssueNavigator => "Issue Navigator",
+            _ => "Default browser",
+        };
+    }
 }
 
 internal sealed class WindowsSettingsStore
