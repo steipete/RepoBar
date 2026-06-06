@@ -17,6 +17,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private ActionsInsights _actionsInsights = ActionsInsights.Empty;
     private GitHubAccountInsight? _accountInsight;
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
+    private string? _lastPullRequestNotificationUrl;
     private bool _isRefreshing;
     private string? _lastError;
 
@@ -33,6 +34,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         };
 
         _notifyIcon.MouseUp += OnNotifyIconMouseUp;
+        _notifyIcon.BalloonTipClicked += (_, _) => OpenLastPullRequestNotification();
 
         _refreshTimer.Interval = Math.Clamp(settingsStore.Settings.RefreshIntervalMinutes, 1, 60) * 60 * 1000;
         _refreshTimer.Tick += (_, _) => BeginRefresh();
@@ -463,6 +465,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             return;
         }
 
+        _lastPullRequestNotificationUrl = null;
         _notifyIcon.ShowBalloonTip(5000, $"RepoBar {actionName}", result.DisplayText, ToolTipIcon.Info);
         BeginRefresh();
     }
@@ -585,12 +588,24 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 status.RecentLists.Pulls);
             foreach (var pull in newPulls.Take(3))
             {
+                if (!string.IsNullOrWhiteSpace(pull.Url))
+                {
+                    _lastPullRequestNotificationUrl = pull.Url;
+                }
                 _notifyIcon.ShowBalloonTip(
                     timeout: 8000,
                     tipTitle: $"{status.Repository.FullName} pull request",
                     tipText: pull.Title,
                     tipIcon: ToolTipIcon.Info);
             }
+        }
+    }
+
+    private void OpenLastPullRequestNotification()
+    {
+        if (!string.IsNullOrWhiteSpace(_lastPullRequestNotificationUrl))
+        {
+            OpenUrl(_lastPullRequestNotificationUrl);
         }
     }
 
