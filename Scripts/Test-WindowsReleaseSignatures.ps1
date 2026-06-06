@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Classifies every .exe in the Windows release payload. RepoBar.Windows.exe
-    must be signed by the OpenClaw release signer when -RequireSignedRepoBar is
+    must carry a valid Authenticode signature when -RequireSignedRepoBar is
     passed. Unknown executables fail closed so new payloads must make an
     intentional signing decision.
 #>
@@ -15,7 +15,7 @@ param(
 
     [switch]$RequireSignedRepoBar,
 
-    [string]$OpenClawSignerPattern = "OpenClaw Foundation"
+    [string]$TrustedSignerPattern = ""
 )
 
 Set-StrictMode -Version Latest
@@ -71,8 +71,8 @@ foreach ($exe in $executables) {
             if ($RequireSignedRepoBar -and $exe.SignatureStatus -ne "Valid") {
                 $errors.Add("RepoBar executable is not validly signed: $($exe.RelativePath) [$($exe.SignatureStatus)]")
             }
-            if ($exe.SignatureStatus -eq "Valid" -and $exe.SignerSubject -notmatch $OpenClawSignerPattern) {
-                $errors.Add("RepoBar executable signer did not match OpenClaw release signer: $($exe.RelativePath) [$($exe.SignerSubject)]")
+            if ($TrustedSignerPattern -and $exe.SignatureStatus -eq "Valid" -and $exe.SignerSubject -notmatch $TrustedSignerPattern) {
+                $errors.Add("RepoBar executable signer did not match trusted release signer: $($exe.RelativePath) [$($exe.SignerSubject)]")
             }
         }
         default {

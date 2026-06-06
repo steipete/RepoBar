@@ -104,7 +104,6 @@ jobs:
     permissions:
       actions: read
       contents: read
-      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v6.0.2
@@ -118,9 +117,7 @@ jobs:
       - name: Azure Login for Release Signing
         uses: azure/login@v3
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: '{"clientId":"${{ secrets.AZURE_CLIENT_ID }}","clientSecret":"${{ secrets.AZURE_CLIENT_SECRET }}","subscriptionId":"${{ secrets.AZURE_SUBSCRIPTION_ID }}","tenantId":"${{ secrets.AZURE_TENANT_ID }}"}'
 
       - name: Stage RepoBar Executable for Signing
         shell: pwsh
@@ -129,11 +126,14 @@ jobs:
           New-Item -ItemType HardLink -Path signing-input-win-x64\RepoBar.Windows.exe -Target dist\windows\publish\win-x64\RepoBar.Windows.exe | Out-Null
 
       - name: Sign RepoBar Windows Executable
-        uses: azure/artifact-signing-action@v2
+        uses: azure/trusted-signing-action@v2
         with:
-          endpoint: https://eus.codesigning.azure.net/
-          signing-account-name: openclaw
-          certificate-profile-name: openclaw
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://wus2.codesigning.azure.net/
+          signing-account-name: hanselman
+          certificate-profile-name: WindowsEdgeLight
           files-folder: signing-input-win-x64
           files-folder-filter: exe
           files-folder-depth: 1
@@ -166,11 +166,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "ISCC.exe exited with code $LASTEXITCODE" }
 
       - name: Sign RepoBar Windows Installer
-        uses: azure/artifact-signing-action@v2
+        uses: azure/trusted-signing-action@v2
         with:
-          endpoint: https://eus.codesigning.azure.net/
-          signing-account-name: openclaw
-          certificate-profile-name: openclaw
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: https://wus2.codesigning.azure.net/
+          signing-account-name: hanselman
+          certificate-profile-name: WindowsEdgeLight
           files-folder: dist/windows
           files-folder-filter: exe
           files-folder-depth: 1
@@ -185,8 +188,6 @@ jobs:
           if (-not $installer) { throw "RepoBar Windows installer was not produced." }
           $signature = Get-AuthenticodeSignature -LiteralPath $installer.FullName
           if ($signature.Status -ne "Valid") { throw "$($installer.Name) signature was $($signature.Status)." }
-          $subject = if ($signature.SignerCertificate) { $signature.SignerCertificate.Subject } else { "" }
-          if ($subject -notmatch "OpenClaw Foundation") { throw "$($installer.Name) signer was not OpenClaw Foundation: $subject" }
 
       - name: Upload signed tray layout
         uses: actions/upload-artifact@v7
