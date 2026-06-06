@@ -19,6 +19,7 @@ internal static partial class GitHubReferenceNavigator
         var claimedSpans = new List<RangeSpan>();
         var uniqueRepositoriesByName = UniqueRepositoriesByName(defaultRepositoryFullName, knownRepositoryFullNames);
         AddRepositoryHeadingReferences(text, matches, claimedSpans);
+        AddPrimaryUrlListShortcutClaims(text, claimedSpans);
 
         foreach (Match match in GitHubCommitUrlRegex().Matches(text))
         {
@@ -517,6 +518,92 @@ internal static partial class GitHubReferenceNavigator
         }
     }
 
+    private static void AddPrimaryUrlListShortcutClaims(string text, List<RangeSpan> claimedSpans)
+    {
+        var lines = EnumerateLines(text);
+        var shortcutNumbers = new HashSet<long>();
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var lineInfo = lines[i];
+            var primary = PrimaryUrlListItemRegex().Match(lineInfo.Text);
+            if (!primary.Success)
+            {
+                continue;
+            }
+
+            var number = long.Parse(primary.Groups["number"].Value);
+            var matchingUrl = GitHubUrlRegex().Matches(lineInfo.Text)
+                .Any(url => long.Parse(url.Groups["number"].Value) == number);
+            for (var next = i + 1; !matchingUrl && next < lines.Count; next++)
+            {
+                var candidate = lines[next];
+                if (string.IsNullOrWhiteSpace(candidate.Text))
+                {
+                    break;
+                }
+
+                if (LeadingWhitespace(candidate.Text) <= lineInfo.Indent)
+                {
+                    break;
+                }
+
+                matchingUrl = GitHubUrlRegex().Matches(candidate.Text)
+                    .Any(url => long.Parse(url.Groups["number"].Value) == number);
+            }
+
+            if (matchingUrl)
+            {
+                shortcutNumbers.Add(number);
+                ClaimBareNumbersInPrimaryUrlItem(lines, i, claimedSpans);
+            }
+        }
+
+        if (shortcutNumbers.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var lineInfo in lines)
+        {
+            foreach (Match match in OwnerRepoNumberRegex().Matches(lineInfo.Text))
+            {
+                if (shortcutNumbers.Contains(long.Parse(match.Groups["number"].Value)))
+                {
+                    claimedSpans.Add(new RangeSpan(lineInfo.Start + match.Index, lineInfo.Start + match.Index + match.Length));
+                }
+            }
+        }
+    }
+
+    private static void ClaimBareNumbersInPrimaryUrlItem(
+        IReadOnlyList<LineInfo> lines,
+        int primaryLineIndex,
+        List<RangeSpan> claimedSpans)
+    {
+        var primaryLine = lines[primaryLineIndex];
+        for (var i = primaryLineIndex; i < lines.Count; i++)
+        {
+            var lineInfo = lines[i];
+            if (i > primaryLineIndex)
+            {
+                if (string.IsNullOrWhiteSpace(lineInfo.Text))
+                {
+                    break;
+                }
+
+                if (lineInfo.Indent <= primaryLine.Indent)
+                {
+                    break;
+                }
+            }
+
+            foreach (Match match in BareNumberRegex().Matches(lineInfo.Text))
+            {
+                claimedSpans.Add(new RangeSpan(lineInfo.Start + match.Index, lineInfo.Start + match.Index + match.Length));
+            }
+        }
+    }
+
     private static void AddExplicitRepositoryLineReferences(
         string line,
         int lineStart,
@@ -630,6 +717,32 @@ internal static partial class GitHubReferenceNavigator
         }
 
         return count;
+    }
+
+    private static IReadOnlyList<LineInfo> EnumerateLines(string text)
+    {
+        var lines = new List<LineInfo>();
+        var lineStart = 0;
+        while (lineStart <= text.Length)
+        {
+            var lineEnd = text.IndexOf('\n', lineStart);
+            if (lineEnd < 0)
+            {
+                lineEnd = text.Length;
+            }
+
+            var line = text[lineStart..lineEnd].TrimEnd('\r');
+            lines.Add(new LineInfo(lineStart, line, LeadingWhitespace(line)));
+
+            if (lineEnd == text.Length)
+            {
+                break;
+            }
+
+            lineStart = lineEnd + 1;
+        }
+
+        return lines;
     }
 
     public static Uri BuildUri(GitHubReferenceMatch reference, string host)
@@ -848,6 +961,9 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)\b")]
     private static partial Regex BareNumberRegex();
 
+    [GeneratedRegex(@"^\s*(?:(?:[-*]|\d+[.)])\s*)?(?<ref>#(?<number>\d+))\b")]
+    private static partial Regex PrimaryUrlListItemRegex();
+
     [GeneratedRegex(@"\b(?:prs?|issues?|pull)\b", RegexOptions.IgnoreCase)]
     private static partial Regex IssueReferenceContextRegex();
 
@@ -865,6 +981,8 @@ internal static partial class GitHubReferenceNavigator
     private readonly record struct GitHubReferenceCandidate(int Index, GitHubReferenceMatch Reference);
 
     private readonly record struct SeriesNumber(long Value, int Index, string? Kind);
+
+    private readonly record struct LineInfo(int Start, string Text, int Indent);
 }
 
 internal sealed record GitHubReferenceMatch(string RepositoryFullName, long Number, string Kind, string RawText, string? Host = null, string? Identifier = null)

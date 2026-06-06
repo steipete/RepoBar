@@ -968,6 +968,74 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_keeps_primary_url_list_shortcuts_after_repository_heading_blocks()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 belongs to Tachikoma.
+            1. #2172 schema text extensions
+               URL: https://github.com/openclaw/clawhub/pull/2172
+               Why: small, real bug, linked #874.
+            2. #2173 canonical profile route
+               URL: https://github.com/openclaw/clawhub/pull/2173
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/clawhub", 2172L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/clawhub", 2173L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_split_primary_url_list_shortcuts_with_multiple_repositories()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. #10 first
+               URL: https://github.com/a/repo/pull/10
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 belongs to Tachikoma.
+            2. #20 second
+               URL: https://github.com/b/repo/pull/20
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("a/repo", 10L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("b/repo", 20L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_does_not_let_primary_url_shortcuts_admit_unrelated_same_number_refs()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. #10 first
+               URL: https://github.com/a/repo/pull/10
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 belongs to Tachikoma.
+            Later b/repo#10 is unrelated prose.
+            2. #20 second
+               URL: https://github.com/b/repo/pull/20
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("a/repo", 10L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("b/repo", 20L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
     public void FindReferences_resolves_unique_repository_name_shorthand()
     {
         var references = GitHubReferenceNavigator.FindReferences(
