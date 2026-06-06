@@ -31,6 +31,11 @@ internal sealed class PullRequestNotificationTracker
 
     public IReadOnlyList<GitHubListItem> DetectNewPullRequests(string repositoryFullName, IReadOnlyList<GitHubListItem> currentPulls)
     {
+        if (currentPulls.Count == 0)
+        {
+            return [];
+        }
+
         var currentKeys = currentPulls
             .Select(KeyForPull)
             .Where(key => !string.IsNullOrWhiteSpace(key))
