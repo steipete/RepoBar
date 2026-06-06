@@ -53,6 +53,35 @@ public sealed class WindowsReleaseSigningWorkflowTests
         Assert.Contains("repobar-windows-installer-win-x64-signed", workflow);
     }
 
+    [Fact]
+    public void CiWorkflow_runs_windows_smoke_and_uploads_proof_artifacts()
+    {
+        var workflow = File.ReadAllText(Path.Combine(GetRepositoryRoot(), ".github", "workflows", "ci.yml"));
+
+        Assert.Contains("timeout-minutes: 30", workflow);
+        Assert.Contains("name: Windows tray", workflow);
+        Assert.Contains("run: ./Scripts/build_windows.ps1 test", workflow);
+        Assert.Contains("name: Upload Windows test results", workflow);
+        Assert.Contains("name: repobar-windows-test-results", workflow);
+        Assert.Contains("path: dist/windows/test-results", workflow);
+        Assert.Contains("if-no-files-found: warn", workflow);
+        Assert.Contains("name: Smoke tray", workflow);
+        Assert.Contains("run: ./Scripts/smoke_windows.ps1 -Runtime win-x64 -LaunchSeconds 5", workflow);
+        Assert.Contains("name: Upload Windows smoke artifacts", workflow);
+        Assert.Contains("name: repobar-windows-smoke", workflow);
+        Assert.Contains("path: dist/windows/smoke", workflow);
+
+        Assert.True(
+            workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Package tray layout", StringComparison.Ordinal));
+        Assert.True(
+            workflow.IndexOf("name: Upload Windows test results", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal));
+        Assert.True(
+            workflow.IndexOf("name: Upload Windows smoke artifacts", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Package tray layout", StringComparison.Ordinal));
+    }
+
     private static string GetRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
