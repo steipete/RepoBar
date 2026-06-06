@@ -29,7 +29,7 @@ The Windows app currently provides:
 - copyable Windows diagnostics with cache/archive state, active account, local repository inventory, compact tray tooltip rate-limit state, rate-limit snapshots, cache clearing, and forced refresh
 - optional Actions summary with latest workflow state, active queue counts, monitored-owner billing/cache/artifact-retention usage, and self-hosted runner state per configured repository
 - optional pull request notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
-- Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview, active-host GitHub Enterprise links, and pasted-list order preservation, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
+- Issue Navigator window for pasted GitHub URLs, issue/PR references, and prose reference lists like `PR 123, 456 and 789` with an embedded browser preview, active-host GitHub Enterprise links, and pasted-list order preservation, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
 - About window with project, website, issue tracker, email, update check, and copyable update diagnostics actions
 - optional launch-at-login registration for the current Windows user

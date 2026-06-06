@@ -139,4 +139,73 @@ public sealed class GitHubReferenceNavigatorTests
                 Assert.Equal("pull", reference.Kind);
             });
     }
+
+    [Fact]
+    public void FindReferences_resolves_bare_pr_prose_lists_against_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "Please check PR 123, 456 and 789 before release.",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("steipete/RepoBar", 123, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 456, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 789, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_resolves_bare_issue_prose_lists_against_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "Fix issue #12 and #13, then compare with #14.",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("steipete/RepoBar", 12, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 13, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 14, "issues"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_does_not_duplicate_owner_repository_references_as_bare_prose()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            openclaw/openclaw PR #42
+            PR #99
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/openclaw", 42, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("steipete/RepoBar", 99, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
+    public void FindReferences_ignores_bare_prose_without_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "PR 123 and issue #456",
+            "github.com",
+            null);
+
+        Assert.Empty(references);
+    }
+
+    [Fact]
+    public void FindReferences_ignores_plural_status_counts()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "State: main, clean. Open PRs: none. Open issues: 12.",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Empty(references);
+    }
 }
