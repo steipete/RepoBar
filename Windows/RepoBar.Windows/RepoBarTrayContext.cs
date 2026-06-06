@@ -189,6 +189,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                     AddAccountInsightItems(items, _accountInsight);
                 }
                 break;
+            case WindowsMainMenuItem.GlobalCommits:
+                AddGlobalCommitItems(items);
+                break;
             case WindowsMainMenuItem.GlobalActivity:
                 AddGlobalActivityItems(items);
                 break;
@@ -265,6 +268,38 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         rateItem.DropDownItems.Add(new ToolStripSeparator());
         rateItem.DropDownItems.Add(new ToolStripMenuItem("Budget is shared by the GitHub user or token actor, not by each token string.") { Enabled = false });
         items.Add(rateItem);
+    }
+
+    private void AddGlobalCommitItems(ToolStripItemCollection items)
+    {
+        if (_statuses.Count == 0)
+        {
+            return;
+        }
+
+        var commits = WindowsGlobalCommits.FromStatuses(_statuses);
+        if (commits.Count == 0)
+        {
+            return;
+        }
+
+        var commitsItem = new ToolStripMenuItem("Commits");
+        foreach (var item in commits)
+        {
+            var menuItem = new ToolStripMenuItem(item.Title, null, (_, _) =>
+            {
+                if (!string.IsNullOrWhiteSpace(item.Url))
+                {
+                    OpenUrl(item.Url);
+                }
+            })
+            {
+                Enabled = !string.IsNullOrWhiteSpace(item.Url),
+                ToolTipText = item.Subtitle ?? item.Title,
+            };
+            commitsItem.DropDownItems.Add(menuItem);
+        }
+        items.Add(commitsItem);
     }
 
     private void AddGlobalActivityItems(ToolStripItemCollection items)

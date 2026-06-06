@@ -418,10 +418,12 @@ internal sealed class GitHubRepositoryClient : IDisposable
             {
                 var message = TryGetNestedString(commit, "commit", "message") ?? "Commit";
                 var firstLine = message.Split('\n', 2)[0].Trim();
+                var committedAt = TryGetNestedDateTimeOffset(commit, "commit", "author", "date");
                 return new GitHubListItem(
                     $"{ShortSha(TryGetString(commit, "sha"))} {firstLine}",
                     TryGetString(commit, "html_url"),
-                    Metadata(TryGetNestedString(commit, "commit", "author", "name"), TryGetNestedDateTimeOffset(commit, "commit", "author", "date")));
+                    Metadata(TryGetNestedString(commit, "commit", "author", "name"), committedAt),
+                    UpdatedAt: committedAt);
             })
             .ToArray();
     }

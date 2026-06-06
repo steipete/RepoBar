@@ -11,6 +11,7 @@ internal sealed class WindowsMenuCustomization
     [
         WindowsMainMenuItem.RefreshNow,
         WindowsMainMenuItem.ContributionSummary,
+        WindowsMainMenuItem.GlobalCommits,
         WindowsMainMenuItem.GlobalActivity,
         WindowsMainMenuItem.ActionsUsage,
         WindowsMainMenuItem.RateLimits,
@@ -136,6 +137,7 @@ internal enum WindowsMainMenuItem
 {
     RefreshNow,
     ContributionSummary,
+    GlobalCommits,
     GlobalActivity,
     ActionsUsage,
     RateLimits,
@@ -182,6 +184,7 @@ internal static class WindowsMenuCustomizationLabels
         {
             WindowsMainMenuItem.RefreshNow => "Refresh now",
             WindowsMainMenuItem.ContributionSummary => "Contribution summary",
+            WindowsMainMenuItem.GlobalCommits => "Commits",
             WindowsMainMenuItem.GlobalActivity => "Activity",
             WindowsMainMenuItem.ActionsUsage => "Actions usage",
             WindowsMainMenuItem.RateLimits => "Rate limits",

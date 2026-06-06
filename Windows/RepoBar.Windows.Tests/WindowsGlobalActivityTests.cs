@@ -5,6 +5,31 @@ namespace RepoBar.Windows.Tests;
 public sealed class WindowsGlobalActivityTests
 {
     [Fact]
+    public void FromStatuses_sorts_commits_across_repositories_and_prefixes_titles()
+    {
+        var older = DateTimeOffset.Parse("2026-06-01T10:00:00Z");
+        var newer = DateTimeOffset.Parse("2026-06-01T12:00:00Z");
+        var statuses = new[]
+        {
+            Status("owner/one", commits:
+            [
+                new GitHubListItem("aaaa111 Fix Windows tray", "https://example.com/one/commit", "alice", UpdatedAt: older),
+            ]),
+            Status("owner/two", commits:
+            [
+                new GitHubListItem("bbbb222 Add menu", "https://example.com/two/commit", "bob", UpdatedAt: newer),
+                new GitHubListItem("cccc333 No date", "https://example.com/two/old", "carol"),
+            ]),
+        };
+
+        var commits = WindowsGlobalCommits.FromStatuses(statuses, limit: 2);
+
+        Assert.Equal(["owner/two: bbbb222 Add menu", "owner/one: aaaa111 Fix Windows tray"], commits.Select(item => item.Title));
+        Assert.Equal("https://example.com/two/commit", commits[0].Url);
+        Assert.Equal("bob", commits[0].Subtitle);
+    }
+
+    [Fact]
     public void FromStatuses_sorts_activity_across_repositories_and_prefixes_titles()
     {
         var older = DateTimeOffset.Parse("2026-06-01T10:00:00Z");
@@ -13,11 +38,17 @@ public sealed class WindowsGlobalActivityTests
         {
             Status(
                 "owner/one",
-                new GitHubListItem("Pushed 1 commit", "https://example.com/one", "alice", UpdatedAt: older)),
+                activity:
+                [
+                    new GitHubListItem("Pushed 1 commit", "https://example.com/one", "alice", UpdatedAt: older),
+                ]),
             Status(
                 "owner/two",
-                new GitHubListItem("opened Issue #2", "https://example.com/two", "bob", UpdatedAt: newer),
-                new GitHubListItem("Created branch main", "https://example.com/two/branch", "carol")),
+                activity:
+                [
+                    new GitHubListItem("opened Issue #2", "https://example.com/two", "bob", UpdatedAt: newer),
+                    new GitHubListItem("Created branch main", "https://example.com/two/branch", "carol"),
+                ]),
         };
 
         var activity = WindowsGlobalActivity.FromStatuses(statuses, limit: 2);
@@ -27,7 +58,10 @@ public sealed class WindowsGlobalActivityTests
         Assert.Equal("bob", activity[0].Subtitle);
     }
 
-    private static RepositoryStatus Status(string fullName, params GitHubListItem[] activity)
+    private static RepositoryStatus Status(
+        string fullName,
+        GitHubListItem[]? activity = null,
+        GitHubListItem[]? commits = null)
     {
         var parts = fullName.Split('/', 2);
         return new RepositoryStatus(
@@ -40,7 +74,7 @@ public sealed class WindowsGlobalActivityTests
             PushedAt: null,
             LatestRun: null,
             LatestRelease: null,
-            RecentLists: RecentRepositoryLists.Empty with { Activity = activity },
+            RecentLists: RecentRepositoryLists.Empty with { Activity = activity ?? [], Commits = commits ?? [] },
             Traffic: null,
             Heatmap: null,
             Changelog: null,
