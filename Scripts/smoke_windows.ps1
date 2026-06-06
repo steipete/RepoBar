@@ -153,11 +153,15 @@ function Initialize-SmokeSettings {
         repositorySortKey = "activity"
         showRateLimits = $true
         showContributionSummary = $false
+        showActionsUsage = $true
         actionsMonitoredOwners = @("steipete")
         actionsPlanTier = "team"
         diagnosticsEnabled = $true
         loggingVerbosity = "debug"
         fileLoggingEnabled = $true
+        enableGitHubReferenceMonitor = $true
+        enablePullRequestNotifications = $true
+        pullRequestNotificationClickAction = "openIssueNavigator"
         menuCustomization = [ordered]@{
             hiddenMainMenuItems = @()
             mainMenuOrder = @(
@@ -306,6 +310,7 @@ try {
     $runtimeSummary = Wait-SmokeRuntimeSummary -Path $runtimeSummaryPath
     $localRepositories = @($runtimeSummary.localRepositories)
     $runtimeRows = @($runtimeSummary.rows)
+    $runtimeActionsMonitoredOwners = @($runtimeSummary.actionsMonitoredOwners)
     $localRepo = $localRepositories | Where-Object { $_.fullName -eq "steipete/RepoBar" } | Select-Object -First 1
     $localRow = $runtimeRows | Where-Object { $_.repository -eq "steipete/RepoBar" -and $_.hasLocalStatus } | Select-Object -First 1
     if ($null -eq $localRepo -or $null -eq $localRow) {
@@ -327,6 +332,27 @@ try {
     }
     if ($runtimeSummary.responseCacheDirectory -notlike "*\cache\github\accounts\*") {
         throw "RepoBar.Windows runtime smoke did not use an account-scoped response cache directory."
+    }
+    if ($runtimeSummary.refreshIntervalMinutes -ne 5 -or $runtimeSummary.checkForUpdatesAutomatically -ne $true) {
+        throw "RepoBar.Windows runtime smoke did not preserve refresh/update settings."
+    }
+    if ($runtimeSummary.repositoryMenuScope -ne "all" -or $runtimeSummary.repositorySortKey -ne "activity" -or $runtimeSummary.repositoryDisplayLimit -ne 6) {
+        throw "RepoBar.Windows runtime smoke did not preserve repository menu settings."
+    }
+    if ($runtimeSummary.discoverLocalProjects -ne $true -or $runtimeSummary.localProjectsRoot -ne $projectsRoot -or $runtimeSummary.localProjectsMaxDepth -ne 3) {
+        throw "RepoBar.Windows runtime smoke did not preserve local project discovery settings."
+    }
+    if ($runtimeSummary.fetchLocalProjectsBeforeStatus -ne $false -or $runtimeSummary.localProjectsFetchIntervalMinutes -ne 5 -or $runtimeSummary.autoSyncLocalProjects -ne $true -or $runtimeSummary.showDirtyFilesInMenu -ne $true) {
+        throw "RepoBar.Windows runtime smoke did not preserve local project fetch/sync menu settings."
+    }
+    if ($runtimeSummary.showActionsUsage -ne $true -or $runtimeActionsMonitoredOwners -notcontains "steipete") {
+        throw "RepoBar.Windows runtime smoke did not preserve Actions usage settings."
+    }
+    if ($runtimeSummary.enableGitHubReferenceMonitor -ne $true) {
+        throw "RepoBar.Windows runtime smoke did not preserve clipboard reference monitor settings."
+    }
+    if ($runtimeSummary.enablePullRequestNotifications -ne $true -or $runtimeSummary.pullRequestNotificationClickAction -ne "openissuenavigator") {
+        throw "RepoBar.Windows runtime smoke did not preserve pull request notification settings."
     }
     if ($null -eq $runtimeSummary.renderedMenuProof) {
         throw "RepoBar.Windows runtime smoke did not include rendered menu proof."
@@ -371,10 +397,27 @@ try {
         runtimeActiveAccountId = $runtimeSummary.activeAccountId
         runtimeActiveAccountLabel = $runtimeSummary.activeAccountLabel
         runtimeActiveAccountCredentialTargets = @($runtimeSummary.activeAccountCredentialTargets)
+        runtimeRefreshIntervalMinutes = $runtimeSummary.refreshIntervalMinutes
+        runtimeCheckForUpdatesAutomatically = $runtimeSummary.checkForUpdatesAutomatically
+        runtimeRepositoryMenuScope = $runtimeSummary.repositoryMenuScope
+        runtimeRepositorySortKey = $runtimeSummary.repositorySortKey
+        runtimeRepositoryDisplayLimit = $runtimeSummary.repositoryDisplayLimit
+        runtimeDiscoverLocalProjects = $runtimeSummary.discoverLocalProjects
+        runtimeLocalProjectsRoot = $runtimeSummary.localProjectsRoot
+        runtimeLocalProjectsMaxDepth = $runtimeSummary.localProjectsMaxDepth
+        runtimeFetchLocalProjectsBeforeStatus = $runtimeSummary.fetchLocalProjectsBeforeStatus
+        runtimeLocalProjectsFetchIntervalMinutes = $runtimeSummary.localProjectsFetchIntervalMinutes
+        runtimeAutoSyncLocalProjects = $runtimeSummary.autoSyncLocalProjects
+        runtimeShowDirtyFilesInMenu = $runtimeSummary.showDirtyFilesInMenu
         runtimeDiagnosticsEnabled = $runtimeSummary.diagnosticsEnabled
         runtimeLoggingVerbosity = $runtimeSummary.loggingVerbosity
         runtimeFileLoggingEnabled = $runtimeSummary.fileLoggingEnabled
         runtimeLogFilePath = $runtimeSummary.logFilePath
+        runtimeShowActionsUsage = $runtimeSummary.showActionsUsage
+        runtimeActionsMonitoredOwners = $runtimeActionsMonitoredOwners
+        runtimeEnableGitHubReferenceMonitor = $runtimeSummary.enableGitHubReferenceMonitor
+        runtimeEnablePullRequestNotifications = $runtimeSummary.enablePullRequestNotifications
+        runtimePullRequestNotificationClickAction = $runtimeSummary.pullRequestNotificationClickAction
         runtimeResponseCacheDirectory = $runtimeSummary.responseCacheDirectory
         runtimeResponseCacheEntryCount = $runtimeSummary.responseCacheEntryCount
         runtimePullRequestNotificationStatePath = $runtimeSummary.pullRequestNotificationStatePath
@@ -404,12 +447,18 @@ try {
             diagnosticsCaptureEnabled = $runtimeSummary.diagnosticsEnabled
             logVerbosityConfigured = $runtimeSummary.loggingVerbosity -eq "debug"
             fileLoggingWritten = $runtimeSummary.fileLoggingEnabled -and (Test-Path $runtimeSummary.logFilePath)
+            refreshIntervalConfigured = $runtimeSummary.refreshIntervalMinutes -eq 5
+            repositoryMenuSettingsConfigured = $runtimeSummary.repositoryMenuScope -eq "all" -and $runtimeSummary.repositorySortKey -eq "activity" -and $runtimeSummary.repositoryDisplayLimit -eq 6
+            localDiscoveryConfigured = $runtimeSummary.discoverLocalProjects -eq $true -and $runtimeSummary.localProjectsRoot -eq $projectsRoot -and $runtimeSummary.localProjectsMaxDepth -eq 3
+            localFetchSyncConfigured = $runtimeSummary.fetchLocalProjectsBeforeStatus -eq $false -and $runtimeSummary.localProjectsFetchIntervalMinutes -eq 5 -and $runtimeSummary.autoSyncLocalProjects -eq $true -and $runtimeSummary.showDirtyFilesInMenu -eq $true
             responseCacheAccountScoped = $runtimeSummary.responseCacheDirectory -like "*\cache\github\accounts\*"
             pullRequestNotificationsAccountScoped = $runtimeSummary.pullRequestNotificationStatePath -like "*\pull-request-notifications\accounts\*"
             localFetchIntervalConfigured = $settings.localProjectsFetchIntervalMinutes -eq 5
             autoSyncConfigured = $settings.autoSyncLocalProjects -eq $true
-            actionsMonitoredOwnersConfigured = @($settings.actionsMonitoredOwners) -contains "steipete"
+            actionsMonitoredOwnersConfigured = $runtimeSummary.showActionsUsage -eq $true -and $runtimeActionsMonitoredOwners -contains "steipete"
             actionsPlanTierConfigured = $settings.actionsPlanTier -eq "team"
+            clipboardReferenceMonitorConfigured = $runtimeSummary.enableGitHubReferenceMonitor -eq $true
+            pullRequestNotificationsConfigured = $runtimeSummary.enablePullRequestNotifications -eq $true -and $runtimeSummary.pullRequestNotificationClickAction -eq "openissuenavigator"
             autoUpdateCheckConfigured = $settings.checkForUpdatesAutomatically -eq $true
             updateDiagnosticsConfigured = $menuOrder -contains "copyUpdateDiagnostics"
             renderedMainMenuComplete = $missingMainMenuItems.Count -eq 0
@@ -423,7 +472,7 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), activeAccountRepositoriesScoped=$($summary.proof.activeAccountRepositoriesScoped), responseCacheAccountScoped=$($summary.proof.responseCacheAccountScoped), pullRequestNotificationsAccountScoped=$($summary.proof.pullRequestNotificationsAccountScoped), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), autoSync=$($summary.proof.autoSyncConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), autoUpdateCheck=$($summary.proof.autoUpdateCheckConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured), renderedMainMenu=$($summary.proof.renderedMainMenuComplete), renderedRepositoryMenu=$($summary.proof.renderedRepositoryMenuComplete)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), activeAccountRepositoriesScoped=$($summary.proof.activeAccountRepositoriesScoped), responseCacheAccountScoped=$($summary.proof.responseCacheAccountScoped), pullRequestNotificationsAccountScoped=$($summary.proof.pullRequestNotificationsAccountScoped), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), repositoryMenuSettings=$($summary.proof.repositoryMenuSettingsConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), refreshInterval=$($summary.proof.refreshIntervalConfigured), localDiscovery=$($summary.proof.localDiscoveryConfigured), localFetchSync=$($summary.proof.localFetchSyncConfigured), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), autoSync=$($summary.proof.autoSyncConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), clipboardReferenceMonitor=$($summary.proof.clipboardReferenceMonitorConfigured), pullRequestNotifications=$($summary.proof.pullRequestNotificationsConfigured), autoUpdateCheck=$($summary.proof.autoUpdateCheckConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured), renderedMainMenu=$($summary.proof.renderedMainMenuComplete), renderedRepositoryMenu=$($summary.proof.renderedRepositoryMenuComplete)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }
