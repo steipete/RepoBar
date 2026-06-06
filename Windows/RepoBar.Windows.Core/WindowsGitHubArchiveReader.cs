@@ -9,17 +9,24 @@ internal sealed class WindowsGitHubArchiveReader
     internal const string SmokeArchiveFixtureEnvironmentVariable = "REPOBAR_WINDOWS_SMOKE_ARCHIVE_FIXTURE";
 
     private readonly string _databasePath;
+    private readonly string _gitHubHost;
 
     public WindowsGitHubArchiveReader(string databasePath)
+        : this(databasePath, "github.com")
+    {
+    }
+
+    internal WindowsGitHubArchiveReader(string databasePath, string gitHubHost)
     {
         _databasePath = ResolvePath(databasePath);
+        _gitHubHost = GitHubHost.Normalize(gitHubHost);
     }
 
     public static WindowsGitHubArchiveReader? FromSettings(WindowsSettings settings)
     {
         return string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
             ? null
-            : new WindowsGitHubArchiveReader(settings.GitHubArchiveDatabasePath);
+            : new WindowsGitHubArchiveReader(settings.GitHubArchiveDatabasePath, settings.GitHubHost);
     }
 
     internal static void CreateSmokeFixtureIfRequested(WindowsSettings settings)
@@ -66,6 +73,7 @@ internal sealed class WindowsGitHubArchiveReader
 
         InsertSmokeThread(
             connection,
+            settings.GitHubHost,
             settings.GetActiveRepositories().FirstOrDefault(repository => repository.IsValid) ??
                 new RepositoryRef { Owner = "steipete", Name = "RepoBar" },
             kind: "issue",
@@ -75,6 +83,7 @@ internal sealed class WindowsGitHubArchiveReader
             author: "archive-issue-bot");
         InsertSmokeThread(
             connection,
+            settings.GitHubHost,
             settings.GetActiveRepositories().FirstOrDefault(repository => repository.IsValid) ??
                 new RepositoryRef { Owner = "steipete", Name = "RepoBar" },
             kind: "pull_request",
@@ -180,7 +189,7 @@ internal sealed class WindowsGitHubArchiveReader
         }
     }
 
-    private static ArchiveThreadRow? TryReadThread(SqliteDataReader reader, RepositoryRef repository, string fallbackUrlKind)
+    private ArchiveThreadRow? TryReadThread(SqliteDataReader reader, RepositoryRef repository, string fallbackUrlKind)
     {
         using var rawDocument = ParseRawJson(ReadString(reader, "raw_json"));
         var raw = rawDocument?.RootElement;
@@ -196,7 +205,7 @@ internal sealed class WindowsGitHubArchiveReader
         var url = ReadString(reader, "url")
             ?? ReadString(reader, "html_url")
             ?? JsonString(raw, "html_url", "htmlUrl", "url")
-            ?? $"https://github.com/{repository.Owner}/{repository.Name}/{fallbackUrlKind}/{number.Value}";
+            ?? ThreadUrl(_gitHubHost, repository, fallbackUrlKind, number.Value);
         var author = ReadString(reader, "author_login")
             ?? JsonString(raw, "author_login")
             ?? JsonNestedString(raw, "user", "login")
@@ -354,6 +363,7 @@ internal sealed class WindowsGitHubArchiveReader
 
     private static void InsertSmokeThread(
         SqliteConnection connection,
+        string gitHubHost,
         RepositoryRef repository,
         string kind,
         int number,
@@ -361,7 +371,7 @@ internal sealed class WindowsGitHubArchiveReader
         string urlKind,
         string author)
     {
-        var url = $"https://github.com/{repository.Owner}/{repository.Name}/{urlKind}/{number}";
+        var url = ThreadUrl(gitHubHost, repository, urlKind, number);
         using var command = connection.CreateCommand();
         command.CommandText = """
             insert into threads(
@@ -388,6 +398,11 @@ internal sealed class WindowsGitHubArchiveReader
                 user = new { login = author },
             }));
         command.ExecuteNonQuery();
+    }
+
+    private static string ThreadUrl(string gitHubHost, RepositoryRef repository, string urlKind, int number)
+    {
+        return $"https://{GitHubHost.Normalize(gitHubHost)}/{repository.Owner}/{repository.Name}/{urlKind}/{number}";
     }
 
     private static string ResolvePath(string path)

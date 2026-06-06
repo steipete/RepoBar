@@ -23,13 +23,13 @@ The Windows app currently provides:
 - filtered repository discovery from GitHub's accessible repository list
 - repository checkout from the tray into the configured local projects folder
 - account-scoped ETag-backed response cache with stale reads when GitHub is temporarily unavailable
-- optional RepoBar archive SQLite fallback for recent issue and pull request submenus
+- optional RepoBar archive SQLite fallback for recent issue and pull request submenus, including active-host fallback links when archive rows omit URLs
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
 - copyable Windows diagnostics with cache/archive state, active account, local repository inventory, compact tray tooltip rate-limit state, rate-limit snapshots, cache clearing, and forced refresh
 - optional Actions summary with latest workflow state, active queue counts, monitored-owner billing/cache/artifact-retention usage, and self-hosted runner state per configured repository
 - optional pull request notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
-- Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
+- Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview and active-host GitHub Enterprise links, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
 - About window with project, website, issue tracker, email, update check, and copyable update diagnostics actions
 - optional launch-at-login registration for the current Windows user
@@ -291,7 +291,7 @@ The app also checks `GITHUB_TOKEN` and `GH_TOKEN`. Tokens are not written to the
 
 When `enableResponseCache` is true, RepoBar stores ETag-backed REST responses and can reuse stale responses after temporary GitHub failures.
 
-Set `gitHubArchiveDatabasePath` to a RepoBar-owned archive SQLite database produced from the same portable snapshot format as the macOS app. When the live recent issue or pull request endpoint is rate-limited, forbidden, offline, or returns malformed JSON, the Windows tray reads open `threads` rows from the archive so the issue and pull request submenus do not go blank. RepoBar only reads this database; it does not edit gitcrawl config or write into crawler-owned stores.
+Set `gitHubArchiveDatabasePath` to a RepoBar-owned archive SQLite database produced from the same portable snapshot format as the macOS app. When the live recent issue or pull request endpoint is rate-limited, forbidden, offline, or returns malformed JSON, the Windows tray reads open `threads` rows from the archive so the issue and pull request submenus do not go blank. If an archive row omits a URL, RepoBar builds the fallback issue or pull-request link from the active account host. RepoBar only reads this database; it does not edit gitcrawl config or write into crawler-owned stores.
 
 ## Local Projects
 

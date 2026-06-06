@@ -63,7 +63,7 @@ internal static partial class GitHubReferenceNavigator
 
     public static Uri BuildUri(GitHubReferenceMatch reference, string host)
     {
-        var normalizedHost = string.IsNullOrWhiteSpace(host) ? "github.com" : host.Trim();
+        var normalizedHost = GitHubHost.Normalize(host);
         var pathKind = IsPullRequestKind(reference.Kind)
                 ? "pull"
                 : "issues";

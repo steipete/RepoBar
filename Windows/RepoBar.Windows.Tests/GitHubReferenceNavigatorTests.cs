@@ -33,4 +33,14 @@ public sealed class GitHubReferenceNavigatorTests
 
         Assert.Equal("https://github.example.com/owner/repo/pull/9", uri.ToString());
     }
+
+    [Fact]
+    public void BuildUri_normalizes_enterprise_hosts()
+    {
+        var uri = GitHubReferenceNavigator.BuildUri(
+            new GitHubReferenceMatch("owner/repo", 42, "issues", "owner/repo#42"),
+            "https://GitHub.Enterprise.test/org");
+
+        Assert.Equal("https://github.enterprise.test/owner/repo/issues/42", uri.ToString());
+    }
 }

@@ -86,6 +86,73 @@ public sealed class GitHubArchiveReaderTests
     }
 
     [Fact]
+    public void Archive_reader_builds_fallback_urls_from_active_enterprise_host()
+    {
+        var databasePath = CreateArchiveDatabase();
+        try
+        {
+            using (var connection = OpenWritable(databasePath))
+            {
+                CreateThreadsTable(connection);
+                InsertThread(
+                    connection,
+                    repository: "owner/name",
+                    kind: "issue",
+                    number: 44,
+                    title: "Enterprise archive issue",
+                    state: "open",
+                    updatedAt: "2026-06-03T12:00:00Z",
+                    url: null,
+                    author: "alice");
+            }
+
+            var reader = new WindowsGitHubArchiveReader(databasePath, "https://GitHub.Enterprise.test/org");
+            var repository = new RepositoryRef { Owner = "owner", Name = "name" };
+
+            var issue = Assert.Single(reader.RecentIssues(repository, limit: 5));
+
+            Assert.Equal("#44 Enterprise archive issue", issue.Title);
+            Assert.Equal("https://github.enterprise.test/owner/name/issues/44", issue.Url);
+        }
+        finally
+        {
+            DeleteDatabase(databasePath);
+        }
+    }
+
+    [Fact]
+    public void CreateSmokeFixtureIfRequested_uses_active_enterprise_host()
+    {
+        var databasePath = CreateArchiveDatabase();
+        var previous = Environment.GetEnvironmentVariable(WindowsGitHubArchiveReader.SmokeArchiveFixtureEnvironmentVariable);
+        try
+        {
+            Environment.SetEnvironmentVariable(WindowsGitHubArchiveReader.SmokeArchiveFixtureEnvironmentVariable, "1");
+            WindowsGitHubArchiveReader.CreateSmokeFixtureIfRequested(new WindowsSettings
+            {
+                GitHubHost = "github.enterprise.test",
+                GitHubArchiveDatabasePath = databasePath,
+                Repositories = [new RepositoryRef { Owner = "owner", Name = "name" }],
+            });
+
+            var reader = new WindowsGitHubArchiveReader(databasePath, "github.enterprise.test");
+            var repository = new RepositoryRef { Owner = "owner", Name = "name" };
+
+            Assert.Contains(
+                reader.RecentIssues(repository, limit: 5),
+                issue => issue.Url == "https://github.enterprise.test/owner/name/issues/987");
+            Assert.Contains(
+                reader.RecentPulls(repository, limit: 5),
+                pull => pull.Url == "https://github.enterprise.test/owner/name/pull/654");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable(WindowsGitHubArchiveReader.SmokeArchiveFixtureEnvironmentVariable, previous);
+            DeleteDatabase(databasePath);
+        }
+    }
+
+    [Fact]
     public async Task Repository_client_uses_archive_lists_when_live_recent_lists_fail()
     {
         var databasePath = CreateArchiveDatabase();
@@ -328,7 +395,7 @@ public sealed class GitHubArchiveReaderTests
         string title,
         string state,
         string updatedAt,
-        string url,
+        string? url,
         string author)
     {
         using var command = connection.CreateCommand();
@@ -345,7 +412,7 @@ public sealed class GitHubArchiveReaderTests
         command.Parameters.AddWithValue("$title", title);
         command.Parameters.AddWithValue("$updated_at", updatedAt);
         command.Parameters.AddWithValue("$state", state);
-        command.Parameters.AddWithValue("$html_url", url);
+        command.Parameters.AddWithValue("$html_url", url is null ? DBNull.Value : url);
         command.Parameters.AddWithValue("$author_login", author);
         command.Parameters.AddWithValue(
             "$raw_json",
