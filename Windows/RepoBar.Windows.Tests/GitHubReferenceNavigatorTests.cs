@@ -1036,6 +1036,106 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_bare_refs_from_normal_repository_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            Found 5 more in openclaw/gogcli after clean main pull.
+
+            1. #569 release/bottle codesigning
+            2. #568 local self-sign PR
+            3. #567 Win11 access_denied
+            4. #338 Workspace invalid_rapt
+            5. #468 Google Meet PR
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/gogcli", 569L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 568L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 567L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 338L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 468L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_uses_inline_normal_repository_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. openclaw/Peekaboo
+
+            Found in openclaw/gogcli: #569
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/gogcli", reference.RepositoryFullName);
+        Assert.Equal(569L, reference.Number);
+    }
+
+    [Fact]
+    public void FindReferences_preserves_normal_repository_context_across_repository_heading_blocks()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            Found in openclaw/gogcli.
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18
+            1. #569
+            2. #568
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 569L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/gogcli", 568L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_does_not_leak_heading_child_repository_prose_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              Found in openclaw/gogcli.
+              #18
+            1. #569
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("steipete/RepoBar", 569L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_explicit_repository_colon_kinded_refs_under_normal_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            Found in openclaw/gogcli.
+            other/repo: PR 18
+            PR #19
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("other/repo", 18L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)),
+            reference => Assert.Equal(("openclaw/gogcli", 19L, "pull"), (reference.RepositoryFullName, reference.Number, reference.Kind)));
+    }
+
+    [Fact]
     public void FindReferences_resolves_unique_repository_name_shorthand()
     {
         var references = GitHubReferenceNavigator.FindReferences(

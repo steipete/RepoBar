@@ -20,6 +20,7 @@ internal static partial class GitHubReferenceNavigator
         var uniqueRepositoriesByName = UniqueRepositoriesByName(defaultRepositoryFullName, knownRepositoryFullNames);
         AddRepositoryHeadingReferences(text, matches, claimedSpans);
         AddPrimaryUrlListShortcutClaims(text, claimedSpans);
+        AddNormalRepositoryContextReferences(text, matches, claimedSpans);
 
         foreach (Match match in GitHubCommitUrlRegex().Matches(text))
         {
@@ -575,6 +576,246 @@ internal static partial class GitHubReferenceNavigator
         }
     }
 
+    private static void AddNormalRepositoryContextReferences(
+        string text,
+        List<GitHubReferenceCandidate> matches,
+        List<RangeSpan> claimedSpans)
+    {
+        var lines = EnumerateLines(text);
+        var repositoryHeadingLines = RepositoryHeadingLineIndexes(lines);
+        var repositoryFullName = NormalRepositoryContext(lines, repositoryHeadingLines);
+        if (string.IsNullOrWhiteSpace(repositoryFullName))
+        {
+            return;
+        }
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (repositoryHeadingLines.Contains(i))
+            {
+                continue;
+            }
+
+            var lineInfo = lines[i];
+            AddExplicitRepositoryLineReferences(lineInfo.Text, lineInfo.Start, matches, claimedSpans);
+
+            foreach (Match match in KindedBareNumberRegex().Matches(lineInfo.Text))
+            {
+                var index = lineInfo.Start + match.Index;
+                if (claimedSpans.Any(span => span.Contains(index)))
+                {
+                    continue;
+                }
+
+                foreach (Capture number in match.Groups["number"].Captures)
+                {
+                    matches.Add(new GitHubReferenceCandidate(
+                        lineInfo.Start + number.Index,
+                        new GitHubReferenceMatch(
+                            repositoryFullName,
+                            long.Parse(number.Value),
+                            NormalizeKind(match.Groups["kind"].Value),
+                            number.Value)));
+                }
+
+                claimedSpans.Add(new RangeSpan(index, index + match.Length));
+            }
+
+            foreach (Match match in BareIssueSeriesRegex().Matches(lineInfo.Text))
+            {
+                var index = lineInfo.Start + match.Groups["number"].Index;
+                if (claimedSpans.Any(span => span.Contains(index)))
+                {
+                    continue;
+                }
+
+                var startNumber = long.Parse(match.Groups["number"].Value);
+                matches.Add(new GitHubReferenceCandidate(
+                    index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        startNumber,
+                        "issues",
+                        match.Groups["number"].Value)));
+
+                foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+                {
+                    matches.Add(new GitHubReferenceCandidate(
+                        lineInfo.Start + number.Index,
+                        new GitHubReferenceMatch(
+                            repositoryFullName,
+                            number.Value,
+                            number.Kind ?? "issues",
+                            number.Value.ToString())));
+                }
+
+                claimedSpans.Add(new RangeSpan(lineInfo.Start + match.Index, lineInfo.Start + match.Index + match.Length));
+            }
+
+            foreach (Match match in BareNumberRegex().Matches(lineInfo.Text))
+            {
+                var index = lineInfo.Start + match.Index;
+                AddCandidateIfUnclaimed(
+                    matches,
+                    claimedSpans,
+                    index,
+                    match.Length,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        long.Parse(match.Groups["number"].Value),
+                        "issues",
+                        match.Value));
+            }
+        }
+    }
+
+    private static HashSet<int> RepositoryHeadingLineIndexes(IReadOnlyList<LineInfo> lines)
+    {
+        var consumed = new HashSet<int>();
+        string? headingRepository = null;
+        var headingIndent = 0;
+        string? pendingHeadingRepository = null;
+        var pendingHeadingIndent = 0;
+        int? pendingHeadingIndex = null;
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            var lineInfo = lines[i];
+            var line = lineInfo.Text;
+            var indent = lineInfo.Indent;
+
+            if (!string.IsNullOrWhiteSpace(pendingHeadingRepository))
+            {
+                if (string.IsNullOrWhiteSpace(line) || indent <= pendingHeadingIndent)
+                {
+                    pendingHeadingRepository = null;
+                    pendingHeadingIndex = null;
+                }
+                else if (RepositoryCountSummaryLineRegex().IsMatch(line))
+                {
+                    if (pendingHeadingIndex.HasValue)
+                    {
+                        consumed.Add(pendingHeadingIndex.Value);
+                    }
+
+                    consumed.Add(i);
+                    headingRepository = pendingHeadingRepository;
+                    headingIndent = pendingHeadingIndent;
+                    pendingHeadingRepository = null;
+                    pendingHeadingIndex = null;
+                    continue;
+                }
+                else
+                {
+                    pendingHeadingRepository = null;
+                    pendingHeadingIndex = null;
+                }
+            }
+
+            var isHeadingChild = !string.IsNullOrWhiteSpace(headingRepository) && indent > headingIndent;
+            if (isHeadingChild)
+            {
+                consumed.Add(i);
+                continue;
+            }
+
+            headingRepository = null;
+
+            var heading = RepositoryCountHeadingRegex().Match(line);
+            if (heading.Success)
+            {
+                consumed.Add(i);
+                headingRepository = $"{heading.Groups["owner"].Value}/{heading.Groups["repo"].Value}";
+                headingIndent = indent;
+                pendingHeadingRepository = null;
+                pendingHeadingIndex = null;
+                continue;
+            }
+
+            var repositoryOnlyHeading = RepositoryOnlyHeadingRegex().Match(line);
+            if (repositoryOnlyHeading.Success)
+            {
+                pendingHeadingRepository = $"{repositoryOnlyHeading.Groups["owner"].Value}/{repositoryOnlyHeading.Groups["repo"].Value}";
+                pendingHeadingIndent = indent;
+                pendingHeadingIndex = i;
+            }
+        }
+
+        return consumed;
+    }
+
+    private static string? NormalRepositoryContext(
+        IReadOnlyList<LineInfo> lines,
+        HashSet<int> repositoryHeadingLines)
+    {
+        var repositories = new List<string>();
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var sawPrimaryListReference = false;
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (repositoryHeadingLines.Contains(i))
+            {
+                continue;
+            }
+
+            var line = lines[i].Text;
+            var lineHasPrimaryListReference = PrimaryUrlListItemRegex().IsMatch(line);
+            var lineScopedRepositories = LineScopedRepositories(line);
+            foreach (Match match in NormalRepositoryContextRegex().Matches(line))
+            {
+                var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+                if (sawPrimaryListReference || lineHasPrimaryListReference || lineScopedRepositories.Contains(repositoryFullName))
+                {
+                    continue;
+                }
+
+                if (seen.Add(repositoryFullName))
+                {
+                    repositories.Add(repositoryFullName);
+                }
+            }
+
+            if (lineHasPrimaryListReference)
+            {
+                sawPrimaryListReference = true;
+            }
+        }
+
+        return repositories.Count == 1 ? repositories[0] : null;
+    }
+
+    private static HashSet<string> LineScopedRepositories(string line)
+    {
+        var repositories = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (Match match in GroupedRepositoryLineRegex().Matches(line))
+        {
+            repositories.Add($"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}");
+        }
+
+        foreach (Match match in RepositoryColonKindedSeriesRegex().Matches(line))
+        {
+            repositories.Add($"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}");
+        }
+
+        foreach (Match match in OwnerRepoKindedSeriesRegex().Matches(line))
+        {
+            repositories.Add($"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}");
+        }
+
+        foreach (Match match in OwnerRepoSeriesRegex().Matches(line))
+        {
+            repositories.Add($"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}");
+        }
+
+        foreach (Match match in OwnerRepoNumberRegex().Matches(line))
+        {
+            repositories.Add($"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}");
+        }
+
+        return repositories;
+    }
+
     private static void ClaimBareNumbersInPrimaryUrlItem(
         IReadOnlyList<LineInfo> lines,
         int primaryLineIndex,
@@ -610,6 +851,38 @@ internal static partial class GitHubReferenceNavigator
         List<GitHubReferenceCandidate> matches,
         List<RangeSpan> claimedSpans)
     {
+        foreach (Match match in RepositoryColonKindedSeriesRegex().Matches(line))
+        {
+            if (claimedSpans.Any(span => span.Contains(lineStart + match.Index)))
+            {
+                continue;
+            }
+
+            var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+            var kind = NormalizeKind(match.Groups["kind"].Value);
+            var startNumber = long.Parse(match.Groups["number"].Value);
+            matches.Add(new GitHubReferenceCandidate(
+                lineStart + match.Groups["number"].Index,
+                new GitHubReferenceMatch(
+                    repositoryFullName,
+                    startNumber,
+                    kind,
+                    match.Groups["number"].Value)));
+
+            foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    lineStart + number.Index,
+                    new GitHubReferenceMatch(
+                        repositoryFullName,
+                        number.Value,
+                        number.Kind ?? kind,
+                        number.Value.ToString())));
+            }
+
+            claimedSpans.Add(new RangeSpan(lineStart + match.Index, lineStart + match.Index + match.Length));
+        }
+
         foreach (Match match in OwnerRepoKindedSeriesRegex().Matches(line))
         {
             if (claimedSpans.Any(span => span.Contains(lineStart + match.Index)))
@@ -939,6 +1212,9 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<repo>[A-Za-z0-9_.-]+)#(?<number>\d+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex RepositoryNameNumberRegex();
+
+    [GeneratedRegex(@"\b(?:in|repo|repository|from|for|on|inside)\s+(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex NormalRepositoryContextRegex();
 
     [GeneratedRegex(@"(?<separator>-|/|,|and)[ \t]*(?:(?<kind>PRs?|pull requests?|issues?)[ \t]+)?#?(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex SeriesTokenRegex();
