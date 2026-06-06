@@ -24,7 +24,7 @@ The Windows app currently provides:
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
 - optional Actions summary with latest workflow state, active queue counts, billing usage, cache usage, and self-hosted runner state per configured repository
-- optional pull request notifications through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
+- optional pull request notifications for new PRs, updates, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
 - optional launch-at-login registration for the current Windows user
@@ -107,6 +107,11 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "showRateLimits": true,
   "showContributionSummary": true,
   "enablePullRequestNotifications": false,
+  "enablePullRequestNewNotifications": true,
+  "enablePullRequestUpdateNotifications": true,
+  "enablePullRequestReviewRequestNotifications": false,
+  "enablePullRequestCommentNotifications": false,
+  "pullRequestNotificationClickAction": "openInBrowser",
   "showActionsUsage": false,
   "repositories": [
     { "owner": "steipete", "name": "RepoBar", "visibility": "pinned" }
@@ -115,6 +120,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 ```
 
 Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name; pinned repositories stay ahead of the normal sorted list.
+
+Use **PR notifications** plus the event toggles to choose whether Windows tray balloons are sent for new pull requests, pull request updates, review requests, and new comments. The first refresh records a baseline without notifying, matching the macOS behavior.
 
 ## Validation
 

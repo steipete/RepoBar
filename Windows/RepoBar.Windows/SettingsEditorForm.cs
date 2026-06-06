@@ -34,6 +34,10 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
     private readonly CheckBox _enablePullRequestNotifications = new();
+    private readonly CheckBox _enablePullRequestNewNotifications = new();
+    private readonly CheckBox _enablePullRequestUpdateNotifications = new();
+    private readonly CheckBox _enablePullRequestReviewRequestNotifications = new();
+    private readonly CheckBox _enablePullRequestCommentNotifications = new();
     private readonly ComboBox _pullRequestNotificationClickAction = new();
     private readonly BindingList<RepositoryRow> _repositories = [];
     private readonly DataGridView _repositoriesGrid = new();
@@ -102,6 +106,10 @@ internal sealed class SettingsEditorForm : Form
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
         _enablePullRequestNotifications.Checked = settings.EnablePullRequestNotifications;
+        _enablePullRequestNewNotifications.Checked = settings.EnablePullRequestNewNotifications;
+        _enablePullRequestUpdateNotifications.Checked = settings.EnablePullRequestUpdateNotifications;
+        _enablePullRequestReviewRequestNotifications.Checked = settings.EnablePullRequestReviewRequestNotifications;
+        _enablePullRequestCommentNotifications.Checked = settings.EnablePullRequestCommentNotifications;
         _pullRequestNotificationClickAction.DropDownStyle = ComboBoxStyle.DropDownList;
         _pullRequestNotificationClickAction.DataSource = Enum.GetValues<PullRequestNotificationClickAction>()
             .Select(NotificationClickActionRow.FromAction)
@@ -182,6 +190,10 @@ internal sealed class SettingsEditorForm : Form
         _showContributionSummary.Text = "Show contribution summary";
         _showActionsUsage.Text = "Show Actions usage";
         _enablePullRequestNotifications.Text = "PR notifications";
+        _enablePullRequestNewNotifications.Text = "Notify new PRs";
+        _enablePullRequestUpdateNotifications.Text = "Notify PR updates";
+        _enablePullRequestReviewRequestNotifications.Text = "Notify review requests";
+        _enablePullRequestCommentNotifications.Text = "Notify PR comments";
 
         settingsGrid.Controls.Add(_openMenuOnLeftClick);
         settingsGrid.Controls.Add(_launchAtLogin);
@@ -193,6 +205,10 @@ internal sealed class SettingsEditorForm : Form
         settingsGrid.Controls.Add(_showContributionSummary);
         settingsGrid.Controls.Add(_showActionsUsage);
         settingsGrid.Controls.Add(_enablePullRequestNotifications);
+        settingsGrid.Controls.Add(_enablePullRequestNewNotifications);
+        settingsGrid.Controls.Add(_enablePullRequestUpdateNotifications);
+        settingsGrid.Controls.Add(_enablePullRequestReviewRequestNotifications);
+        settingsGrid.Controls.Add(_enablePullRequestCommentNotifications);
 
         var localRootPanel = new Panel { Dock = DockStyle.Top, Height = 34 };
         _localProjectsRoot.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
@@ -496,6 +512,10 @@ internal sealed class SettingsEditorForm : Form
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
         settings.EnablePullRequestNotifications = _enablePullRequestNotifications.Checked;
+        settings.EnablePullRequestNewNotifications = _enablePullRequestNewNotifications.Checked;
+        settings.EnablePullRequestUpdateNotifications = _enablePullRequestUpdateNotifications.Checked;
+        settings.EnablePullRequestReviewRequestNotifications = _enablePullRequestReviewRequestNotifications.Checked;
+        settings.EnablePullRequestCommentNotifications = _enablePullRequestCommentNotifications.Checked;
         settings.PullRequestNotificationClickAction = _pullRequestNotificationClickAction.SelectedValue is PullRequestNotificationClickAction action
             ? action
             : PullRequestNotificationClickAction.OpenInBrowser;

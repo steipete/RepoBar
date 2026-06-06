@@ -805,16 +805,17 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         foreach (var status in statuses.Where(status => status.ErrorMessage == null))
         {
-            var newPulls = _pullRequestNotificationTracker.DetectNewPullRequests(
+            var notifications = _pullRequestNotificationTracker.DetectEvents(
                 status.Repository.FullName,
-                status.RecentLists.Pulls);
-            foreach (var pull in newPulls.Take(3))
+                status.RecentLists.Pulls,
+                _settingsStore.Settings);
+            foreach (var notification in notifications.Take(3))
             {
-                _lastPullRequestNotificationTarget = PullRequestNotificationClickTarget.From(status.Repository.FullName, pull);
+                _lastPullRequestNotificationTarget = PullRequestNotificationClickTarget.From(status.Repository.FullName, notification.Pull);
                 _notifyIcon.ShowBalloonTip(
                     timeout: 8000,
-                    tipTitle: $"{status.Repository.FullName} pull request",
-                    tipText: pull.Title,
+                    tipTitle: $"{status.Repository.FullName} {notification.Kind.DisplayName()}",
+                    tipText: notification.Detail == null ? notification.Pull.Title : $"{notification.Pull.Title}\n{notification.Detail}",
                     tipIcon: ToolTipIcon.Info);
             }
         }

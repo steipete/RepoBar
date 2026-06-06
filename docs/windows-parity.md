@@ -17,7 +17,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Rate limits | REST/GraphQL resource meter and blocker banner | Tray rate-limit state with REST/GraphQL resource buckets, quota, reset, blocker, and shared-budget details | Mostly |
 | Actions usage | Optional Actions/runners billing menu | Optional workflow summary plus queue, billing usage, cache usage, and self-hosted runner state | Mostly |
 | Issue Navigator | Clipboard/reference resolver window with browser preview | Windows reference resolver window with embedded browser preview, copy, and open actions | Mostly |
-| Notifications | Optional PR notifications with browser or Issue Navigator click handling | Windows tray notifications with configurable browser or Issue Navigator click-through and persistent duplicate suppression across transient empty refreshes | Mostly |
+| Notifications | Optional PR notifications for new PRs, updates, review requests, and comments with browser or Issue Navigator click handling | Windows tray notifications for new PRs, updates, review requests, and comments with configurable browser or Issue Navigator click-through and persistent duplicate suppression across transient empty refreshes | Mostly |
 | Updates/install | Sparkle/Homebrew/DMG | Installer, current-user startup option, and manual GitHub release check with Windows installer asset detection | Mostly |
 | Tests | Swift tests for parsing, auth, cache, refs, menu signatures | .NET unit tests plus Windows Crabbox build/runtime smoke with screenshot/artifact capture | Mostly |
 

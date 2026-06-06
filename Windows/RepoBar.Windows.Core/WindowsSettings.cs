@@ -27,6 +27,10 @@ internal sealed class WindowsSettings
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public bool EnablePullRequestNotifications { get; set; }
+    public bool EnablePullRequestNewNotifications { get; set; } = true;
+    public bool EnablePullRequestUpdateNotifications { get; set; } = true;
+    public bool EnablePullRequestReviewRequestNotifications { get; set; }
+    public bool EnablePullRequestCommentNotifications { get; set; }
     public PullRequestNotificationClickAction PullRequestNotificationClickAction { get; set; } = PullRequestNotificationClickAction.OpenInBrowser;
     public bool ShowActionsUsage { get; set; }
     public List<RepositoryRef> Repositories { get; set; } = [];

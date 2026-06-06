@@ -275,7 +275,8 @@ internal sealed class GitHubRepositoryClient : IDisposable
                 .Select(pull => new GitHubListItem(
                     $"#{pull.GetProperty("number").GetInt32()} {TryGetString(pull, "title") ?? "Untitled pull request"}",
                     TryGetString(pull, "html_url"),
-                    Metadata(TryGetNestedString(pull, "user", "login"), TryGetDateTimeOffset(pull, "updated_at"))))
+                    Metadata(TryGetNestedString(pull, "user", "login"), TryGetDateTimeOffset(pull, "updated_at")),
+                    PullRequestSnapshotFor(pull)))
                 .ToArray();
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -896,6 +897,37 @@ internal sealed class GitHubRepositoryClient : IDisposable
         return parts.Count == 0 ? null : string.Join(" - ", parts);
     }
 
+    private static PullRequestNotificationSnapshot PullRequestSnapshotFor(JsonElement pull)
+    {
+        return new PullRequestNotificationSnapshot(
+            TryGetDateTimeOffset(pull, "updated_at"),
+            TryGetInt32(pull, "comments") ?? 0,
+            TryGetInt32(pull, "review_comments") ?? 0,
+            TryGetStringArray(pull, "requested_reviewers", "login"),
+            TryGetStringArray(pull, "requested_teams", "slug"));
+    }
+
+    private static int? TryGetInt32(JsonElement element, string propertyName)
+    {
+        return element.TryGetProperty(propertyName, out var property) && property.ValueKind == JsonValueKind.Number
+            ? property.GetInt32()
+            : null;
+    }
+
+    private static string[] TryGetStringArray(JsonElement element, string propertyName, string itemPropertyName)
+    {
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.Array)
+        {
+            return [];
+        }
+
+        return property.EnumerateArray()
+            .Select(item => TryGetString(item, itemPropertyName))
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Cast<string>()
+            .ToArray();
+    }
+
     private static string? ShortSha(string? sha)
     {
         return string.IsNullOrWhiteSpace(sha) ? null : sha[..Math.Min(7, sha.Length)];
@@ -1034,7 +1066,11 @@ internal sealed record HeatmapStatus(int TotalCommits, int ActiveWeeks, DateTime
 
 internal sealed record ChangelogStatus(string Headline, string Url);
 
-internal sealed record GitHubListItem(string Title, string? Url, string? Subtitle);
+internal sealed record GitHubListItem(
+    string Title,
+    string? Url,
+    string? Subtitle,
+    PullRequestNotificationSnapshot? PullRequestSnapshot = null);
 
 internal sealed record RecentRepositoryLists(
     IReadOnlyList<GitHubListItem> Issues,

@@ -64,4 +64,110 @@ public sealed class PullRequestNotificationTrackerTests
             }
         }
     }
+
+    [Fact]
+    public void DetectEvents_reports_updates_review_requests_and_comments_when_enabled()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
+        try
+        {
+            var statePath = Path.Combine(directory, "state.json");
+            var tracker = new PullRequestNotificationTracker(statePath);
+            var settings = NotificationSettings();
+
+            Assert.Empty(tracker.DetectEvents("o/r", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z", comments: 1),
+                Pull("#2 Second", 2, "2026-06-06T10:00:00Z"),
+                Pull("#3 Third", 3, "2026-06-06T10:00:00Z"),
+            ], settings));
+
+            var events = tracker.DetectEvents("o/r", [
+                Pull("#1 First", 1, "2026-06-06T10:10:00Z", comments: 1),
+                Pull("#2 Second", 2, "2026-06-06T10:00:00Z", requestedReviewers: ["octo"]),
+                Pull("#3 Third", 3, "2026-06-06T10:00:00Z", comments: 2, reviewComments: 1),
+            ], settings);
+
+            Assert.Equal(
+                [
+                    PullRequestNotificationEventKind.PullRequestUpdated,
+                    PullRequestNotificationEventKind.ReviewRequested,
+                    PullRequestNotificationEventKind.NewComment,
+                ],
+                events.Select(item => item.Kind));
+            Assert.Equal("Review requested from octo", events[1].Detail);
+            Assert.Equal("3 new comments", events[2].Detail);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void DetectEvents_loads_legacy_seen_url_state()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
+        try
+        {
+            Directory.CreateDirectory(directory);
+            var statePath = Path.Combine(directory, "state.json");
+            File.WriteAllText(statePath, """
+                {
+                  "o/r": ["https://github.com/o/r/pull/1"]
+                }
+                """);
+            var tracker = new PullRequestNotificationTracker(statePath);
+
+            var events = tracker.DetectEvents("o/r", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z"),
+                Pull("#2 Second", 2, "2026-06-06T10:00:00Z"),
+            ], NotificationSettings());
+
+            Assert.Single(events);
+            Assert.Equal(PullRequestNotificationEventKind.NewPullRequest, events[0].Kind);
+            Assert.Equal("#2 Second", events[0].Pull.Title);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    private static WindowsSettings NotificationSettings()
+    {
+        return new WindowsSettings
+        {
+            EnablePullRequestNewNotifications = true,
+            EnablePullRequestUpdateNotifications = true,
+            EnablePullRequestReviewRequestNotifications = true,
+            EnablePullRequestCommentNotifications = true,
+        };
+    }
+
+    private static GitHubListItem Pull(
+        string title,
+        int number,
+        string updatedAt,
+        int comments = 0,
+        int reviewComments = 0,
+        string[]? requestedReviewers = null,
+        string[]? requestedTeams = null)
+    {
+        return new GitHubListItem(
+            title,
+            $"https://github.com/o/r/pull/{number}",
+            null,
+            new PullRequestNotificationSnapshot(
+                DateTimeOffset.Parse(updatedAt),
+                comments,
+                reviewComments,
+                requestedReviewers ?? [],
+                requestedTeams ?? []));
+    }
 }
