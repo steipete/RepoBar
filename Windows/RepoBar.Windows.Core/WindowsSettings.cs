@@ -488,8 +488,17 @@ internal sealed class WindowsSettingsStore
         settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
         settings.RepositoryOwnerFilter = NormalizeRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
         settings.ActionsMonitoredOwners = NormalizeRepositoryOwnerFilter(settings.ActionsMonitoredOwners);
+        settings.RepositoryMenuScope = Enum.IsDefined(settings.RepositoryMenuScope) ? settings.RepositoryMenuScope : RepositoryMenuScope.All;
+        settings.RepositorySortKey = Enum.IsDefined(settings.RepositorySortKey) ? settings.RepositorySortKey : RepositorySortKey.Activity;
+        settings.HeatmapDisplay = Enum.IsDefined(settings.HeatmapDisplay) ? settings.HeatmapDisplay : WindowsHeatmapDisplay.RowAndSubmenu;
+        settings.HeatmapSpan = Enum.IsDefined(settings.HeatmapSpan) ? settings.HeatmapSpan : WindowsHeatmapSpan.TwelveMonths;
+        settings.ActivityScope = Enum.IsDefined(settings.ActivityScope) ? settings.ActivityScope : WindowsActivityScope.MyActivity;
+        settings.TerminalPreference = Enum.IsDefined(settings.TerminalPreference) ? settings.TerminalPreference : WindowsTerminalPreference.Auto;
         settings.ActionsPlanTier = Enum.IsDefined(settings.ActionsPlanTier) ? settings.ActionsPlanTier : WindowsActionsPlanTier.Free;
         settings.LoggingVerbosity = Enum.IsDefined(settings.LoggingVerbosity) ? settings.LoggingVerbosity : WindowsLogVerbosity.Info;
+        settings.PullRequestNotificationClickAction = Enum.IsDefined(settings.PullRequestNotificationClickAction)
+            ? settings.PullRequestNotificationClickAction
+            : PullRequestNotificationClickAction.OpenInBrowser;
         settings.MenuCustomization ??= new WindowsMenuCustomization();
         settings.MenuCustomization.Normalize();
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)

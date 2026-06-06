@@ -287,6 +287,31 @@ public sealed class WindowsSettingsStoreTests
     }
 
     [Fact]
+    public void NormalizeSettings_resets_unknown_enum_backed_preferences()
+    {
+        var settings = new WindowsSettings
+        {
+            RepositoryMenuScope = (RepositoryMenuScope)999,
+            RepositorySortKey = (RepositorySortKey)999,
+            HeatmapDisplay = (WindowsHeatmapDisplay)999,
+            HeatmapSpan = (WindowsHeatmapSpan)999,
+            ActivityScope = (WindowsActivityScope)999,
+            TerminalPreference = (WindowsTerminalPreference)999,
+            PullRequestNotificationClickAction = (PullRequestNotificationClickAction)999,
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal(RepositoryMenuScope.All, settings.RepositoryMenuScope);
+        Assert.Equal(RepositorySortKey.Activity, settings.RepositorySortKey);
+        Assert.Equal(WindowsHeatmapDisplay.RowAndSubmenu, settings.HeatmapDisplay);
+        Assert.Equal(WindowsHeatmapSpan.TwelveMonths, settings.HeatmapSpan);
+        Assert.Equal(WindowsActivityScope.MyActivity, settings.ActivityScope);
+        Assert.Equal(WindowsTerminalPreference.Auto, settings.TerminalPreference);
+        Assert.Equal(PullRequestNotificationClickAction.OpenInBrowser, settings.PullRequestNotificationClickAction);
+    }
+
+    [Fact]
     public void SetRepositoryMenuScope_persists_scope_changes()
     {
         var store = CreateStore(new WindowsSettings());
