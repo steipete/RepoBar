@@ -274,6 +274,28 @@ internal static partial class GitHubReferenceNavigator
                     }
                 }
 
+                foreach (Match match in KindedBareNumberRegex().Matches(line))
+                {
+                    var index = lineStart + match.Index;
+                    if (claimedSpans.Any(span => span.Contains(index)))
+                    {
+                        continue;
+                    }
+
+                    foreach (Capture number in match.Groups["number"].Captures)
+                    {
+                        matches.Add(new GitHubReferenceCandidate(
+                            lineStart + number.Index,
+                            new GitHubReferenceMatch(
+                                headingRepository,
+                                long.Parse(number.Value),
+                                NormalizeKind(match.Groups["kind"].Value),
+                                number.Value)));
+                    }
+
+                    claimedSpans.Add(new RangeSpan(index, index + match.Length));
+                }
+
                 foreach (Match match in BareIssueSeriesRegex().Matches(line))
                 {
                     var index = lineStart + match.Groups["number"].Index;
