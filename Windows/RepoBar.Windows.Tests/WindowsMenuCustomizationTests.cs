@@ -92,6 +92,81 @@ public sealed class WindowsMenuCustomizationTests
     }
 
     [Fact]
+    public void VisibleRepositoryMenuBlocks_groups_adjacent_visible_items()
+    {
+        var customization = new WindowsMenuCustomization
+        {
+            RepositoryMenuOrder =
+            [
+                WindowsRepositoryMenuItem.OpenRepository,
+                WindowsRepositoryMenuItem.OpenIssues,
+                WindowsRepositoryMenuItem.LocalStatus,
+                WindowsRepositoryMenuItem.RecentIssues,
+                WindowsRepositoryMenuItem.RecentPullRequests,
+                WindowsRepositoryMenuItem.Heatmap,
+                WindowsRepositoryMenuItem.Visibility,
+            ],
+            HiddenRepositoryMenuItems =
+            [
+                WindowsRepositoryMenuItem.OpenIssues,
+            ],
+        };
+
+        var blocks = customization.VisibleRepositoryMenuBlocks();
+
+        Assert.Collection(
+            blocks,
+            block =>
+            {
+                Assert.Equal(WindowsRepositoryMenuGroup.Open, block.Group);
+                Assert.Equal([WindowsRepositoryMenuItem.OpenRepository], block.Items);
+            },
+            block =>
+            {
+                Assert.Equal(WindowsRepositoryMenuGroup.Local, block.Group);
+                Assert.Equal([WindowsRepositoryMenuItem.LocalStatus], block.Items);
+            },
+            block =>
+            {
+                Assert.Equal(WindowsRepositoryMenuGroup.Lists, block.Group);
+                Assert.Equal(
+                    [
+                        WindowsRepositoryMenuItem.RecentIssues,
+                        WindowsRepositoryMenuItem.RecentPullRequests,
+                    ],
+                    block.Items);
+            },
+            block =>
+            {
+                Assert.Equal(WindowsRepositoryMenuGroup.Status, block.Group);
+                Assert.Equal([WindowsRepositoryMenuItem.Heatmap], block.Items);
+            },
+            block =>
+            {
+                Assert.Equal(WindowsRepositoryMenuGroup.Manage, block.Group);
+                Assert.Equal([WindowsRepositoryMenuItem.Visibility], block.Items);
+            });
+    }
+
+    [Fact]
+    public void Default_repository_order_keeps_mac_style_groups_contiguous()
+    {
+        var blocks = new WindowsMenuCustomization().VisibleRepositoryMenuBlocks();
+
+        Assert.Equal(
+            [
+                WindowsRepositoryMenuGroup.Open,
+                WindowsRepositoryMenuGroup.Local,
+                WindowsRepositoryMenuGroup.Lists,
+                WindowsRepositoryMenuGroup.Status,
+                WindowsRepositoryMenuGroup.Commits,
+                WindowsRepositoryMenuGroup.Activity,
+                WindowsRepositoryMenuGroup.Manage,
+            ],
+            blocks.Select(block => block.Group));
+    }
+
+    [Fact]
     public void Display_names_cover_customizable_items()
     {
         foreach (var item in WindowsMenuCustomization.DefaultMainMenuOrder)

@@ -37,24 +37,24 @@ internal sealed class WindowsMenuCustomization
         WindowsRepositoryMenuItem.OpenIssues,
         WindowsRepositoryMenuItem.OpenPullRequests,
         WindowsRepositoryMenuItem.OpenActions,
+        WindowsRepositoryMenuItem.LatestRelease,
+        WindowsRepositoryMenuItem.Changelog,
         WindowsRepositoryMenuItem.Checkout,
+        WindowsRepositoryMenuItem.LocalStatus,
         WindowsRepositoryMenuItem.RecentIssues,
         WindowsRepositoryMenuItem.RecentPullRequests,
         WindowsRepositoryMenuItem.Releases,
         WindowsRepositoryMenuItem.CiRuns,
+        WindowsRepositoryMenuItem.Discussions,
         WindowsRepositoryMenuItem.Branches,
         WindowsRepositoryMenuItem.Tags,
-        WindowsRepositoryMenuItem.Commits,
         WindowsRepositoryMenuItem.Contributors,
-        WindowsRepositoryMenuItem.Activity,
-        WindowsRepositoryMenuItem.Discussions,
-        WindowsRepositoryMenuItem.LatestRelease,
         WindowsRepositoryMenuItem.StatusDetails,
         WindowsRepositoryMenuItem.Traffic,
         WindowsRepositoryMenuItem.Heatmap,
-        WindowsRepositoryMenuItem.Changelog,
-        WindowsRepositoryMenuItem.LocalStatus,
         WindowsRepositoryMenuItem.PushedAt,
+        WindowsRepositoryMenuItem.Commits,
+        WindowsRepositoryMenuItem.Activity,
         WindowsRepositoryMenuItem.Visibility,
     ];
 
@@ -89,6 +89,14 @@ internal sealed class WindowsMenuCustomization
     {
         var hidden = HiddenRepositoryMenuItems.ToHashSet();
         return RepositoryMenuOrder.Where(item => !hidden.Contains(item)).ToArray();
+    }
+
+    public IReadOnlyList<WindowsRepositoryMenuBlock> VisibleRepositoryMenuBlocks()
+    {
+        return VisibleRepositoryMenuItems()
+            .GroupAdjacent(item => item.Group())
+            .Select(group => new WindowsRepositoryMenuBlock(group.Key, group.Items))
+            .ToArray();
     }
 
     public bool IsMainMenuItemVisible(WindowsMainMenuItem item)
@@ -192,6 +200,21 @@ internal enum WindowsRepositoryMenuItem
     Visibility,
 }
 
+internal enum WindowsRepositoryMenuGroup
+{
+    Open,
+    Local,
+    Lists,
+    Status,
+    Commits,
+    Activity,
+    Manage,
+}
+
+internal sealed record WindowsRepositoryMenuBlock(
+    WindowsRepositoryMenuGroup Group,
+    IReadOnlyList<WindowsRepositoryMenuItem> Items);
+
 internal static class WindowsMenuCustomizationLabels
 {
     public static string DisplayName(this WindowsMainMenuItem item)
@@ -253,8 +276,81 @@ internal static class WindowsMenuCustomizationLabels
         };
     }
 
+    public static WindowsRepositoryMenuGroup Group(this WindowsRepositoryMenuItem item)
+    {
+        return item switch
+        {
+            WindowsRepositoryMenuItem.OpenRepository or
+                WindowsRepositoryMenuItem.OpenIssues or
+                WindowsRepositoryMenuItem.OpenPullRequests or
+                WindowsRepositoryMenuItem.OpenActions or
+                WindowsRepositoryMenuItem.LatestRelease or
+                WindowsRepositoryMenuItem.Changelog => WindowsRepositoryMenuGroup.Open,
+            WindowsRepositoryMenuItem.Checkout or
+                WindowsRepositoryMenuItem.LocalStatus => WindowsRepositoryMenuGroup.Local,
+            WindowsRepositoryMenuItem.RecentIssues or
+                WindowsRepositoryMenuItem.RecentPullRequests or
+                WindowsRepositoryMenuItem.Releases or
+                WindowsRepositoryMenuItem.CiRuns or
+                WindowsRepositoryMenuItem.Branches or
+                WindowsRepositoryMenuItem.Tags or
+                WindowsRepositoryMenuItem.Contributors or
+                WindowsRepositoryMenuItem.Discussions => WindowsRepositoryMenuGroup.Lists,
+            WindowsRepositoryMenuItem.StatusDetails or
+                WindowsRepositoryMenuItem.Traffic or
+                WindowsRepositoryMenuItem.Heatmap or
+                WindowsRepositoryMenuItem.PushedAt => WindowsRepositoryMenuGroup.Status,
+            WindowsRepositoryMenuItem.Commits => WindowsRepositoryMenuGroup.Commits,
+            WindowsRepositoryMenuItem.Activity => WindowsRepositoryMenuGroup.Activity,
+            WindowsRepositoryMenuItem.Visibility => WindowsRepositoryMenuGroup.Manage,
+            _ => WindowsRepositoryMenuGroup.Open,
+        };
+    }
+
     public static bool IsRequired(this WindowsMainMenuItem item)
     {
         return item is WindowsMainMenuItem.Preferences or WindowsMainMenuItem.Quit;
+    }
+}
+
+internal sealed record AdjacentGroup<TKey, TItem>(TKey Key, IReadOnlyList<TItem> Items)
+    where TKey : notnull;
+
+internal static class WindowsMenuGrouping
+{
+    public static IReadOnlyList<AdjacentGroup<TKey, TItem>> GroupAdjacent<TItem, TKey>(
+        this IEnumerable<TItem> items,
+        Func<TItem, TKey> keySelector)
+        where TKey : notnull
+    {
+        var groups = new List<AdjacentGroup<TKey, TItem>>();
+        var currentKey = default(TKey)!;
+        List<TItem>? currentItems = null;
+        var hasCurrent = false;
+
+        foreach (var item in items)
+        {
+            var key = keySelector(item);
+            if (!hasCurrent || !EqualityComparer<TKey>.Default.Equals(currentKey, key))
+            {
+                if (currentItems != null)
+                {
+                    groups.Add(new AdjacentGroup<TKey, TItem>(currentKey, currentItems));
+                }
+
+                currentKey = key;
+                currentItems = [];
+                hasCurrent = true;
+            }
+
+            currentItems!.Add(item);
+        }
+
+        if (currentItems != null)
+        {
+            groups.Add(new AdjacentGroup<TKey, TItem>(currentKey, currentItems));
+        }
+
+        return groups;
     }
 }

@@ -759,12 +759,29 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             return item;
         }
 
-        foreach (var menuItem in _settingsStore.Settings.MenuCustomization.VisibleRepositoryMenuItems())
+        foreach (var block in _settingsStore.Settings.MenuCustomization.VisibleRepositoryMenuBlocks())
         {
-            AddRepositoryMenuItem(item.DropDownItems, status, menuItem);
+            AddRepositoryMenuBlock(item.DropDownItems, status, block);
         }
 
         return item;
+    }
+
+    private void AddRepositoryMenuBlock(
+        ToolStripItemCollection items,
+        RepositoryStatus status,
+        WindowsRepositoryMenuBlock block)
+    {
+        var blockStart = items.Count;
+        foreach (var menuItem in block.Items)
+        {
+            AddRepositoryMenuItem(items, status, menuItem);
+        }
+
+        if (blockStart > 0 && items.Count > blockStart)
+        {
+            items.Insert(blockStart, new ToolStripSeparator());
+        }
     }
 
     private void AddRepositoryMenuItem(ToolStripItemCollection items, RepositoryStatus status, WindowsRepositoryMenuItem menuItem)
