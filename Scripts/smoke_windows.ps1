@@ -210,11 +210,27 @@ function Initialize-SmokeSettings {
         }
         repositories = @(
             [ordered]@{
-                owner = "steipete"
-                name = "RepoBar"
+                owner = "octocat"
+                name = "Hello-World"
                 visibility = "pinned"
             }
         )
+        repositoriesByAccount = [ordered]@{
+            default = @(
+                [ordered]@{
+                    owner = "octocat"
+                    name = "Hello-World"
+                    visibility = "pinned"
+                }
+            )
+            work = @(
+                [ordered]@{
+                    owner = "steipete"
+                    name = "RepoBar"
+                    visibility = "pinned"
+                }
+            )
+        }
     }
 
     $settings | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 -Path $Path
@@ -274,9 +290,13 @@ try {
     }
 
     $settings = Get-Content $settingsPath -Raw | ConvertFrom-Json
-    $repositories = @($settings.repositories)
-    if ($repositories.Count -lt 1) {
-        throw "RepoBar.Windows settings did not include the sample repository."
+    $legacyRepositories = @($settings.repositories)
+    $activeAccountRepositories = @($settings.repositoriesByAccount.PSObject.Properties[$settings.activeAccountId].Value)
+    if ($activeAccountRepositories.Count -lt 1) {
+        throw "RepoBar.Windows settings did not include the active account sample repository."
+    }
+    if (($activeAccountRepositories | Where-Object { $_.owner -eq "steipete" -and $_.name -eq "RepoBar" } | Measure-Object).Count -ne 1) {
+        throw "RepoBar.Windows settings did not keep the active account repository list scoped to work."
     }
 
     New-Item -ItemType Directory -Force -Path $smokeArtifacts | Out-Null
@@ -306,7 +326,8 @@ try {
     }
 
     $activeAccount = @($settings.accounts) | Where-Object { $_.id -eq $settings.activeAccountId } | Select-Object -First 1
-    $sampleRepository = $repositories | Select-Object -First 1
+    $sampleRepository = $activeAccountRepositories | Select-Object -First 1
+    $legacyRepository = $legacyRepositories | Select-Object -First 1
     $menuOrder = @($settings.menuCustomization.mainMenuOrder)
     $summary = [ordered]@{
         pid = $process.Id
@@ -318,8 +339,11 @@ try {
         activeAccountId = $settings.activeAccountId
         activeAccountLabel = if ($activeAccount) { $activeAccount.label } else { $null }
         gitHubHost = $settings.githubHost
-        repositoryCount = $repositories.Count
+        repositoryCount = $activeAccountRepositories.Count
+        legacyRepositoryCount = $legacyRepositories.Count
+        activeAccountRepositoryCount = $activeAccountRepositories.Count
         sampleRepository = if ($sampleRepository) { "$($sampleRepository.owner)/$($sampleRepository.name)" } else { $null }
+        legacyRepository = if ($legacyRepository) { "$($legacyRepository.owner)/$($legacyRepository.name)" } else { $null }
         localGitFixturePath = $localFixturePath
         gitHubArchiveDatabasePath = $archiveDatabasePath
         localRepositoryCount = $runtimeSummary.localRepositoryCount
@@ -341,6 +365,7 @@ try {
             processRunning = -not $process.HasExited
             settingsCreated = Test-Path $settingsPath
             sampleRepositoryConfigured = $null -ne $sampleRepository
+            activeAccountRepositoriesScoped = ($activeAccountRepositories | Where-Object { $_.owner -eq "steipete" -and $_.name -eq "RepoBar" } | Measure-Object).Count -eq 1
             localGitFixtureCreated = Test-Path (Join-Path $localFixturePath ".git")
             localGitStatusAttached = $null -ne $localRow
             archiveFallbackIssueListed = $archiveIssueTitles -contains "#987 Smoke archive issue"
@@ -371,7 +396,7 @@ try {
     $summary | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 -Path $summaryPath
 
     $screenshotText = if ($capturedScreenshot) { $capturedScreenshot } else { "unavailable" }
-    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), autoUpdateCheck=$($summary.proof.autoUpdateCheckConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
+    $proofText = "processRunning=$($summary.proof.processRunning), settingsCreated=$($summary.proof.settingsCreated), sampleRepository=$($summary.sampleRepository), activeAccountRepositoriesScoped=$($summary.proof.activeAccountRepositoriesScoped), localRepositoryCount=$($summary.localRepositoryCount), localGitStatusAttached=$($summary.proof.localGitStatusAttached), archiveFallbackIssue=$($summary.proof.archiveFallbackIssueListed), archiveFallbackPullRequest=$($summary.proof.archiveFallbackPullRequestListed), workAccountActive=$($summary.proof.workAccountActive), workCredentialTargetsScoped=$($summary.proof.workCredentialTargetsScoped), accountSwitcher=$($summary.proof.accountSwitcherConfigured), cacheReset=$($summary.proof.cacheResetConfigured), repositoryScope=$($summary.proof.repositoryScopeConfigured), repositorySort=$($summary.proof.repositorySortConfigured), myRepositories=$($summary.proof.myRepositoriesConfigured), diagnostics=$($summary.proof.diagnosticsConfigured), about=$($summary.proof.aboutConfigured), diagnosticsCapture=$($summary.proof.diagnosticsCaptureEnabled), logVerbosity=$($summary.proof.logVerbosityConfigured), fileLogging=$($summary.proof.fileLoggingWritten), localFetchInterval=$($summary.proof.localFetchIntervalConfigured), actionsMonitoredOwners=$($summary.proof.actionsMonitoredOwnersConfigured), actionsPlanTier=$($summary.proof.actionsPlanTierConfigured), autoUpdateCheck=$($summary.proof.autoUpdateCheckConfigured), updateDiagnostics=$($summary.proof.updateDiagnosticsConfigured)"
     Write-Host "RepoBar.Windows smoke passed: pid=$($process.Id), settings=$settingsPath, screenshot=$screenshotText, summary=$summaryPath"
     Write-Host "RepoBar.Windows smoke proof: $proofText"
 }

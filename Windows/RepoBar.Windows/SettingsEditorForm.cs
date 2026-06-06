@@ -62,6 +62,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _enablePullRequestCommentNotifications = new();
     private readonly ComboBox _pullRequestNotificationClickAction = new();
     private readonly BindingList<RepositoryRow> _repositories = [];
+    private readonly Dictionary<string, List<RepositoryRow>> _repositoriesByAccount = new(StringComparer.OrdinalIgnoreCase);
     private readonly DataGridView _repositoriesGrid = new();
     private readonly TextBox _repositoryFilterTextBox = new();
     private WindowsMenuCustomization _menuCustomization = new();
@@ -209,10 +210,15 @@ internal sealed class SettingsEditorForm : Form
         _pullRequestNotificationClickAction.SelectedValue = settings.PullRequestNotificationClickAction;
         _menuCustomization = settings.MenuCustomization.Copy();
 
-        foreach (var repository in settings.Repositories)
+        foreach (var account in _accounts)
         {
-            _repositories.Add(new RepositoryRow(repository.Owner, repository.Name, repository.Visibility));
+            _repositoriesByAccount[account.Id] = RowsFromRepositoryRefs(
+                settings.RepositoriesByAccount.TryGetValue(account.Id, out var accountRepositories)
+                    ? accountRepositories
+                    : Enumerable.Empty<RepositoryRef>());
         }
+
+        LoadRepositoryRows(settings.GetActiveAccount().Id);
     }
 
     private void BuildControls()
@@ -448,6 +454,7 @@ internal sealed class SettingsEditorForm : Form
         if (_selectedAccount != null)
         {
             SaveAccountFields(_selectedAccount);
+            SaveRepositoryRows(_selectedAccount.Id);
         }
 
         if (_accountSelector.SelectedItem is AccountRow selected)
@@ -486,6 +493,11 @@ internal sealed class SettingsEditorForm : Form
     private void AddAccount()
     {
         SaveSelectedAccountFields();
+        if (_selectedAccount != null)
+        {
+            SaveRepositoryRows(_selectedAccount.Id);
+        }
+
         var id = NextAccountId();
         var account = new AccountRow(
             id,
@@ -495,6 +507,7 @@ internal sealed class SettingsEditorForm : Form
             _oauthClientIdTextBox.Text.Trim(),
             _oauthSecretEnvironmentTextBox.Text.Trim());
         _accounts.Add(account);
+        _repositoriesByAccount[account.Id] = [];
         _accountSelector.SelectedItem = account;
     }
 
@@ -507,6 +520,7 @@ internal sealed class SettingsEditorForm : Form
 
         var index = _accountSelector.SelectedIndex;
         _accounts.Remove(account);
+        _repositoriesByAccount.Remove(account.Id);
         _selectedAccount = null;
         _accountSelector.SelectedIndex = Math.Clamp(index - 1, 0, _accounts.Count - 1);
         SelectAccountFromCombo();
@@ -518,6 +532,27 @@ internal sealed class SettingsEditorForm : Form
         {
             SaveAccountFields(_selectedAccount);
         }
+    }
+
+    private void LoadRepositoryRows(string accountId)
+    {
+        _repositories.Clear();
+        if (!_repositoriesByAccount.TryGetValue(accountId, out var repositories))
+        {
+            repositories = [];
+            _repositoriesByAccount[accountId] = repositories;
+        }
+
+        foreach (var repository in repositories)
+        {
+            _repositories.Add(new RepositoryRow(repository.Owner, repository.Name, repository.Visibility));
+        }
+    }
+
+    private void SaveRepositoryRows(string accountId)
+    {
+        _repositoriesGrid.EndEdit();
+        _repositoriesByAccount[accountId] = RowsFromRepositoryRefs(CurrentRepositoryRefs());
     }
 
     private void ToggleOnlyMyRepositoriesFromCheckbox()
@@ -670,6 +705,7 @@ internal sealed class SettingsEditorForm : Form
         SaveSelectedAccountFields();
         var settings = _settingsStore.Settings;
         var activeAccount = CurrentAccountRow();
+        SaveRepositoryRows(activeAccount.Id);
         settings.Accounts = _accounts.Select(account => account.ToProfile()).ToList();
         settings.ActiveAccountId = activeAccount.Id;
         settings.GitHubHost = activeAccount.GitHubHost;
@@ -740,16 +776,13 @@ internal sealed class SettingsEditorForm : Form
             ? action
             : PullRequestNotificationClickAction.OpenInBrowser;
         settings.MenuCustomization = _menuCustomization.Copy();
+        settings.RepositoriesByAccount = _accounts.ToDictionary(
+            account => account.Id,
+            account => RepositoryRefsForAccount(account.Id),
+            StringComparer.OrdinalIgnoreCase);
+        settings.Repositories = RepositoryRefsForAccount(activeAccount.Id);
         WindowsSettingsStore.NormalizeSettings(settings);
-
-        _settingsStore.ReplaceRepositories(_repositories
-            .Where(repository => !string.IsNullOrWhiteSpace(repository.Owner) && !string.IsNullOrWhiteSpace(repository.Name))
-            .Select(repository => new RepositoryRef
-            {
-                Owner = repository.Owner,
-                Name = repository.Name,
-                Visibility = repository.Visibility,
-            }));
+        _settingsStore.Save();
 
         SaveCredentialTokenIfNeeded();
     }
@@ -784,7 +817,46 @@ internal sealed class SettingsEditorForm : Form
                 ? planTier
                 : WindowsActionsPlanTier.Free,
             Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
+            Repositories = CurrentRepositoryRefs(),
+            RepositoriesByAccount = _accounts.ToDictionary(
+                account => account.Id,
+                account => string.Equals(account.Id, activeAccount.Id, StringComparison.OrdinalIgnoreCase)
+                    ? CurrentRepositoryRefs()
+                    : RepositoryRefsForAccount(account.Id),
+                StringComparer.OrdinalIgnoreCase),
         };
+    }
+
+    private List<RepositoryRef> CurrentRepositoryRefs()
+    {
+        return WindowsSettingsStore.NormalizeRepositoryList(_repositories
+            .Where(repository => !string.IsNullOrWhiteSpace(repository.Owner) && !string.IsNullOrWhiteSpace(repository.Name))
+            .Select(repository => new RepositoryRef
+            {
+                Owner = repository.Owner,
+                Name = repository.Name,
+                Visibility = repository.Visibility,
+            }));
+    }
+
+    private List<RepositoryRef> RepositoryRefsForAccount(string accountId)
+    {
+        return WindowsSettingsStore.NormalizeRepositoryList(
+            _repositoriesByAccount.TryGetValue(accountId, out var repositories)
+                ? repositories.Select(repository => new RepositoryRef
+                {
+                    Owner = repository.Owner,
+                    Name = repository.Name,
+                    Visibility = repository.Visibility,
+                })
+                : Enumerable.Empty<RepositoryRef>());
+    }
+
+    private static List<RepositoryRow> RowsFromRepositoryRefs(IEnumerable<RepositoryRef> repositories)
+    {
+        return repositories
+            .Select(repository => new RepositoryRow(repository.Owner, repository.Name, repository.Visibility))
+            .ToList();
     }
 
     private static string FormatRepositoryOwnerFilter(IEnumerable<string> owners)

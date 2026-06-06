@@ -67,6 +67,104 @@ public sealed class WindowsSettingsStoreTests
             store.VisibleRepositories.Select(repository => repository.FullName));
     }
 
+    [Fact]
+    public void NormalizeSettings_migrates_legacy_repositories_to_active_account()
+    {
+        var settings = new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts =
+            [
+                Account("default", "Default"),
+                Account("work", "Work"),
+            ],
+            Repositories =
+            [
+                Repo("owner/legacy", RepositoryVisibility.Pinned),
+            ],
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal(["owner/legacy"], settings.RepositoriesByAccount["work"].Select(repository => repository.FullName));
+        Assert.Empty(settings.RepositoriesByAccount["default"]);
+        Assert.Equal(["owner/legacy"], settings.Repositories.Select(repository => repository.FullName));
+    }
+
+    [Fact]
+    public void SetActiveAccount_switches_visible_repository_list()
+    {
+        var store = CreateStore(new WindowsSettings
+        {
+            ActiveAccountId = "default",
+            Accounts =
+            [
+                Account("default", "Default"),
+                Account("work", "Work"),
+            ],
+            RepositoriesByAccount = new Dictionary<string, List<RepositoryRef>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [Repo("personal/project", RepositoryVisibility.Pinned)],
+                ["work"] = [Repo("work/project", RepositoryVisibility.Pinned)],
+            },
+        });
+
+        Assert.Equal(["personal/project"], store.VisibleRepositories.Select(repository => repository.FullName));
+
+        Assert.True(store.SetActiveAccount("work"));
+
+        Assert.Equal(["work/project"], store.VisibleRepositories.Select(repository => repository.FullName));
+        Assert.Equal(["work/project"], store.Settings.Repositories.Select(repository => repository.FullName));
+    }
+
+    [Fact]
+    public void ReplaceRepositories_updates_active_account_only()
+    {
+        var store = CreateStore(new WindowsSettings
+        {
+            ActiveAccountId = "default",
+            Accounts =
+            [
+                Account("default", "Default"),
+                Account("work", "Work"),
+            ],
+            RepositoriesByAccount = new Dictionary<string, List<RepositoryRef>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [Repo("personal/old", RepositoryVisibility.Pinned)],
+                ["work"] = [Repo("work/project", RepositoryVisibility.Pinned)],
+            },
+        });
+
+        store.ReplaceRepositories([Repo("personal/new", RepositoryVisibility.Visible)]);
+
+        Assert.Equal(["personal/new"], store.Settings.RepositoriesByAccount["default"].Select(repository => repository.FullName));
+        Assert.Equal(["work/project"], store.Settings.RepositoriesByAccount["work"].Select(repository => repository.FullName));
+    }
+
+    [Fact]
+    public void SetVisibility_applies_to_active_account_repository_list()
+    {
+        var store = CreateStore(new WindowsSettings
+        {
+            ActiveAccountId = "work",
+            Accounts =
+            [
+                Account("default", "Default"),
+                Account("work", "Work"),
+            ],
+            RepositoriesByAccount = new Dictionary<string, List<RepositoryRef>>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["default"] = [Repo("personal/project", RepositoryVisibility.Pinned)],
+                ["work"] = [],
+            },
+        });
+
+        store.SetVisibility("work/project", RepositoryVisibility.Pinned);
+
+        Assert.Equal(["work/project"], store.Settings.RepositoriesByAccount["work"].Select(repository => repository.FullName));
+        Assert.Equal(["personal/project"], store.Settings.RepositoriesByAccount["default"].Select(repository => repository.FullName));
+    }
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(2, 2)]
@@ -174,6 +272,17 @@ public sealed class WindowsSettingsStoreTests
             Owner = parts[0],
             Name = parts[1],
             Visibility = visibility,
+        };
+    }
+
+    private static WindowsAccountProfile Account(string id, string label)
+    {
+        return new WindowsAccountProfile
+        {
+            Id = id,
+            Label = label,
+            GitHubHost = "github.com",
+            TokenEnvironmentVariable = $"REPOBAR_{id.ToUpperInvariant()}_TOKEN",
         };
     }
 }

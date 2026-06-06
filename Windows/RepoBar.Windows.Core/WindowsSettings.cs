@@ -54,12 +54,31 @@ internal sealed class WindowsSettings
     public PullRequestNotificationClickAction PullRequestNotificationClickAction { get; set; } = PullRequestNotificationClickAction.OpenInBrowser;
     public bool ShowActionsUsage { get; set; }
     public List<RepositoryRef> Repositories { get; set; } = [];
+    public Dictionary<string, List<RepositoryRef>> RepositoriesByAccount { get; set; } = [];
 
     internal WindowsAccountProfile GetActiveAccount()
     {
         return Accounts.FirstOrDefault(account => string.Equals(account.Id, ActiveAccountId, StringComparison.OrdinalIgnoreCase)) ??
             Accounts.FirstOrDefault() ??
             WindowsAccountProfile.FromLegacy(this);
+    }
+
+    internal List<RepositoryRef> GetActiveRepositories()
+    {
+        var account = GetActiveAccount();
+        if (RepositoriesByAccount.TryGetValue(account.Id, out var repositories))
+        {
+            return repositories;
+        }
+        if (Repositories.Count > 0)
+        {
+            RepositoriesByAccount[account.Id] = Repositories;
+            return Repositories;
+        }
+
+        repositories = [];
+        RepositoriesByAccount[account.Id] = repositories;
+        return repositories;
     }
 }
 
@@ -376,7 +395,7 @@ internal sealed class WindowsSettingsStore
 
     public string SettingsPath { get; }
     public WindowsSettings Settings { get; }
-    public IReadOnlyList<RepositoryRef> VisibleRepositories => Settings.Repositories
+    public IReadOnlyList<RepositoryRef> VisibleRepositories => Settings.GetActiveRepositories()
         .Select((repository, index) => new { Repository = repository, Index = index })
         .Where(item => item.Repository.IsVisible)
         .OrderBy(item => item.Repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
@@ -475,13 +494,49 @@ internal sealed class WindowsSettingsStore
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
             ? null
             : settings.GitHubArchiveDatabasePath.Trim();
-        settings.Repositories ??= [];
-        settings.Repositories = settings.Repositories
+        settings.Repositories = NormalizeRepositoryList(settings.Repositories);
+        settings.RepositoriesByAccount ??= [];
+        settings.RepositoriesByAccount = settings.RepositoriesByAccount
+            .Where(pair => !string.IsNullOrWhiteSpace(pair.Key))
+            .GroupBy(pair => SanitizeAccountId(pair.Key), StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(
+                group => group.Key,
+                group => NormalizeRepositoryList(group.First().Value),
+                StringComparer.OrdinalIgnoreCase);
+        if (!settings.RepositoriesByAccount.ContainsKey(active.Id) && settings.Repositories.Count > 0)
+        {
+            settings.RepositoriesByAccount[active.Id] = NormalizeRepositoryList(settings.Repositories);
+        }
+        foreach (var account in settings.Accounts)
+        {
+            settings.RepositoriesByAccount.TryAdd(account.Id, []);
+        }
+
+        settings.Repositories = CloneRepositoryList(settings.GetActiveRepositories());
+    }
+
+    internal static List<RepositoryRef> NormalizeRepositoryList(IEnumerable<RepositoryRef>? repositories)
+    {
+        return (repositories ?? Enumerable.Empty<RepositoryRef>())
             .Where(repository => repository.IsValid)
             .Select(repository => new RepositoryRef
             {
                 Owner = repository.Owner.Trim(),
                 Name = repository.Name.Trim(),
+                Visibility = repository.Visibility,
+            })
+            .GroupBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .ToList();
+    }
+
+    private static List<RepositoryRef> CloneRepositoryList(IEnumerable<RepositoryRef> repositories)
+    {
+        return repositories
+            .Select(repository => new RepositoryRef
+            {
+                Owner = repository.Owner,
+                Name = repository.Name,
                 Visibility = repository.Visibility,
             })
             .ToList();
@@ -531,15 +586,17 @@ internal sealed class WindowsSettingsStore
             return;
         }
 
-        var repository = Settings.Repositories.FirstOrDefault(existing =>
+        var repositories = Settings.GetActiveRepositories();
+        var repository = repositories.FirstOrDefault(existing =>
             string.Equals(existing.FullName, fullName, StringComparison.OrdinalIgnoreCase));
         if (repository == null)
         {
             repository = new RepositoryRef { Owner = parts[0], Name = parts[1] };
-            Settings.Repositories.Add(repository);
+            repositories.Add(repository);
         }
 
         repository.Visibility = visibility;
+        Settings.Repositories = CloneRepositoryList(repositories);
         Save();
     }
 
@@ -556,25 +613,19 @@ internal sealed class WindowsSettingsStore
             return false;
         }
 
-        (Settings.Repositories[target.Value.FromIndex], Settings.Repositories[target.Value.ToIndex]) =
-            (Settings.Repositories[target.Value.ToIndex], Settings.Repositories[target.Value.FromIndex]);
+        var repositories = Settings.GetActiveRepositories();
+        (repositories[target.Value.FromIndex], repositories[target.Value.ToIndex]) =
+            (repositories[target.Value.ToIndex], repositories[target.Value.FromIndex]);
+        Settings.Repositories = CloneRepositoryList(repositories);
         Save();
         return true;
     }
 
     public void ReplaceRepositories(IEnumerable<RepositoryRef> repositories)
     {
-        Settings.Repositories = repositories
-            .Where(repository => repository.IsValid)
-            .Select(repository => new RepositoryRef
-            {
-                Owner = repository.Owner.Trim(),
-                Name = repository.Name.Trim(),
-                Visibility = repository.Visibility,
-            })
-            .GroupBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .ToList();
+        var normalized = NormalizeRepositoryList(repositories);
+        Settings.RepositoriesByAccount[Settings.GetActiveAccount().Id] = normalized;
+        Settings.Repositories = CloneRepositoryList(normalized);
         Save();
     }
 
@@ -585,7 +636,7 @@ internal sealed class WindowsSettingsStore
             return null;
         }
 
-        var visible = Settings.Repositories
+        var visible = Settings.GetActiveRepositories()
             .Select((repository, index) => new { Repository = repository, Index = index })
             .Where(item => item.Repository.IsVisible)
             .OrderBy(item => item.Repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
@@ -736,7 +787,7 @@ internal static class WindowsRepositoryDisplay
 {
     public static IReadOnlyList<RepositoryStatus> Apply(IReadOnlyList<RepositoryStatus> statuses, WindowsSettings settings)
     {
-        var pinnedOrder = settings.Repositories
+        var pinnedOrder = settings.GetActiveRepositories()
             .Where(repository => repository.Visibility == RepositoryVisibility.Pinned)
             .Select((repository, index) => (repository.FullName, index))
             .GroupBy(pair => pair.FullName, StringComparer.OrdinalIgnoreCase)

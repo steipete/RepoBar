@@ -65,7 +65,7 @@ internal sealed class GitHubReferenceClipboardMonitor
 
     private static string? DefaultRepository(WindowsSettings settings)
     {
-        return settings.Repositories
+        return settings.GetActiveRepositories()
             .Where(repository => repository.IsVisible)
             .OrderBy(repository => repository.Visibility == RepositoryVisibility.Pinned ? 0 : 1)
             .ThenBy(repository => repository.FullName, StringComparer.OrdinalIgnoreCase)

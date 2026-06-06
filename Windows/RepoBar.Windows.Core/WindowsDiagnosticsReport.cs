@@ -112,7 +112,7 @@ internal sealed record WindowsDiagnosticsReport(
             settings.GitHubHost,
             settings.ActiveAccountId,
             activeAccount.DisplayName,
-            settings.Repositories.Count,
+            settings.GetActiveRepositories().Count,
             settingsStore.VisibleRepositories.Count,
             statuses.Count,
             localGitIndex.Repositories.Count,

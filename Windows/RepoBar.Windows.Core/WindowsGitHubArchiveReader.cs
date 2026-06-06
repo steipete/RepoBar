@@ -66,7 +66,7 @@ internal sealed class WindowsGitHubArchiveReader
 
         InsertSmokeThread(
             connection,
-            settings.Repositories.FirstOrDefault(repository => repository.IsValid) ??
+            settings.GetActiveRepositories().FirstOrDefault(repository => repository.IsValid) ??
                 new RepositoryRef { Owner = "steipete", Name = "RepoBar" },
             kind: "issue",
             number: 987,
@@ -75,7 +75,7 @@ internal sealed class WindowsGitHubArchiveReader
             author: "archive-issue-bot");
         InsertSmokeThread(
             connection,
-            settings.Repositories.FirstOrDefault(repository => repository.IsValid) ??
+            settings.GetActiveRepositories().FirstOrDefault(repository => repository.IsValid) ??
                 new RepositoryRef { Owner = "steipete", Name = "RepoBar" },
             kind: "pull_request",
             number: 654,

@@ -872,7 +872,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private int AddLocalOnlyRepositories()
     {
-        var configured = _settingsStore.Settings.Repositories
+        var configured = _settingsStore.Settings.GetActiveRepositories()
             .Select(repository => repository.FullName)
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         var localOnly = _localGitIndex.Repositories

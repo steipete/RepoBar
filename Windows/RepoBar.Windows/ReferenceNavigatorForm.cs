@@ -51,7 +51,7 @@ internal sealed class ReferenceNavigatorForm : Form
         Controls.Add(root);
 
         _defaultRepository.DropDownStyle = ComboBoxStyle.DropDownList;
-        _defaultRepository.Items.AddRange(_settings.Repositories
+        _defaultRepository.Items.AddRange(_settings.GetActiveRepositories()
             .Where(repository => repository.IsVisible)
             .Select(repository => repository.FullName)
             .Cast<object>()
