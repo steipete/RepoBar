@@ -569,10 +569,11 @@ internal sealed class WindowsSettingsStore
         return string.IsNullOrWhiteSpace(candidate) ? WindowsAccountProfile.DefaultId : candidate;
     }
 
-    internal static List<string> NormalizeRepositoryOwnerFilter(IEnumerable<string>? owners)
+    internal static List<string> NormalizeRepositoryOwnerFilter(IEnumerable<string?>? owners)
     {
         return (owners ?? Enumerable.Empty<string>())
-            .Select(owner => owner.Trim().ToLowerInvariant())
+            .Where(owner => !string.IsNullOrWhiteSpace(owner))
+            .Select(owner => owner!.Trim().ToLowerInvariant())
             .Where(owner => !string.IsNullOrWhiteSpace(owner))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(owner => owner, StringComparer.OrdinalIgnoreCase)
