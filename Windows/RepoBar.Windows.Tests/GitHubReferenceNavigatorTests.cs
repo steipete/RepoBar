@@ -551,6 +551,56 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_carries_repository_heading_issue_context_across_child_lines()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 2 issues / 1 PR
+              PR #18.
+              This is 19.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 19L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_carries_repository_heading_issue_context_from_final_sentence_only()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 2 issues / 1 PR
+              PR #18. Done.
+              This is 19.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/Tachikoma", reference.RepositoryFullName);
+        Assert.Equal(18L, reference.Number);
+    }
+
+    [Fact]
+    public void FindReferences_does_not_carry_repository_heading_issue_count_summaries()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              Open issues: 1
+              This is 2.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Empty(references);
+    }
+
+    [Fact]
     public void FindReferences_stops_repository_heading_context_at_unindented_lines()
     {
         var references = GitHubReferenceNavigator.FindReferences(

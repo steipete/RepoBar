@@ -222,6 +222,7 @@ internal static partial class GitHubReferenceNavigator
         string? headingRepository = null;
         var headingIndent = 0;
         var previousHeadingChildHadCommitContext = false;
+        var previousHeadingChildHadIssueReferenceContext = false;
         var lineStart = 0;
         while (lineStart <= text.Length)
         {
@@ -255,6 +256,7 @@ internal static partial class GitHubReferenceNavigator
             if (!string.IsNullOrWhiteSpace(headingRepository) && indent > headingIndent)
             {
                 var headingChildHasCommitContext = HasCommitContext(line);
+                var headingChildHasIssueReferenceContext = HeadingChildHasIssueReferenceContext(line);
                 if (previousHeadingChildHadCommitContext || headingChildHasCommitContext)
                 {
                     foreach (Match match in CommitHashRegex().Matches(line))
@@ -327,6 +329,40 @@ internal static partial class GitHubReferenceNavigator
                     claimedSpans.Add(new RangeSpan(lineStart + match.Index, lineStart + match.Index + match.Length));
                 }
 
+                if (previousHeadingChildHadIssueReferenceContext)
+                {
+                    foreach (Match match in BackReferenceBareIssueSeriesRegex().Matches(line))
+                    {
+                        var index = lineStart + match.Groups["number"].Index;
+                        if (claimedSpans.Any(span => span.Contains(index)))
+                        {
+                            continue;
+                        }
+
+                        var startNumber = long.Parse(match.Groups["number"].Value);
+                        matches.Add(new GitHubReferenceCandidate(
+                            index,
+                            new GitHubReferenceMatch(
+                                headingRepository,
+                                startNumber,
+                                "issues",
+                                match.Groups["number"].Value)));
+
+                        foreach (var number in ExpandSeriesNumbers(match.Groups["tail"], startNumber))
+                        {
+                            matches.Add(new GitHubReferenceCandidate(
+                                lineStart + number.Index,
+                                new GitHubReferenceMatch(
+                                    headingRepository,
+                                    number.Value,
+                                    "issues",
+                                    number.Value.ToString())));
+                        }
+
+                        claimedSpans.Add(new RangeSpan(lineStart + match.Index, lineStart + match.Index + match.Length));
+                    }
+                }
+
                 foreach (Match match in BareNumberRegex().Matches(line))
                 {
                     var index = lineStart + match.Index;
@@ -343,11 +379,13 @@ internal static partial class GitHubReferenceNavigator
                 }
 
                 previousHeadingChildHadCommitContext = headingChildHasCommitContext;
+                previousHeadingChildHadIssueReferenceContext = headingChildHasIssueReferenceContext;
             }
             else
             {
                 headingRepository = null;
                 previousHeadingChildHadCommitContext = false;
+                previousHeadingChildHadIssueReferenceContext = false;
             }
 
             var heading = RepositoryCountHeadingRegex().Match(line);
@@ -356,6 +394,7 @@ internal static partial class GitHubReferenceNavigator
                 headingRepository = $"{heading.Groups["owner"].Value}/{heading.Groups["repo"].Value}";
                 headingIndent = indent;
                 previousHeadingChildHadCommitContext = false;
+                previousHeadingChildHadIssueReferenceContext = false;
                 claimedSpans.Add(new RangeSpan(lineStart + heading.Index, lineStart + heading.Index + heading.Length));
             }
 
@@ -519,6 +558,34 @@ internal static partial class GitHubReferenceNavigator
             text.Contains("sha", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool HeadingChildHasIssueReferenceContext(string text)
+    {
+        var lastSentence = LastNonEmptySentence(text);
+        return !string.IsNullOrWhiteSpace(lastSentence) &&
+            !IsIssueCountSummary(lastSentence) &&
+            HasIssueReferenceContext(lastSentence);
+    }
+
+    private static string? LastNonEmptySentence(string text)
+    {
+        return text
+            .Split(new[] { '.', '!', '?' }, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+            .LastOrDefault();
+    }
+
+    private static bool HasIssueReferenceContext(string text)
+    {
+        return IssueReferenceContextRegex().IsMatch(text) ||
+            text.Contains("pull request", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("security fix", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("fix/enhancement", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsIssueCountSummary(string text)
+    {
+        return IssueCountSummaryRegex().IsMatch(text);
+    }
+
     private static string NormalizeHash(string value)
     {
         return value.ToLowerInvariant();
@@ -557,6 +624,9 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)(?<tail>(?:\s*(?:-|/|,|and)\s*#?\d+)+)\b", RegexOptions.IgnoreCase)]
     private static partial Regex BareIssueSeriesRegex();
 
+    [GeneratedRegex(@"^\s*(?:[-*]\s*)?(?:that|this|it|they|these|those)\s+(?:(?:is|are|was|were)\s+)?#?(?<number>\d+)(?<tail>(?:\s*(?:-|/|,|and)\s*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex BackReferenceBareIssueSeriesRegex();
+
     [GeneratedRegex(@"^\s*(?<prefix>gh-|#)?(?<number>\d+)\.?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex DirectBareNumberRegex();
 
@@ -565,6 +635,12 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)\b")]
     private static partial Regex BareNumberRegex();
+
+    [GeneratedRegex(@"\b(?:prs?|issues?|pull)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex IssueReferenceContextRegex();
+
+    [GeneratedRegex(@"^\s*(?:open|closed)\s+(?:prs?|issues?)\s*:\s*\d*\.?\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex IssueCountSummaryRegex();
 
     private readonly record struct RangeSpan(int Start, int End)
     {
