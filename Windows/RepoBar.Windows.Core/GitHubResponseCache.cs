@@ -76,6 +76,17 @@ internal sealed record GitHubRateLimitSnapshot(
     DateTimeOffset? ResetAt,
     string? Resource)
 {
+    public static IReadOnlyList<GitHubRateLimitSnapshot> LatestByResource(IEnumerable<GitHubRateLimitSnapshot?> snapshots)
+    {
+        return snapshots
+            .Where(snapshot => snapshot != null)
+            .Cast<GitHubRateLimitSnapshot>()
+            .GroupBy(snapshot => string.IsNullOrWhiteSpace(snapshot.Resource) ? "core" : snapshot.Resource, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.Last())
+            .OrderBy(snapshot => snapshot.Resource ?? "core", StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static GitHubRateLimitSnapshot? FromHeaders(HttpResponseMessage response)
     {
         var limit = TryReadInt(response, "X-RateLimit-Limit");

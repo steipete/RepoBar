@@ -16,6 +16,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     private IReadOnlyList<RepositoryStatus> _statuses = [];
     private ActionsInsights _actionsInsights = ActionsInsights.Empty;
     private GitHubAccountInsight? _accountInsight;
+    private IReadOnlyList<GitHubRateLimitSnapshot> _rateLimits = [];
     private LocalGitIndex _localGitIndex = LocalGitIndex.Empty;
     private string? _resolvedToken;
     private string? _lastPullRequestNotificationUrl;
@@ -78,6 +79,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _lastError = null;
         _actionsInsights = ActionsInsights.Empty;
         _accountInsight = null;
+        _rateLimits = [];
         BuildMenu();
 
         try
@@ -101,6 +103,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             _accountInsight = _settingsStore.Settings.ShowContributionSummary
                 ? await LoadAccountInsightAsync(_resolvedToken, _shutdown.Token).ConfigureAwait(false)
                 : null;
+            UpdateRateLimits();
             ShowPullRequestNotifications(_statuses);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -167,9 +170,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             AddActionsUsageItems(_menu.Items);
         }
-        if (_settingsStore.Settings.ShowRateLimits && _githubClient.LastRateLimit != null)
+        if (_settingsStore.Settings.ShowRateLimits && _rateLimits.Count > 0)
         {
-            AddRateLimitItems(_menu.Items, _githubClient.LastRateLimit);
+            AddRateLimitItems(_menu.Items, _rateLimits);
         }
         _menu.Items.Add(new ToolStripMenuItem("Issue Navigator", null, (_, _) => ShowIssueNavigator()));
         _menu.Items.Add(new ToolStripMenuItem("Preferences", null, (_, _) => ShowPreferences()));
@@ -178,25 +181,42 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _menu.Items.Add(new ToolStripMenuItem("Quit RepoBar", null, (_, _) => ExitThread()));
     }
 
-    private static void AddRateLimitItems(ToolStripItemCollection items, GitHubRateLimitSnapshot snapshot)
+    private static void AddRateLimitItems(ToolStripItemCollection items, IReadOnlyList<GitHubRateLimitSnapshot> snapshots)
     {
         var now = DateTimeOffset.UtcNow;
-        var rateItem = new ToolStripMenuItem($"GitHub API: {snapshot.CompactText(now)}");
-        rateItem.DropDownItems.Add(new ToolStripMenuItem($"Resource: {snapshot.Resource ?? "core"}") { Enabled = false });
-        rateItem.DropDownItems.Add(new ToolStripMenuItem($"Remaining: {snapshot.Remaining?.ToString("n0") ?? "unknown"}") { Enabled = false });
-        rateItem.DropDownItems.Add(new ToolStripMenuItem($"Limit: {snapshot.Limit?.ToString("n0") ?? "unknown"}") { Enabled = false });
-        if (snapshot.PercentRemaining != null)
+        var blocked = snapshots.Count(snapshot => snapshot.IsBlocked(now));
+        var title = snapshots.Count == 1
+            ? $"GitHub API: {snapshots[0].CompactText(now)}"
+            : blocked > 0
+                ? $"GitHub API: {blocked:n0} blocked  {snapshots.Count:n0} buckets"
+                : $"GitHub API: {snapshots.Count:n0} buckets";
+        var rateItem = new ToolStripMenuItem(title);
+
+        foreach (var snapshot in snapshots)
         {
-            rateItem.DropDownItems.Add(new ToolStripMenuItem($"Percent remaining: {snapshot.PercentRemaining}%") { Enabled = false });
+            var bucket = new ToolStripMenuItem(snapshot.CompactText(now));
+            bucket.DropDownItems.Add(new ToolStripMenuItem($"Resource: {snapshot.Resource ?? "core"}") { Enabled = false });
+            bucket.DropDownItems.Add(new ToolStripMenuItem($"Remaining: {snapshot.Remaining?.ToString("n0") ?? "unknown"}") { Enabled = false });
+            bucket.DropDownItems.Add(new ToolStripMenuItem($"Limit: {snapshot.Limit?.ToString("n0") ?? "unknown"}") { Enabled = false });
+            if (snapshot.PercentRemaining != null)
+            {
+                bucket.DropDownItems.Add(new ToolStripMenuItem($"Percent remaining: {snapshot.PercentRemaining}%") { Enabled = false });
+            }
+            if (snapshot.ResetAt != null)
+            {
+                bucket.DropDownItems.Add(new ToolStripMenuItem($"Reset: {snapshot.ResetAt.Value.LocalDateTime:g}") { Enabled = false });
+            }
+            if (snapshot.IsBlocked(now))
+            {
+                bucket.DropDownItems.Add(new ToolStripSeparator());
+                bucket.DropDownItems.Add(new ToolStripMenuItem("Current blocker: GitHub API quota exhausted") { Enabled = false });
+            }
+            rateItem.DropDownItems.Add(bucket);
         }
-        if (snapshot.ResetAt != null)
-        {
-            rateItem.DropDownItems.Add(new ToolStripMenuItem($"Reset: {snapshot.ResetAt.Value.LocalDateTime:g}") { Enabled = false });
-        }
-        if (snapshot.IsBlocked(now))
+        if (blocked > 0)
         {
             rateItem.DropDownItems.Add(new ToolStripSeparator());
-            rateItem.DropDownItems.Add(new ToolStripMenuItem("Current blocker: GitHub API quota exhausted") { Enabled = false });
+            rateItem.DropDownItems.Add(new ToolStripMenuItem($"{blocked:n0} active quota blocker{(blocked == 1 ? "" : "s")}") { Enabled = false });
         }
         rateItem.DropDownItems.Add(new ToolStripSeparator());
         rateItem.DropDownItems.Add(new ToolStripMenuItem("Budget is shared by the GitHub user or token actor, not by each token string.") { Enabled = false });
@@ -311,6 +331,19 @@ internal sealed class RepoBarTrayContext : ApplicationContext
     {
         using var client = new GitHubAccountInsightClient(_settingsStore.Settings, token);
         return await client.LoadAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    private void UpdateRateLimits()
+    {
+        var snapshots = new List<GitHubRateLimitSnapshot?>();
+        snapshots.Add(_githubClient.LastRateLimit);
+        snapshots.AddRange(_actionsInsights.RateLimits);
+        if (_accountInsight != null)
+        {
+            snapshots.AddRange(_accountInsight.RateLimits);
+        }
+
+        _rateLimits = GitHubRateLimitSnapshot.LatestByResource(snapshots);
     }
 
     private ToolStripMenuItem BuildRepositoryMenu(RepositoryStatus status)

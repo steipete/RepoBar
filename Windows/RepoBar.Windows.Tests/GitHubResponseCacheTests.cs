@@ -163,6 +163,21 @@ public sealed class GitHubResponseCacheTests
         Assert.Contains("blocked", snapshot.CompactText(DateTimeOffset.UtcNow));
     }
 
+    [Fact]
+    public void Rate_limit_snapshot_keeps_latest_snapshot_per_resource()
+    {
+        var snapshots = GitHubRateLimitSnapshot.LatestByResource(
+        [
+            new GitHubRateLimitSnapshot(5000, 4999, null, "core"),
+            new GitHubRateLimitSnapshot(5000, 4998, null, "graphql"),
+            new GitHubRateLimitSnapshot(5000, 4000, null, "core"),
+        ]);
+
+        Assert.Equal(2, snapshots.Count);
+        Assert.Equal(4000, snapshots.Single(snapshot => snapshot.Resource == "core").Remaining);
+        Assert.Equal(4998, snapshots.Single(snapshot => snapshot.Resource == "graphql").Remaining);
+    }
+
     private static HttpResponseMessage JsonResponse(string json)
     {
         return new HttpResponseMessage(HttpStatusCode.OK)

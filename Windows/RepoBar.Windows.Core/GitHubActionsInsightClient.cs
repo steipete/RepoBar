@@ -8,6 +8,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
 {
     private static readonly string[] QueuedStatuses = ["queued", "waiting", "pending"];
     private readonly HttpClient _httpClient;
+    private readonly List<GitHubRateLimitSnapshot> _rateLimits = [];
 
     public GitHubActionsInsightClient(WindowsSettings settings, string? token)
         : this(settings, token, new HttpClientHandler())
@@ -42,7 +43,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         }
 
         var billing = await LoadBillingUsageAsync(repositories, cancellationToken).ConfigureAwait(false);
-        return new ActionsInsights(results, billing, DateTimeOffset.UtcNow);
+        return new ActionsInsights(results, billing, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
     }
 
     private async Task<RepositoryActionsInsight> LoadRepositoryAsync(
@@ -75,6 +76,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         using var response = await _httpClient.GetAsync(
             $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/actions/runs?status={Uri.EscapeDataString(status)}&per_page=1",
             cancellationToken).ConfigureAwait(false);
+        CaptureRateLimit(response);
         if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
         {
             return 0;
@@ -96,6 +98,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         using var response = await _httpClient.GetAsync(
             $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/actions/runners?per_page=100",
             cancellationToken).ConfigureAwait(false);
+        CaptureRateLimit(response);
         if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.NotFound)
         {
             return ActionsRunnerFleet.Empty;
@@ -156,6 +159,7 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         request.Headers.TryAddWithoutValidation("X-GitHub-Api-Version", "2026-03-10");
 
         using var response = await _httpClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        CaptureRateLimit(response);
         if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized or HttpStatusCode.NotFound)
         {
             return null;
@@ -237,6 +241,14 @@ internal sealed class GitHubActionsInsightClient : IDisposable
             TryGetString(item, "repositoryName"));
     }
 
+    private void CaptureRateLimit(HttpResponseMessage response)
+    {
+        if (GitHubRateLimitSnapshot.FromHeaders(response) is { } snapshot)
+        {
+            _rateLimits.Add(snapshot);
+        }
+    }
+
     public void Dispose()
     {
         _httpClient.Dispose();
@@ -246,9 +258,10 @@ internal sealed class GitHubActionsInsightClient : IDisposable
 internal sealed record ActionsInsights(
     IReadOnlyList<RepositoryActionsInsight> Repositories,
     ActionsBillingUsage? Billing,
-    DateTimeOffset FetchedAt)
+    DateTimeOffset FetchedAt,
+    IReadOnlyList<GitHubRateLimitSnapshot> RateLimits)
 {
-    public static readonly ActionsInsights Empty = new([], null, DateTimeOffset.MinValue);
+    public static readonly ActionsInsights Empty = new([], null, DateTimeOffset.MinValue, []);
 
     public int RunningCount => Repositories.Sum(repository => repository.Queue.InProgressCount);
     public int QueuedCount => Repositories.Sum(repository => repository.Queue.QueuedCount);

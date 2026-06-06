@@ -57,6 +57,9 @@ public sealed class GitHubActionsInsightClientTests
         Assert.Equal(1.25, insights.Billing.TotalNetAmount);
         Assert.Equal(120.5, insights.Billing.MinutesByOs["Windows"]);
         Assert.Contains("$1.25", insights.DisplayText);
+        var rateLimit = Assert.Single(insights.RateLimits);
+        Assert.Equal("core", rateLimit.Resource);
+        Assert.Equal(4997, rateLimit.Remaining);
     }
 
     [Fact]
@@ -79,10 +82,14 @@ public sealed class GitHubActionsInsightClientTests
 
     private static HttpResponseMessage JsonResponse(string json)
     {
-        return new HttpResponseMessage(HttpStatusCode.OK)
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
         };
+        response.Headers.TryAddWithoutValidation("X-RateLimit-Limit", "5000");
+        response.Headers.TryAddWithoutValidation("X-RateLimit-Remaining", "4997");
+        response.Headers.TryAddWithoutValidation("X-RateLimit-Resource", "core");
+        return response;
     }
 
     private sealed class StubHandler : HttpMessageHandler

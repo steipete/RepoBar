@@ -9,6 +9,7 @@ namespace RepoBar.Windows;
 internal sealed class GitHubAccountInsightClient : IDisposable
 {
     private readonly HttpClient _graphQlClient;
+    private readonly List<GitHubRateLimitSnapshot> _rateLimits = [];
 
     public GitHubAccountInsightClient(WindowsSettings settings, string? token)
         : this(settings, token, new HttpClientHandler())
@@ -66,6 +67,7 @@ internal sealed class GitHubAccountInsightClient : IDisposable
             Content = new StringContent(body, Encoding.UTF8, "application/json"),
         };
         using var response = await _graphQlClient.SendAsync(request, cancellationToken).ConfigureAwait(false);
+        CaptureRateLimit(response);
         if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized or HttpStatusCode.NotFound)
         {
             return null;
@@ -102,7 +104,16 @@ internal sealed class GitHubAccountInsightClient : IDisposable
             TryGetNestedInt32(viewer, "contributionsCollection", "totalIssueContributions") ?? 0,
             TryGetNestedInt32(viewer, "contributionsCollection", "totalPullRequestContributions") ?? 0,
             TryGetNestedInt32(viewer, "contributionsCollection", "totalPullRequestReviewContributions") ?? 0,
-            ParseContributionWeeks(viewer));
+            ParseContributionWeeks(viewer),
+            GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
+    }
+
+    private void CaptureRateLimit(HttpResponseMessage response)
+    {
+        if (GitHubRateLimitSnapshot.FromHeaders(response) is { } snapshot)
+        {
+            _rateLimits.Add(snapshot);
+        }
     }
 
     private static bool TryGetNestedProperty(JsonElement element, out JsonElement value, params string[] path)
@@ -225,7 +236,8 @@ internal sealed record GitHubAccountInsight(
     int IssueContributions,
     int PullRequestContributions,
     int PullRequestReviewContributions,
-    IReadOnlyList<GitHubContributionWeek> ContributionWeeks)
+    IReadOnlyList<GitHubContributionWeek> ContributionWeeks,
+    IReadOnlyList<GitHubRateLimitSnapshot> RateLimits)
 {
     private static readonly char[] HeatmapBuckets = ['.', ':', '-', '=', '+', '*', '#'];
 

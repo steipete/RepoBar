@@ -21,7 +21,7 @@ The Windows app currently provides:
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
 - optional RepoBar archive SQLite fallback for recent issue and pull request submenus
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
-- optional GitHub API rate-limit row with quota, reset, blocker, and shared-budget details
+- optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
 - optional Actions summary with latest workflow state, active queue counts, billing usage, and self-hosted runner state per configured repository
 - optional pull request notifications through Windows tray balloons with click-through to the pull request
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview
