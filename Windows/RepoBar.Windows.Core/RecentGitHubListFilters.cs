@@ -30,6 +30,29 @@ internal static class RecentGitHubListFilters
         };
     }
 
+    public static IReadOnlyList<GitHubListItem> IssuesWithLabel(IReadOnlyList<GitHubListItem> issues, string labelName)
+    {
+        if (string.IsNullOrWhiteSpace(labelName))
+        {
+            return [];
+        }
+
+        return issues
+            .Where(issue => issue.LabelNames?.Any(label => IsSameLabel(label, labelName)) == true)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<string> IssueLabels(IReadOnlyList<GitHubListItem> issues)
+    {
+        return issues
+            .SelectMany(issue => issue.LabelNames ?? [])
+            .Select(label => label.Trim())
+            .Where(label => label.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(label => label, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static IReadOnlyList<GitHubListItem> PullRequests(
         IReadOnlyList<GitHubListItem> pullRequests,
         RecentPullRequestListFilter filter,
@@ -71,6 +94,13 @@ internal static class RecentGitHubListFilters
     }
 
     private static bool IsSameLogin(string? lhs, string? rhs)
+    {
+        return !string.IsNullOrWhiteSpace(lhs) &&
+            !string.IsNullOrWhiteSpace(rhs) &&
+            string.Equals(lhs.Trim(), rhs.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsSameLabel(string? lhs, string? rhs)
     {
         return !string.IsNullOrWhiteSpace(lhs) &&
             !string.IsNullOrWhiteSpace(rhs) &&

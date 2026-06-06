@@ -715,14 +715,31 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
         var submenu = new ToolStripMenuItem("Issues");
         AddRecentItems(submenu.DropDownItems, recentItems, "No issues");
-        if (!string.IsNullOrWhiteSpace(viewerLogin))
+        var labels = RecentGitHubListFilters.IssueLabels(recentItems);
+        if (!string.IsNullOrWhiteSpace(viewerLogin) || labels.Count > 0)
         {
             submenu.DropDownItems.Add(new ToolStripSeparator());
+        }
+        if (!string.IsNullOrWhiteSpace(viewerLogin))
+        {
             AddFilteredRecentItemsSubmenu(
                 submenu.DropDownItems,
                 "Mine",
                 RecentGitHubListFilters.Issues(recentItems, RecentIssueListFilter.Mine, viewerLogin),
                 "No matching issues");
+        }
+        if (labels.Count > 0)
+        {
+            var labelsMenu = new ToolStripMenuItem("Labels");
+            foreach (var label in labels)
+            {
+                AddFilteredRecentItemsSubmenu(
+                    labelsMenu.DropDownItems,
+                    label,
+                    RecentGitHubListFilters.IssuesWithLabel(recentItems, label),
+                    "No matching issues");
+            }
+            submenu.DropDownItems.Add(labelsMenu);
         }
 
         items.Add(submenu);

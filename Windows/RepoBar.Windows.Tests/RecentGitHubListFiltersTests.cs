@@ -20,6 +20,22 @@ public sealed class RecentGitHubListFiltersTests
     }
 
     [Fact]
+    public void Issues_filter_by_label_and_list_distinct_labels()
+    {
+        var issues = new[]
+        {
+            new GitHubListItem("#1 Bug", null, null, LabelNames: ["bug", "Windows"]),
+            new GitHubListItem("#2 Docs", null, null, LabelNames: ["docs", "windows"]),
+            new GitHubListItem("#3 Empty", null, null, LabelNames: [" "]),
+        };
+
+        Assert.Equal(["bug", "docs", "Windows"], RecentGitHubListFilters.IssueLabels(issues));
+        Assert.Equal(
+            ["#1 Bug", "#2 Docs"],
+            RecentGitHubListFilters.IssuesWithLabel(issues, "WINDOWS").Select(item => item.Title));
+    }
+
+    [Fact]
     public void PullRequests_filters_mine_commented_and_reviewed()
     {
         var pullRequests = new[]
