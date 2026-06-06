@@ -15,6 +15,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
     private readonly HttpClient _graphQlClient;
     private readonly string _host;
     private readonly GitHubResponseCache? _cache;
+    private readonly WindowsGitHubArchiveReader? _archiveReader;
 
     public GitHubRepositoryClient(WindowsSettings settings, string? token)
         : this(
@@ -42,6 +43,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
             : $"https://{_host}/api/";
 
         _cache = cache;
+        _archiveReader = WindowsGitHubArchiveReader.FromSettings(settings);
         _httpClient = new HttpClient(messageHandler) { BaseAddress = new Uri(apiRoot) };
         _graphQlClient = new HttpClient(graphQlMessageHandler) { BaseAddress = new Uri(graphQlRoot) };
         ConfigureGitHubClient(_httpClient, token);
@@ -235,18 +237,25 @@ internal sealed class GitHubRepositoryClient : IDisposable
             cancellationToken).ConfigureAwait(false);
         if (json == null)
         {
-            return [];
+            return _archiveReader?.RecentIssues(repository, 5) ?? [];
         }
 
-        using var document = JsonDocument.Parse(json);
-        return document.RootElement.EnumerateArray()
-            .Where(issue => !issue.TryGetProperty("pull_request", out _))
-            .Take(5)
-            .Select(issue => new GitHubListItem(
-                $"#{issue.GetProperty("number").GetInt32()} {TryGetString(issue, "title") ?? "Untitled issue"}",
-                TryGetString(issue, "html_url"),
-                Metadata(TryGetNestedString(issue, "user", "login"), TryGetDateTimeOffset(issue, "updated_at"))))
-            .ToArray();
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.EnumerateArray()
+                .Where(issue => !issue.TryGetProperty("pull_request", out _))
+                .Take(5)
+                .Select(issue => new GitHubListItem(
+                    $"#{issue.GetProperty("number").GetInt32()} {TryGetString(issue, "title") ?? "Untitled issue"}",
+                    TryGetString(issue, "html_url"),
+                    Metadata(TryGetNestedString(issue, "user", "login"), TryGetDateTimeOffset(issue, "updated_at"))))
+                .ToArray();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return _archiveReader?.RecentIssues(repository, 5) ?? [];
+        }
     }
 
     private async Task<IReadOnlyList<GitHubListItem>> LoadRecentPullsAsync(RepositoryRef repository, CancellationToken cancellationToken)
@@ -256,16 +265,23 @@ internal sealed class GitHubRepositoryClient : IDisposable
             cancellationToken).ConfigureAwait(false);
         if (json == null)
         {
-            return [];
+            return _archiveReader?.RecentPulls(repository, 5) ?? [];
         }
 
-        using var document = JsonDocument.Parse(json);
-        return document.RootElement.EnumerateArray()
-            .Select(pull => new GitHubListItem(
-                $"#{pull.GetProperty("number").GetInt32()} {TryGetString(pull, "title") ?? "Untitled pull request"}",
-                TryGetString(pull, "html_url"),
-                Metadata(TryGetNestedString(pull, "user", "login"), TryGetDateTimeOffset(pull, "updated_at"))))
-            .ToArray();
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            return document.RootElement.EnumerateArray()
+                .Select(pull => new GitHubListItem(
+                    $"#{pull.GetProperty("number").GetInt32()} {TryGetString(pull, "title") ?? "Untitled pull request"}",
+                    TryGetString(pull, "html_url"),
+                    Metadata(TryGetNestedString(pull, "user", "login"), TryGetDateTimeOffset(pull, "updated_at"))))
+                .ToArray();
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return _archiveReader?.RecentPulls(repository, 5) ?? [];
+        }
     }
 
     private async Task<IReadOnlyList<GitHubListItem>> LoadRecentReleasesAsync(RepositoryRef repository, CancellationToken cancellationToken)

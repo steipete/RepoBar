@@ -26,6 +26,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _fetchLocalProjectsBeforeStatus = new();
     private readonly CheckBox _autoSyncLocalProjects = new();
     private readonly CheckBox _enableResponseCache = new();
+    private readonly TextBox _gitHubArchiveDatabasePath = new();
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
@@ -43,7 +44,7 @@ internal sealed class SettingsEditorForm : Form
         MinimizeBox = false;
         MaximizeBox = false;
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        ClientSize = new Size(820, 590);
+        ClientSize = new Size(820, 620);
 
         LoadSettings();
         BuildControls();
@@ -80,6 +81,7 @@ internal sealed class SettingsEditorForm : Form
         _fetchLocalProjectsBeforeStatus.Checked = settings.FetchLocalProjectsBeforeStatus;
         _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
         _enableResponseCache.Checked = settings.EnableResponseCache;
+        _gitHubArchiveDatabasePath.Text = settings.GitHubArchiveDatabasePath ?? "";
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
@@ -132,6 +134,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "OAuth secret env", _oauthSecretEnvironmentTextBox);
         AddLabeledControl(settingsGrid, "Refresh minutes", _refreshMinutes);
         AddLabeledControl(settingsGrid, "Local scan depth", _localProjectsDepth);
+        AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
         _credentialState.AutoSize = true;
         UpdateCredentialState();
@@ -437,6 +440,9 @@ internal sealed class SettingsEditorForm : Form
         settings.FetchLocalProjectsBeforeStatus = _fetchLocalProjectsBeforeStatus.Checked;
         settings.AutoSyncLocalProjects = _autoSyncLocalProjects.Checked;
         settings.EnableResponseCache = _enableResponseCache.Checked;
+        settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(_gitHubArchiveDatabasePath.Text)
+            ? null
+            : _gitHubArchiveDatabasePath.Text.Trim();
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
@@ -466,6 +472,9 @@ internal sealed class SettingsEditorForm : Form
             TokenEnvironmentVariable = activeAccount.TokenEnvironmentVariable,
             GitHubOAuthClientId = activeAccount.GitHubOAuthClientId,
             GitHubOAuthClientSecretEnvironmentVariable = activeAccount.GitHubOAuthClientSecretEnvironmentVariable,
+            GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(_gitHubArchiveDatabasePath.Text)
+                ? null
+                : _gitHubArchiveDatabasePath.Text.Trim(),
             Accounts = _accounts.Select(account => account.ToProfile()).ToList(),
         };
     }

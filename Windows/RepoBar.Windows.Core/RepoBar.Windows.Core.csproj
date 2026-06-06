@@ -15,4 +15,8 @@
       <_Parameter1>RepoBar.Windows.Tests</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.27" />
+  </ItemGroup>
 </Project>

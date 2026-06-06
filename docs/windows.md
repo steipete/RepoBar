@@ -19,6 +19,7 @@ The Windows app currently provides:
 - native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, and repository visibility
 - repository discovery from GitHub's accessible repository list
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
+- optional RepoBar archive SQLite fallback for recent issue and pull request submenus
 - optional signed-in account contribution summary from GitHub GraphQL
 - optional GitHub API rate-limit row with quota, reset, blocker, and shared-budget details
 - optional Actions summary with latest workflow state, active queue counts, billing usage, and self-hosted runner state per configured repository
@@ -97,6 +98,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "fetchLocalProjectsBeforeStatus": true,
   "autoSyncLocalProjects": false,
   "enableResponseCache": true,
+  "gitHubArchiveDatabasePath": "%APPDATA%\\RepoBar\\Archives\\example.sqlite",
   "showRateLimits": true,
   "showContributionSummary": true,
   "enablePullRequestNotifications": false,
@@ -155,6 +157,12 @@ $env:REPOBAR_GITHUB_TOKEN = "<token>"
 ```
 
 The app also checks `GITHUB_TOKEN` and `GH_TOKEN`. Tokens are not written to the settings file. Private repositories require the RepoBar GitHub App to be installed for OAuth access, or a token with repository read access.
+
+## Cache and Archives
+
+When `enableResponseCache` is true, RepoBar stores ETag-backed REST responses and can reuse stale responses after temporary GitHub failures.
+
+Set `gitHubArchiveDatabasePath` to a RepoBar-owned archive SQLite database produced from the same portable snapshot format as the macOS app. When the live recent issue or pull request endpoint is rate-limited, forbidden, offline, or returns malformed JSON, the Windows tray reads open `threads` rows from the archive so the issue and pull request submenus do not go blank. RepoBar only reads this database; it does not edit gitcrawl config or write into crawler-owned stores.
 
 ## Local Projects
 

@@ -20,6 +20,7 @@ internal sealed class WindowsSettings
     public bool FetchLocalProjectsBeforeStatus { get; set; } = true;
     public bool AutoSyncLocalProjects { get; set; }
     public bool EnableResponseCache { get; set; } = true;
+    public string? GitHubArchiveDatabasePath { get; set; }
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public bool EnablePullRequestNotifications { get; set; }
@@ -182,6 +183,9 @@ internal sealed class WindowsSettingsStore
         }
         settings.LocalProjectsMaxDepth = Math.Clamp(settings.LocalProjectsMaxDepth, 0, 8);
         settings.RefreshIntervalMinutes = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
+        settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
+            ? null
+            : settings.GitHubArchiveDatabasePath.Trim();
         settings.Repositories ??= [];
         settings.Repositories = settings.Repositories
             .Where(repository => repository.IsValid)

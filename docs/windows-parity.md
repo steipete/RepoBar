@@ -12,7 +12,7 @@ RepoBar for Windows should become a native taskbar companion with the same produ
 | Local projects | Scan project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Finder/Terminal, sync actions | Scan Windows project root, match remotes, show branch/ahead/behind/dirty/worktrees, open Explorer/Terminal, safe fast-forward sync actions | Partial |
 | Auth/accounts | GitHub App OAuth, PAT fallback, GitHub Enterprise, multi-account storage | GitHub App browser OAuth with refresh, PAT/env fallback, GitHub Enterprise host support, named account profiles with account-scoped Credential Manager entries | Mostly |
 | Repository browser | Search accessible repos and set Visible/Pinned/Hidden | Native settings window with accessible repo discovery and visibility controls | Partial |
-| Cache/offline | SQLite cache, ETags, archive fallback | Shared cache schema or Windows-owned equivalent with ETags/offline reads | Partial |
+| Cache/offline | SQLite cache, ETags, archive fallback | ETag response cache plus RepoBar archive SQLite fallback for recent issue/PR lists | Mostly |
 | Contribution header | Signed-in account contribution heatmap | Signed-in account contribution totals in the tray menu; heatmap later | Partial |
 | Rate limits | REST/GraphQL resource meter and blocker banner | Tray rate-limit state with quota, reset, blocker, and shared-budget details | Partial |
 | Actions usage | Optional Actions/runners billing menu | Optional workflow summary plus queue, billing usage, and self-hosted runner state | Partial |
@@ -41,6 +41,7 @@ Feature parity is not complete until the Windows target has:
 - A manual or automated proof artifact for at least one repository with GitHub status and local git status shown together.
 - GitHub App OAuth proof against GitHub.com or a stubbed loopback/token exchange plus refresh coverage.
 - Account-switch proof that separate Windows profiles resolve separate OAuth/PAT credential targets.
+- Archive fallback proof that recent issue and pull request lists survive failed live GitHub endpoints.
 
 ## Current Validation Commands
 
