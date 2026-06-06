@@ -96,10 +96,6 @@ jobs:
         shell: pwsh
         run: ./Scripts/smoke_windows.ps1 -Runtime win-x64 -LaunchSeconds 5
 
-      - name: Validate Windows proof artifacts
-        shell: pwsh
-        run: ./Scripts/Test-WindowsValidationArtifacts.ps1
-
       - name: Upload Windows smoke artifacts
         if: always()
         uses: actions/upload-artifact@v7
@@ -127,6 +123,18 @@ jobs:
         with:
           name: repobar-windows-win-arm64-unsigned
           path: dist/windows/publish/win-arm64
+
+      - name: Validate Windows proof artifacts
+        shell: pwsh
+        run: ./Scripts/Test-WindowsValidationArtifacts.ps1
+
+      - name: Upload Windows validation manifest
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: repobar-windows-validation
+          path: dist/windows/smoke/repobar-windows-validation.json
+          if-no-files-found: warn
 
   windows-signing:
     name: Windows signing

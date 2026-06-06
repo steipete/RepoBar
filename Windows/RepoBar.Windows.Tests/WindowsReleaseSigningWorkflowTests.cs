@@ -57,6 +57,7 @@ public sealed class WindowsReleaseSigningWorkflowTests
     public void CiWorkflow_runs_windows_smoke_and_uploads_proof_artifacts()
     {
         var workflow = File.ReadAllText(Path.Combine(GetRepositoryRoot(), ".github", "workflows", "ci.yml"));
+        var validator = File.ReadAllText(Path.Combine(GetRepositoryRoot(), "Scripts", "Test-WindowsValidationArtifacts.ps1"));
 
         Assert.Contains("timeout-minutes: 30", workflow);
         Assert.Contains("name: Windows tray", workflow);
@@ -67,8 +68,6 @@ public sealed class WindowsReleaseSigningWorkflowTests
         Assert.Contains("if-no-files-found: warn", workflow);
         Assert.Contains("name: Smoke tray", workflow);
         Assert.Contains("run: ./Scripts/smoke_windows.ps1 -Runtime win-x64 -LaunchSeconds 5", workflow);
-        Assert.Contains("name: Validate Windows proof artifacts", workflow);
-        Assert.Contains("run: ./Scripts/Test-WindowsValidationArtifacts.ps1", workflow);
         Assert.Contains("name: Upload Windows smoke artifacts", workflow);
         Assert.Contains("name: repobar-windows-smoke", workflow);
         Assert.Contains("path: dist/windows/smoke", workflow);
@@ -79,6 +78,11 @@ public sealed class WindowsReleaseSigningWorkflowTests
         Assert.Contains("name: Upload unsigned ARM64 tray layout", workflow);
         Assert.Contains("name: repobar-windows-win-arm64-unsigned", workflow);
         Assert.Contains("path: dist/windows/publish/win-arm64", workflow);
+        Assert.Contains("name: Validate Windows proof artifacts", workflow);
+        Assert.Contains("run: ./Scripts/Test-WindowsValidationArtifacts.ps1", workflow);
+        Assert.Contains("name: Upload Windows validation manifest", workflow);
+        Assert.Contains("name: repobar-windows-validation", workflow);
+        Assert.Contains("path: dist/windows/smoke/repobar-windows-validation.json", workflow);
 
         Assert.True(
             workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal) <
@@ -87,20 +91,24 @@ public sealed class WindowsReleaseSigningWorkflowTests
             workflow.IndexOf("name: Upload Windows test results", StringComparison.Ordinal) <
             workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal));
         Assert.True(
-            workflow.IndexOf("name: Smoke tray", StringComparison.Ordinal) <
-            workflow.IndexOf("name: Validate Windows proof artifacts", StringComparison.Ordinal));
-        Assert.True(
-            workflow.IndexOf("name: Validate Windows proof artifacts", StringComparison.Ordinal) <
-            workflow.IndexOf("name: Upload Windows smoke artifacts", StringComparison.Ordinal));
-        Assert.True(
             workflow.IndexOf("name: Upload Windows smoke artifacts", StringComparison.Ordinal) <
             workflow.IndexOf("name: Package tray layout", StringComparison.Ordinal));
         Assert.True(
             workflow.IndexOf("name: Package tray layout", StringComparison.Ordinal) <
             workflow.IndexOf("name: Package ARM64 tray layout", StringComparison.Ordinal));
         Assert.True(
+            workflow.IndexOf("name: Package ARM64 tray layout", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Validate Windows proof artifacts", StringComparison.Ordinal));
+        Assert.True(
+            workflow.IndexOf("name: Validate Windows proof artifacts", StringComparison.Ordinal) <
+            workflow.IndexOf("name: Upload Windows validation manifest", StringComparison.Ordinal));
+        Assert.True(
             workflow.IndexOf("name: Upload unsigned ARM64 tray layout", StringComparison.Ordinal) <
             workflow.IndexOf("windows-signing:", StringComparison.Ordinal));
+
+        Assert.Contains("[string[]]$RequiredRuntimes = @(\"win-x64\", \"win-arm64\")", validator);
+        Assert.Contains("RepoBar.Windows.exe", validator);
+        Assert.Contains("publishLayouts = $layouts", validator);
     }
 
     private static string GetRepositoryRoot()

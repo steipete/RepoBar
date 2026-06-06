@@ -1,6 +1,8 @@
 param(
     [string]$TestResultsPath = "dist/windows/test-results",
     [string]$SmokePath = "dist/windows/smoke",
+    [string]$PublishRootPath = "dist/windows/publish",
+    [string[]]$RequiredRuntimes = @("win-x64", "win-arm64"),
     [string]$OutputPath = ""
 )
 
@@ -30,6 +32,7 @@ function Assert-True {
 
 $testResults = Resolve-RepoPath $TestResultsPath
 $smokeArtifacts = Resolve-RepoPath $SmokePath
+$publishRoot = Resolve-RepoPath $PublishRootPath
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
     $OutputPath = Join-Path $smokeArtifacts "repobar-windows-validation.json"
 }
@@ -107,11 +110,25 @@ Assert-True ($smoke.runtimeFirstArchivePullRequest -eq "#654 Smoke archive pull"
 Assert-True ($runtimeSmoke.renderedMenuProof.mainMenuComplete -eq $true) "RepoBar.Windows runtime summary did not prove the main menu."
 Assert-True ($runtimeSmoke.renderedMenuProof.repositoryMenuComplete -eq $true) "RepoBar.Windows runtime summary did not prove the repository menu."
 
+$layouts = @()
+foreach ($runtime in $RequiredRuntimes) {
+    $layoutPath = Join-Path $publishRoot $runtime
+    $exePath = Join-Path $layoutPath "RepoBar.Windows.exe"
+    Assert-True (Test-Path -LiteralPath $layoutPath -PathType Container) "RepoBar.Windows publish layout is missing for $runtime at $layoutPath."
+    Assert-True (Test-Path -LiteralPath $exePath -PathType Leaf) "RepoBar.Windows executable is missing from the $runtime publish layout."
+    $layouts += [ordered]@{
+        runtime = $runtime
+        path = $layoutPath
+        executable = $exePath
+    }
+}
+
 $result = [ordered]@{
     trx = $trx.FullName
     tests = [int]$counters.total
     smokeSummary = $summary.FullName
     runtimeSummary = $runtime.FullName
+    publishLayouts = $layouts
     screenshotAvailable = [bool]$smoke.screenshotAvailable
     screenshotPath = $smoke.screenshotPath
     validatedAt = [DateTime]::UtcNow.ToString("o")
