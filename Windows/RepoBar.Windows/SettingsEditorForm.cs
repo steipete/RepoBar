@@ -409,7 +409,7 @@ internal sealed class SettingsEditorForm : Form
         var signInButton = new Button { Text = "Sign in with GitHub" };
         signInButton.Click += async (_, _) => await SignInWithGitHubAsync();
         var installAppButton = new Button { Text = "Install GitHub App" };
-        installAppButton.Click += (_, _) => OpenExternalUrl("https://github.com/apps/repobar/installations/new");
+        installAppButton.Click += (_, _) => OpenExternalUrl(GitHubAppInstallUrl());
         var refreshOAuthButton = new Button { Text = "Refresh OAuth" };
         refreshOAuthButton.Click += async (_, _) => await RefreshOAuthAsync();
         var clearOAuthButton = new Button { Text = "Clear OAuth" };
@@ -933,6 +933,12 @@ internal sealed class SettingsEditorForm : Form
     {
         var account = CurrentSettingsSnapshot().GetActiveAccount();
         return $"https://{GitHubHost.Normalize(account.GitHubHost)}/settings/tokens/new?scopes=repo,read:org&description=RepoBar";
+    }
+
+    private string GitHubAppInstallUrl()
+    {
+        var account = CurrentSettingsSnapshot().GetActiveAccount();
+        return GitHubHost.GitHubAppInstallUrl(account.GitHubHost);
     }
 
     private static void OpenExternalUrl(string url)

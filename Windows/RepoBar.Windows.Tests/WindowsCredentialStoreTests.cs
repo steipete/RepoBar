@@ -118,6 +118,15 @@ public sealed class WindowsCredentialStoreTests
         Assert.Equal(expected, GitHubHost.Normalize(host));
     }
 
+    [Theory]
+    [InlineData("github.com", "https://github.com/apps/repobar/installations/new")]
+    [InlineData("GitHub.EXAMPLE.com/", "https://github.example.com/github-apps/repobar/installations/new")]
+    [InlineData("https://github.enterprise.test/org", "https://github.enterprise.test/github-apps/repobar/installations/new")]
+    public void GitHubAppInstallUrl_uses_host_specific_install_path(string host, string expected)
+    {
+        Assert.Equal(expected, GitHubHost.GitHubAppInstallUrl(host));
+    }
+
     [Fact]
     public void NormalizeSettings_migrates_legacy_account_fields_and_mirrors_active_account()
     {
