@@ -154,6 +154,66 @@ public sealed class GitHubResponseCacheTests
     }
 
     [Fact]
+    public async Task Repository_client_loads_all_state_recent_pulls_for_notifications()
+    {
+        var requestedPaths = new List<string>();
+        var handler = new StubHandler(request =>
+        {
+            var path = request.RequestUri?.PathAndQuery ?? "";
+            requestedPaths.Add(path);
+            return path switch
+            {
+                "/repos/owner/name/pulls?state=all&sort=updated&direction=desc&per_page=5" => JsonResponse("""
+                    [
+                      {
+                        "number": 12,
+                        "title": "Ship Windows state notifications",
+                        "html_url": "https://github.com/owner/name/pull/12",
+                        "user": { "login": "alice" },
+                        "updated_at": "2026-06-06T10:05:00Z",
+                        "comments": 2,
+                        "review_comments": 3,
+                        "requested_reviewers": [{ "login": "bob" }],
+                        "requested_teams": [{ "slug": "triage" }],
+                        "state": "closed",
+                        "merged_at": "2026-06-06T10:10:00Z"
+                      }
+                    ]
+                    """),
+                _ => MinimalRepositoryResponse(path),
+            };
+        });
+        var settings = new WindowsSettings
+        {
+            EnableResponseCache = false,
+            HeatmapDisplay = WindowsHeatmapDisplay.Hidden,
+        };
+        using var client = new GitHubRepositoryClient(
+            settings,
+            token: null,
+            handler,
+            EmptyGraphQlHandler(),
+            cache: null);
+
+        var statuses = await client.LoadRepositoriesAsync(
+            [new RepositoryRef { Owner = "owner", Name = "name" }],
+            LocalGitIndex.Empty,
+            CancellationToken.None);
+
+        var status = Assert.Single(statuses);
+        var pull = Assert.Single(status.RecentLists.Pulls);
+        Assert.NotNull(pull.PullRequestSnapshot);
+        var snapshot = pull.PullRequestSnapshot!;
+        Assert.Contains("/repos/owner/name/pulls?state=all&sort=updated&direction=desc&per_page=5", requestedPaths);
+        Assert.Equal("closed", snapshot.State);
+        Assert.Equal(DateTimeOffset.Parse("2026-06-06T10:10:00Z"), snapshot.MergedAt);
+        Assert.Equal(2, snapshot.CommentCount);
+        Assert.Equal(3, snapshot.ReviewCommentCount);
+        Assert.Equal(["bob"], snapshot.RequestedReviewerLogins);
+        Assert.Equal(["triage"], snapshot.RequestedTeamNames);
+    }
+
+    [Fact]
     public async Task Repository_client_skips_heatmap_request_when_heatmap_is_hidden()
     {
         var heatmapCalls = 0;

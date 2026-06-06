@@ -75,6 +75,16 @@ internal sealed class PullRequestNotificationTracker
             }
 
             var emittedSpecificEvent = false;
+            var stateChangeDetail = StateChangeDetail(previous, current);
+            if (settings.EnablePullRequestUpdateNotifications && stateChangeDetail != null)
+            {
+                emittedSpecificEvent = true;
+                events.Add(new PullRequestNotificationEvent(
+                    PullRequestNotificationEventKind.PullRequestUpdated,
+                    pull,
+                    stateChangeDetail));
+            }
+
             var reviewRequestDetail = ReviewRequestDetail(previous, current);
             if (settings.EnablePullRequestReviewRequestNotifications && reviewRequestDetail != null)
             {
@@ -99,7 +109,10 @@ internal sealed class PullRequestNotificationTracker
                 previous.UpdatedAt != null &&
                 current.UpdatedAt > previous.UpdatedAt)
             {
-                events.Add(new PullRequestNotificationEvent(PullRequestNotificationEventKind.PullRequestUpdated, pull, "Updated"));
+                events.Add(new PullRequestNotificationEvent(
+                    PullRequestNotificationEventKind.PullRequestUpdated,
+                    pull,
+                    "Updated"));
             }
         }
 
@@ -204,6 +217,34 @@ internal sealed class PullRequestNotificationTracker
             : $"Review requested from {added.Length:n0} reviewers";
     }
 
+    private static string? StateChangeDetail(PullRequestNotificationSnapshot previous, PullRequestNotificationSnapshot current)
+    {
+        if (current.MergedAt != null && previous.MergedAt == null)
+        {
+            return "PR merged";
+        }
+        if (IsClosed(previous.State) && IsOpen(current.State))
+        {
+            return "PR reopened";
+        }
+        if (IsOpen(previous.State) && IsClosed(current.State))
+        {
+            return "PR closed";
+        }
+
+        return null;
+    }
+
+    private static bool IsOpen(string? state)
+    {
+        return string.Equals(state, "open", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsClosed(string? state)
+    {
+        return string.Equals(state, "closed", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string[] Normalize(IEnumerable<string> values)
     {
         return values
@@ -223,7 +264,9 @@ internal sealed record PullRequestNotificationSnapshot(
     int CommentCount,
     int ReviewCommentCount,
     string[] RequestedReviewerLogins,
-    string[] RequestedTeamNames);
+    string[] RequestedTeamNames,
+    string State = "open",
+    DateTimeOffset? MergedAt = null);
 
 internal sealed record PullRequestNotificationEvent(
     PullRequestNotificationEventKind Kind,

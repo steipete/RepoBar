@@ -132,7 +132,7 @@ public sealed class GitHubArchiveReaderTests
                         """),
                     "/repos/owner/name/pulls?state=open&per_page=1" => JsonResponse("[]"),
                     "/repos/owner/name/issues?state=open&sort=updated&direction=desc&per_page=10" => new HttpResponseMessage(HttpStatusCode.Forbidden),
-                    "/repos/owner/name/pulls?state=open&sort=updated&direction=desc&per_page=5" => new HttpResponseMessage(HttpStatusCode.Forbidden),
+                    "/repos/owner/name/pulls?state=all&sort=updated&direction=desc&per_page=5" => new HttpResponseMessage(HttpStatusCode.Forbidden),
                     "/repos/owner/name/actions/runs?branch=main&per_page=1" => JsonResponse("""{"workflow_runs":[]}"""),
                     "/repos/owner/name/actions/runs?per_page=5" => JsonResponse("""{"workflow_runs":[]}"""),
                     "/repos/owner/name/releases/latest" => new HttpResponseMessage(HttpStatusCode.NotFound),

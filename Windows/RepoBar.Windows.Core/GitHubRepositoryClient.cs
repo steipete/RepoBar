@@ -263,7 +263,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
     private async Task<IReadOnlyList<GitHubListItem>> LoadRecentPullsAsync(RepositoryRef repository, CancellationToken cancellationToken)
     {
         var json = await TryReadJsonAsync(
-            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/pulls?state=open&sort=updated&direction=desc&per_page=5",
+            $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/pulls?state=all&sort=updated&direction=desc&per_page=5",
             cancellationToken).ConfigureAwait(false);
         if (json == null)
         {
@@ -914,7 +914,9 @@ internal sealed class GitHubRepositoryClient : IDisposable
             TryGetInt32(pull, "comments") ?? 0,
             TryGetInt32(pull, "review_comments") ?? 0,
             TryGetStringArray(pull, "requested_reviewers", "login"),
-            TryGetStringArray(pull, "requested_teams", "slug"));
+            TryGetStringArray(pull, "requested_teams", "slug"),
+            TryGetString(pull, "state") ?? "open",
+            TryGetDateTimeOffset(pull, "merged_at"));
     }
 
     private static int? TryGetInt32(JsonElement element, string propertyName)

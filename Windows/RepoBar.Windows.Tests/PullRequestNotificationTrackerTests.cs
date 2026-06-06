@@ -107,6 +107,82 @@ public sealed class PullRequestNotificationTrackerTests
     }
 
     [Fact]
+    public void DetectEvents_reports_pull_request_state_changes_as_updates()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
+        try
+        {
+            var statePath = Path.Combine(directory, "state.json");
+            var tracker = new PullRequestNotificationTracker(statePath);
+            var settings = NotificationSettings();
+
+            Assert.Empty(tracker.DetectEvents("o/r", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z", state: "open"),
+                Pull("#2 Second", 2, "2026-06-06T10:00:00Z", state: "closed"),
+                Pull("#3 Third", 3, "2026-06-06T10:00:00Z", state: "open"),
+            ], settings));
+
+            var events = tracker.DetectEvents("o/r", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z", state: "closed"),
+                Pull("#2 Second", 2, "2026-06-06T10:00:00Z", state: "open"),
+                Pull("#3 Third", 3, "2026-06-06T10:00:00Z", state: "closed", mergedAt: "2026-06-06T10:05:00Z"),
+            ], settings);
+
+            Assert.Equal(
+                [
+                    "PR closed",
+                    "PR reopened",
+                    "PR merged",
+                ],
+                events.Select(item => item.Detail));
+            Assert.All(events, item => Assert.Equal(PullRequestNotificationEventKind.PullRequestUpdated, item.Kind));
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void DetectEvents_keeps_state_change_when_comment_notification_also_matches()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
+        try
+        {
+            var statePath = Path.Combine(directory, "state.json");
+            var tracker = new PullRequestNotificationTracker(statePath);
+            var settings = NotificationSettings();
+
+            Assert.Empty(tracker.DetectEvents("o/r", [
+                Pull("#1 First", 1, "2026-06-06T10:00:00Z", comments: 1, state: "open"),
+            ], settings));
+
+            var events = tracker.DetectEvents("o/r", [
+                Pull("#1 First", 1, "2026-06-06T10:05:00Z", comments: 2, state: "closed"),
+            ], settings);
+
+            Assert.Equal(
+                [
+                    PullRequestNotificationEventKind.PullRequestUpdated,
+                    PullRequestNotificationEventKind.NewComment,
+                ],
+                events.Select(item => item.Kind));
+            Assert.Equal("PR closed", events[0].Detail);
+            Assert.Equal("1 new comment", events[1].Detail);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void DetectEvents_loads_legacy_seen_url_state()
     {
         var directory = Path.Combine(Path.GetTempPath(), $"repobar-pr-notifications-{Guid.NewGuid():N}");
@@ -157,7 +233,9 @@ public sealed class PullRequestNotificationTrackerTests
         int comments = 0,
         int reviewComments = 0,
         string[]? requestedReviewers = null,
-        string[]? requestedTeams = null)
+        string[]? requestedTeams = null,
+        string state = "open",
+        string? mergedAt = null)
     {
         return new GitHubListItem(
             title,
@@ -168,6 +246,8 @@ public sealed class PullRequestNotificationTrackerTests
                 comments,
                 reviewComments,
                 requestedReviewers ?? [],
-                requestedTeams ?? []));
+                requestedTeams ?? [],
+                state,
+                mergedAt == null ? null : DateTimeOffset.Parse(mergedAt)));
     }
 }

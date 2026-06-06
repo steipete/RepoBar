@@ -26,7 +26,7 @@ The Windows app currently provides:
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
 - optional Actions summary with latest workflow state, active queue counts, billing usage, cache usage, and self-hosted runner state per configured repository
-- optional pull request notifications for new PRs, updates, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
+- optional pull request notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
 - optional launch-at-login registration for the current Windows user
@@ -173,7 +173,7 @@ Use **Customize menu** in Preferences to hide or reorder main tray actions and r
 
 Use **Watch clipboard references** to enable the clipboard-only GitHub reference monitor. Windows polls text copied to the clipboard, ignores the initial clipboard contents as a baseline, sends a tray balloon for newly copied issue or pull request references, and opens Issue Navigator with the copied text when the balloon is clicked.
 
-Use **PR notifications** plus the event toggles to choose whether Windows tray balloons are sent for new pull requests, pull request updates, review requests, and new comments. The first refresh records a baseline without notifying, matching the macOS behavior.
+Use **PR notifications** plus the event toggles to choose whether Windows tray balloons are sent for new pull requests, pull request updates, closed/reopened/merged state changes, review requests, and new comments. Windows reads the recent all-state pull request feed so closed and merged pull requests can still update the notification baseline. The first refresh records a baseline without notifying, matching the macOS behavior.
 
 ## Validation
 
