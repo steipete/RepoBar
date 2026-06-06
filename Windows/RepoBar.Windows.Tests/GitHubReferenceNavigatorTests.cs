@@ -426,6 +426,57 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_grouped_repository_issue_lists()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "openclaw/discrawl: #61, #62 and #63",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/discrawl", 61L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/discrawl", 62L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/discrawl", 63L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_resolves_repository_heading_child_references()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 closes #17, 24 additions / 1 deletion.
+            - openclaw/clawdex: 0 issues / 1 PR
+              #1 removes the default personal backup remote.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("openclaw/Tachikoma", 18L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/Tachikoma", 17L), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("openclaw/clawdex", 1L), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_stops_repository_heading_context_at_unindented_lines()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+            #18 should use the selected repository outside the indented block.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal(18L, reference.Number);
+    }
+
+    [Fact]
     public void FindReferences_resolves_unique_repository_name_shorthand()
     {
         var references = GitHubReferenceNavigator.FindReferences(

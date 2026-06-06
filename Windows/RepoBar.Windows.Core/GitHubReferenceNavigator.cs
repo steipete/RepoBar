@@ -18,6 +18,8 @@ internal static partial class GitHubReferenceNavigator
         var matches = new List<GitHubReferenceCandidate>();
         var claimedSpans = new List<RangeSpan>();
         var uniqueRepositoriesByName = UniqueRepositoriesByName(defaultRepositoryFullName, knownRepositoryFullNames);
+        AddRepositoryHeadingReferences(text, matches, claimedSpans);
+
         foreach (Match match in GitHubCommitUrlRegex().Matches(text))
         {
             matches.Add(new GitHubReferenceCandidate(
@@ -212,6 +214,109 @@ internal static partial class GitHubReferenceNavigator
             .ToArray();
     }
 
+    private static void AddRepositoryHeadingReferences(
+        string text,
+        List<GitHubReferenceCandidate> matches,
+        List<RangeSpan> claimedSpans)
+    {
+        string? headingRepository = null;
+        var headingIndent = 0;
+        var lineStart = 0;
+        while (lineStart <= text.Length)
+        {
+            var lineEnd = text.IndexOf('\n', lineStart);
+            if (lineEnd < 0)
+            {
+                lineEnd = text.Length;
+            }
+
+            var line = text[lineStart..lineEnd].TrimEnd('\r');
+            var indent = LeadingWhitespace(line);
+            foreach (Match match in GroupedRepositoryLineRegex().Matches(line))
+            {
+                var repositoryFullName = $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}";
+                foreach (Match number in BareNumberRegex().Matches(match.Groups["refs"].Value))
+                {
+                    var index = lineStart + match.Groups["refs"].Index + number.Groups["number"].Index;
+                    AddCandidateIfUnclaimed(
+                        matches,
+                        claimedSpans,
+                        index,
+                        number.Length,
+                        new GitHubReferenceMatch(
+                            repositoryFullName,
+                            long.Parse(number.Groups["number"].Value),
+                            "issues",
+                            number.Value));
+                }
+            }
+
+            if (!string.IsNullOrWhiteSpace(headingRepository) && indent > headingIndent)
+            {
+                foreach (Match match in BareNumberRegex().Matches(line))
+                {
+                    var index = lineStart + match.Index;
+                    AddCandidateIfUnclaimed(
+                        matches,
+                        claimedSpans,
+                        index,
+                        match.Length,
+                        new GitHubReferenceMatch(
+                            headingRepository,
+                            long.Parse(match.Groups["number"].Value),
+                            "issues",
+                            match.Value));
+                }
+            }
+            else
+            {
+                headingRepository = null;
+            }
+
+            var heading = RepositoryCountHeadingRegex().Match(line);
+            if (heading.Success)
+            {
+                headingRepository = $"{heading.Groups["owner"].Value}/{heading.Groups["repo"].Value}";
+                headingIndent = indent;
+                claimedSpans.Add(new RangeSpan(lineStart + heading.Index, lineStart + heading.Index + heading.Length));
+            }
+
+            if (lineEnd == text.Length)
+            {
+                break;
+            }
+
+            lineStart = lineEnd + 1;
+        }
+    }
+
+    private static void AddCandidateIfUnclaimed(
+        List<GitHubReferenceCandidate> matches,
+        List<RangeSpan> claimedSpans,
+        int index,
+        int length,
+        GitHubReferenceMatch reference)
+    {
+        if (claimedSpans.Any(span => span.Contains(index)))
+        {
+            return;
+        }
+
+        matches.Add(new GitHubReferenceCandidate(index, reference));
+        claimedSpans.Add(new RangeSpan(index, index + length));
+    }
+
+    private static int LeadingWhitespace(string line)
+    {
+        var count = 0;
+        while (count < line.Length && char.IsWhiteSpace(line[count]))
+        {
+            count++;
+        }
+
+        return count;
+    }
+
     public static Uri BuildUri(GitHubReferenceMatch reference, string host)
     {
         var normalizedHost = GitHubHost.Normalize(reference.Host ?? host);
@@ -337,6 +442,12 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?:commits?|pull/\d+/changes)/(?<hash>[0-9a-f]{7,40})", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubCommitUrlRegex();
+
+    [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):\s*(?<refs>#\d+(?:\s*(?:,|and)\s*#?\d+)*)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex GroupedRepositoryLineRegex();
+
+    [GeneratedRegex(@"^\s*(?:[-*]\s*)?(?<owner>[A-Za-z0-9_.-]+)/(?<repo>[A-Za-z0-9_.-]+):\s*(?:(?:\d+\s+(?:issues?|PRs?|pull requests?))(?:\s*/\s*)?)+$", RegexOptions.IgnoreCase)]
+    private static partial Regex RepositoryCountHeadingRegex();
 
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/actions/runs/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubActionsRunUrlRegex();
