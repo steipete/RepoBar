@@ -23,6 +23,7 @@ internal sealed class LocalGitService
 
         var roots = DiscoverRepositoryRoots(root, settings.LocalProjectsMaxDepth);
         var statuses = new List<LocalGitRepositoryStatus>(roots.Count);
+        var autoSyncedStatuses = new List<LocalGitRepositoryStatus>();
         var now = DateTimeOffset.UtcNow;
         foreach (var repoRoot in roots)
         {
@@ -43,6 +44,10 @@ internal sealed class LocalGitService
                 if (sync.Success)
                 {
                     status = await LoadStatusAsync(repoRoot, cancellationToken).ConfigureAwait(false);
+                    if (status != null)
+                    {
+                        autoSyncedStatuses.Add(status);
+                    }
                 }
             }
 
@@ -52,7 +57,9 @@ internal sealed class LocalGitService
             }
         }
 
-        return new LocalGitIndex(statuses.OrderBy(status => status.DisplayName, StringComparer.OrdinalIgnoreCase).ToList());
+        return new LocalGitIndex(
+            statuses.OrderBy(status => status.DisplayName, StringComparer.OrdinalIgnoreCase).ToList(),
+            autoSyncedStatuses.OrderBy(status => status.DisplayName, StringComparer.OrdinalIgnoreCase).ToList());
     }
 
     internal static IReadOnlyList<string> DiscoverRepositoryRoots(string root, int maxDepth)

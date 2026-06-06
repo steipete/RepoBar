@@ -217,6 +217,28 @@ public sealed class LocalGitServiceTests
         Assert.Empty(status.DirtyFilesForMenu(new WindowsSettings { ShowDirtyFilesInMenu = false }));
     }
 
+    [Fact]
+    public void Local_index_exposes_auto_synced_repositories_for_notifications()
+    {
+        var synced = LocalStatus("owner/synced", LocalSyncState.Synced);
+        var other = LocalStatus("owner/other", LocalSyncState.Synced);
+        var index = new LocalGitIndex([synced, other], [synced]);
+
+        Assert.Equal([synced], index.AutoSyncedRepositories);
+        Assert.Equal(synced, index.Find(new RepositoryRef { Owner = "owner", Name = "synced" }));
+    }
+
+    [Fact]
+    public void Local_sync_notification_formats_single_and_multiple_repositories()
+    {
+        var one = LocalStatus("owner/one", LocalSyncState.Synced);
+        var two = LocalStatus("owner/two", LocalSyncState.Synced);
+
+        Assert.Equal("Synced owner/one (main)", LocalGitSyncNotification.Body([one]));
+        Assert.Equal("Synced 2 local repositories.", LocalGitSyncNotification.Body([one, two]));
+        Assert.Equal("", LocalGitSyncNotification.Body([]));
+    }
+
     private static WindowsSettings SettingsWithFetchBeforeStatus(bool enabled)
     {
         return new WindowsSettings
@@ -224,5 +246,23 @@ public sealed class LocalGitServiceTests
             FetchLocalProjectsBeforeStatus = enabled,
             LocalProjectsFetchIntervalMinutes = 5,
         };
+    }
+
+    private static LocalGitRepositoryStatus LocalStatus(string fullName, LocalSyncState syncState)
+    {
+        var name = fullName.Split('/')[1];
+        return new LocalGitRepositoryStatus(
+            Path: Path.Combine(Path.GetTempPath(), name),
+            Name: name,
+            FullName: fullName,
+            Branch: "main",
+            IsClean: syncState != LocalSyncState.Dirty,
+            AheadCount: syncState == LocalSyncState.Ahead ? 1 : 0,
+            BehindCount: syncState == LocalSyncState.Behind ? 1 : 0,
+            SyncState: syncState,
+            DirtyCounts: LocalDirtyCounts.Empty,
+            DirtyFiles: [],
+            WorktreeName: null,
+            UpstreamBranch: "origin/main");
     }
 }

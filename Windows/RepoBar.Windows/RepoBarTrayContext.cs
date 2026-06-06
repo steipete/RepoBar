@@ -109,6 +109,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             _localGitIndex = await _localGitService.LoadIndexAsync(
                 _settingsStore.Settings,
                 _shutdown.Token);
+            ShowAutoSyncNotifications(_localGitIndex.AutoSyncedRepositories);
             _statuses = await _githubClient.LoadRepositoriesAsync(
                 _settingsStore.VisibleRepositories,
                 _localGitIndex,
@@ -949,6 +950,23 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         items.Add(new ToolStripSeparator());
         items.Add(new ToolStripMenuItem("Open folder", null, (_, _) => OpenFile(local.Path)));
         items.Add(new ToolStripMenuItem("Open in terminal", null, (_, _) => OpenTerminal(local.Path)));
+    }
+
+    private void ShowAutoSyncNotifications(IReadOnlyList<LocalGitRepositoryStatus> syncedRepositories)
+    {
+        if (syncedRepositories.Count == 0)
+        {
+            return;
+        }
+
+        _lastPullRequestNotificationTarget = null;
+        _lastReferenceNotificationText = null;
+        _lastUpdateNotificationUrl = null;
+        _notifyIcon.ShowBalloonTip(
+            timeout: 5000,
+            tipTitle: "RepoBar Auto-sync",
+            tipText: LocalGitSyncNotification.Body(syncedRepositories),
+            tipIcon: ToolTipIcon.Info);
     }
 
     private void AddBranchesSubmenu(ToolStripItemCollection items, LocalGitRepositoryStatus local)

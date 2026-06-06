@@ -84,8 +84,16 @@ internal sealed class LocalGitIndex
     private readonly Dictionary<string, LocalGitRepositoryStatus> _byName;
 
     public LocalGitIndex(IReadOnlyList<LocalGitRepositoryStatus> repositories)
+        : this(repositories, [])
+    {
+    }
+
+    public LocalGitIndex(
+        IReadOnlyList<LocalGitRepositoryStatus> repositories,
+        IReadOnlyList<LocalGitRepositoryStatus> autoSyncedRepositories)
     {
         Repositories = repositories;
+        AutoSyncedRepositories = autoSyncedRepositories;
         _byFullName = repositories
             .Where(repository => !string.IsNullOrWhiteSpace(repository.FullName))
             .GroupBy(repository => repository.FullName!, StringComparer.OrdinalIgnoreCase)
@@ -98,6 +106,7 @@ internal sealed class LocalGitIndex
     public static readonly LocalGitIndex Empty = new([]);
 
     public IReadOnlyList<LocalGitRepositoryStatus> Repositories { get; }
+    public IReadOnlyList<LocalGitRepositoryStatus> AutoSyncedRepositories { get; }
 
     public LocalGitRepositoryStatus? Find(RepositoryRef repository)
     {
@@ -115,6 +124,19 @@ internal sealed class LocalGitIndex
             .OrderBy(repository => repository.WorktreeName is null ? 0 : 1)
             .ThenBy(repository => repository.Path, StringComparer.OrdinalIgnoreCase)
             .First();
+    }
+}
+
+internal static class LocalGitSyncNotification
+{
+    public static string Body(IReadOnlyList<LocalGitRepositoryStatus> repositories)
+    {
+        return repositories.Count switch
+        {
+            0 => "",
+            1 => $"Synced {repositories[0].DisplayName} ({repositories[0].Branch})",
+            _ => $"Synced {repositories.Count:n0} local repositories.",
+        };
     }
 }
 
