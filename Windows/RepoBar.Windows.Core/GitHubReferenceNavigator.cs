@@ -107,6 +107,18 @@ internal static partial class GitHubReferenceNavigator
 
         if (!string.IsNullOrWhiteSpace(defaultRepositoryFullName))
         {
+            foreach (Match match in DirectBareNumberRegex().Matches(text))
+            {
+                matches.Add(new GitHubReferenceCandidate(
+                    match.Groups["number"].Index,
+                    new GitHubReferenceMatch(
+                        defaultRepositoryFullName,
+                        long.Parse(match.Groups["number"].Value),
+                        "issues",
+                        match.Value)));
+                claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
+            }
+
             foreach (Match match in KindedBareNumberRegex().Matches(text))
             {
                 if (claimedSpans.Any(span => span.Contains(match.Index)))
@@ -273,6 +285,9 @@ internal static partial class GitHubReferenceNavigator
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]
     private static partial Regex KindedBareNumberRegex();
+
+    [GeneratedRegex(@"^\s*(?:gh-)?#?(?<number>\d+)\.?\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex DirectBareNumberRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)\b")]
     private static partial Regex BareNumberRegex();

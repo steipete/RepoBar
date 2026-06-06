@@ -110,6 +110,57 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_direct_issue_number_against_default_repository()
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            "73655",
+            "github.com",
+            "steipete/RepoBar"));
+
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal(73655L, reference.Number);
+        Assert.Equal("issues", reference.Kind);
+    }
+
+    [Theory]
+    [InlineData("gh-42")]
+    [InlineData("GH-42")]
+    [InlineData("#42")]
+    public void FindReferences_resolves_gh_prefixed_issue_number_against_default_repository(string input)
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            input,
+            "github.com",
+            "steipete/RepoBar"));
+
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal(42L, reference.Number);
+        Assert.Equal("issues", reference.Kind);
+    }
+
+    [Fact]
+    public void FindReferences_does_not_resolve_direct_issue_number_without_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "73655",
+            "github.com",
+            null);
+
+        Assert.Empty(references);
+    }
+
+    [Fact]
+    public void FindReferences_does_not_resolve_incidental_sentence_numbers()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "released in 2026 with 2 commits",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Empty(references);
+    }
+
+    [Fact]
     public void FindReferences_keeps_same_reference_number_on_different_hosts()
     {
         var references = GitHubReferenceNavigator.FindReferences(
