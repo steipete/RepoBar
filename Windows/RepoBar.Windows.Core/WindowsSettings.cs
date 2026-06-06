@@ -584,6 +584,18 @@ internal sealed class WindowsSettingsStore
         return true;
     }
 
+    public bool SetRepositorySortKey(RepositorySortKey sortKey)
+    {
+        if (!Enum.IsDefined(sortKey) || Settings.RepositorySortKey == sortKey)
+        {
+            return false;
+        }
+
+        Settings.RepositorySortKey = sortKey;
+        Save();
+        return true;
+    }
+
     public void Save()
     {
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(Settings, JsonOptions));

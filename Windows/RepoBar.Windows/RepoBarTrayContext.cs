@@ -307,6 +307,9 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             case WindowsMainMenuItem.RepositoryScope:
                 AddRepositoryScopeItem(items);
                 break;
+            case WindowsMainMenuItem.RepositorySort:
+                AddRepositorySortItem(items);
+                break;
             case WindowsMainMenuItem.Diagnostics:
                 items.Add(new ToolStripMenuItem("Diagnostics", null, (_, _) => ShowDiagnostics()));
                 break;
@@ -366,6 +369,29 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
 
         BuildMenu();
+    }
+
+    private void AddRepositorySortItem(ToolStripItemCollection items)
+    {
+        var current = _settingsStore.Settings.RepositorySortKey;
+        var sortMenu = new ToolStripMenuItem($"Repository sort: {current.DisplayName()}");
+        foreach (var sortKey in Enum.GetValues<RepositorySortKey>())
+        {
+            sortMenu.DropDownItems.Add(new ToolStripMenuItem(sortKey.DisplayName(), null, (_, _) => SetRepositorySortKey(sortKey))
+            {
+                Checked = sortKey == current,
+            });
+        }
+
+        items.Add(sortMenu);
+    }
+
+    private void SetRepositorySortKey(RepositorySortKey sortKey)
+    {
+        if (_settingsStore.SetRepositorySortKey(sortKey))
+        {
+            BuildMenu();
+        }
     }
 
     private void AddAccountSwitcherItem(ToolStripItemCollection items)

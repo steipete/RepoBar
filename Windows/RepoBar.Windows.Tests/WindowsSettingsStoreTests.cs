@@ -107,6 +107,17 @@ public sealed class WindowsSettingsStoreTests
         Assert.False(store.SetRepositoryMenuScope((RepositoryMenuScope)999));
     }
 
+    [Fact]
+    public void SetRepositorySortKey_persists_sort_changes()
+    {
+        var store = CreateStore(new WindowsSettings());
+
+        Assert.True(store.SetRepositorySortKey(RepositorySortKey.Name));
+        Assert.Equal(RepositorySortKey.Name, store.Settings.RepositorySortKey);
+        Assert.False(store.SetRepositorySortKey(RepositorySortKey.Name));
+        Assert.False(store.SetRepositorySortKey((RepositorySortKey)999));
+    }
+
     private static WindowsSettingsStore CreateStore(WindowsSettings settings)
     {
         var settingsPath = Path.Combine(Path.GetTempPath(), $"repobar-settings-{Guid.NewGuid():N}.json");
