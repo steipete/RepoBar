@@ -89,4 +89,54 @@ public sealed class GitHubReferenceNavigatorTests
         Assert.Contains(references, reference => reference.Host == "github.com");
         Assert.Contains(references, reference => reference.Host == "github.enterprise.test");
     }
+
+    [Fact]
+    public void FindReferences_preserves_pasted_reference_order()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            1. zed/project PR #30
+            2. see #4
+            3. https://github.enterprise.test/acme/tools/issues/2
+            4. alpha/repo issue #99
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal(("zed/project", 30), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("steipete/RepoBar", 4), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("acme/tools", 2), (reference.RepositoryFullName, reference.Number)),
+            reference => Assert.Equal(("alpha/repo", 99), (reference.RepositoryFullName, reference.Number)));
+    }
+
+    [Fact]
+    public void FindReferences_keeps_first_duplicate_in_pasted_order()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            owner/repo issue #9
+            later duplicate https://github.com/owner/repo/issues/9
+            owner/repo PR #10
+            """,
+            "github.com",
+            null);
+
+        Assert.Collection(
+            references,
+            reference =>
+            {
+                Assert.Equal("owner/repo", reference.RepositoryFullName);
+                Assert.Equal(9, reference.Number);
+                Assert.Equal("issues", reference.Kind);
+                Assert.Equal("owner/repo issue #9", reference.RawText);
+            },
+            reference =>
+            {
+                Assert.Equal("owner/repo", reference.RepositoryFullName);
+                Assert.Equal(10, reference.Number);
+                Assert.Equal("pull", reference.Kind);
+            });
+    }
 }

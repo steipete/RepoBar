@@ -14,26 +14,30 @@ internal static partial class GitHubReferenceNavigator
             return [];
         }
 
-        var matches = new List<GitHubReferenceMatch>();
+        var matches = new List<GitHubReferenceCandidate>();
         var claimedSpans = new List<RangeSpan>();
         foreach (Match match in GitHubUrlRegex().Matches(text))
         {
-            matches.Add(new GitHubReferenceMatch(
-                $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
-                int.Parse(match.Groups["number"].Value),
-                match.Groups["kind"].Value,
-                match.Value,
-                GitHubHost.Normalize(match.Groups["host"].Value)));
+            matches.Add(new GitHubReferenceCandidate(
+                match.Index,
+                new GitHubReferenceMatch(
+                    $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
+                    int.Parse(match.Groups["number"].Value),
+                    match.Groups["kind"].Value,
+                    match.Value,
+                    GitHubHost.Normalize(match.Groups["host"].Value))));
             claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
         }
 
         foreach (Match match in OwnerRepoNumberRegex().Matches(text))
         {
-            matches.Add(new GitHubReferenceMatch(
-                $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
-                int.Parse(match.Groups["number"].Value),
-                NormalizeKind(match.Groups["kind"].Value),
-                match.Value));
+            matches.Add(new GitHubReferenceCandidate(
+                match.Index,
+                new GitHubReferenceMatch(
+                    $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
+                    int.Parse(match.Groups["number"].Value),
+                    NormalizeKind(match.Groups["kind"].Value),
+                    match.Value)));
             claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
         }
 
@@ -46,19 +50,21 @@ internal static partial class GitHubReferenceNavigator
                     continue;
                 }
 
-                matches.Add(new GitHubReferenceMatch(
-                    defaultRepositoryFullName,
-                    int.Parse(match.Groups["number"].Value),
-                    "issues",
-                    match.Value));
+                matches.Add(new GitHubReferenceCandidate(
+                    match.Index,
+                    new GitHubReferenceMatch(
+                        defaultRepositoryFullName,
+                        int.Parse(match.Groups["number"].Value),
+                        "issues",
+                        match.Value)));
             }
         }
 
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         return matches
-            .GroupBy(reference => $"{reference.Host ?? GitHubHost.Normalize(host)}:{reference.RepositoryFullName}#{reference.Number}", StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(reference => reference.RepositoryFullName, StringComparer.OrdinalIgnoreCase)
-            .ThenBy(reference => reference.Number)
+            .OrderBy(candidate => candidate.Index)
+            .Select(candidate => candidate.Reference)
+            .Where(reference => seen.Add(DedupeKey(reference, host)))
             .ToArray();
     }
 
@@ -84,6 +90,11 @@ internal static partial class GitHubReferenceNavigator
             string.Equals(value, "pull request", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static string DedupeKey(GitHubReferenceMatch reference, string host)
+    {
+        return $"{reference.Host ?? GitHubHost.Normalize(host)}:{reference.RepositoryFullName}#{reference.Number}";
+    }
+
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?<kind>issues|pull|pulls)/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubUrlRegex();
 
@@ -100,6 +111,8 @@ internal static partial class GitHubReferenceNavigator
             return index >= Start && index < End;
         }
     }
+
+    private readonly record struct GitHubReferenceCandidate(int Index, GitHubReferenceMatch Reference);
 }
 
 internal sealed record GitHubReferenceMatch(string RepositoryFullName, int Number, string Kind, string RawText, string? Host = null)
