@@ -6,6 +6,7 @@ namespace RepoBar.Windows;
 internal sealed class LocalGitService
 {
     private static readonly Regex AheadBehindRegex = new(@"ahead (?<ahead>\d+)|behind (?<behind>\d+)", RegexOptions.Compiled);
+    private readonly Dictionary<string, DateTimeOffset> _lastFetchByPath = new(StringComparer.OrdinalIgnoreCase);
 
     public async Task<LocalGitIndex> LoadIndexAsync(WindowsSettings settings, CancellationToken cancellationToken)
     {
@@ -22,12 +23,17 @@ internal sealed class LocalGitService
 
         var roots = DiscoverRepositoryRoots(root, settings.LocalProjectsMaxDepth);
         var statuses = new List<LocalGitRepositoryStatus>(roots.Count);
+        var now = DateTimeOffset.UtcNow;
         foreach (var repoRoot in roots)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            if (settings.FetchLocalProjectsBeforeStatus)
+            if (ShouldFetchBeforeStatus(repoRoot, settings, now))
             {
-                _ = await TryGitAsync(repoRoot, ["fetch", "--prune", "--quiet"], cancellationToken).ConfigureAwait(false);
+                var fetch = await RunGitAsync(repoRoot, ["fetch", "--prune", "--quiet"], cancellationToken).ConfigureAwait(false);
+                if (fetch.Success)
+                {
+                    RecordFetch(repoRoot, now);
+                }
             }
 
             var status = await LoadStatusAsync(repoRoot, cancellationToken).ConfigureAwait(false);
@@ -127,7 +133,13 @@ internal sealed class LocalGitService
 
     internal async Task<LocalGitActionResult> FetchAsync(string repoRoot, CancellationToken cancellationToken)
     {
-        return await RunGitAsync(repoRoot, ["fetch", "--prune"], cancellationToken).ConfigureAwait(false);
+        var result = await RunGitAsync(repoRoot, ["fetch", "--prune"], cancellationToken).ConfigureAwait(false);
+        if (result.Success)
+        {
+            RecordFetch(repoRoot, DateTimeOffset.UtcNow);
+        }
+
+        return result;
     }
 
     internal async Task<LocalGitActionResult> FastForwardAsync(string repoRoot, CancellationToken cancellationToken)
@@ -272,6 +284,27 @@ internal sealed class LocalGitService
     {
         var result = await RunGitAsync(workingDirectory, arguments, cancellationToken).ConfigureAwait(false);
         return result.Success ? result.Output : null;
+    }
+
+    internal bool ShouldFetchBeforeStatus(string repoRoot, WindowsSettings settings, DateTimeOffset now)
+    {
+        if (!settings.FetchLocalProjectsBeforeStatus)
+        {
+            return false;
+        }
+
+        var interval = TimeSpan.FromMinutes(Math.Clamp(settings.LocalProjectsFetchIntervalMinutes, 1, 60));
+        return !_lastFetchByPath.TryGetValue(NormalizeRepoPath(repoRoot), out var lastFetch) || now - lastFetch >= interval;
+    }
+
+    internal void RecordFetch(string repoRoot, DateTimeOffset fetchedAt)
+    {
+        _lastFetchByPath[NormalizeRepoPath(repoRoot)] = fetchedAt;
+    }
+
+    private static string NormalizeRepoPath(string repoRoot)
+    {
+        return Path.GetFullPath(ExpandPath(repoRoot));
     }
 
     private static async Task<LocalGitActionResult> RunGitAsync(string workingDirectory, string[] arguments, CancellationToken cancellationToken)

@@ -20,6 +20,7 @@ internal sealed class WindowsSettings
     public string LocalWorktreeFolderName { get; set; } = ".work";
     public WindowsTerminalPreference TerminalPreference { get; set; } = WindowsTerminalPreference.Auto;
     public bool FetchLocalProjectsBeforeStatus { get; set; } = true;
+    public int LocalProjectsFetchIntervalMinutes { get; set; } = 5;
     public bool AutoSyncLocalProjects { get; set; }
     public bool ShowDirtyFilesInMenu { get; set; } = true;
     public bool EnableResponseCache { get; set; } = true;
@@ -375,6 +376,7 @@ internal sealed class WindowsSettingsStore
             ? ".work"
             : settings.LocalWorktreeFolderName.Trim();
         settings.RefreshIntervalMinutes = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
+        settings.LocalProjectsFetchIntervalMinutes = Math.Clamp(settings.LocalProjectsFetchIntervalMinutes, 1, 60);
         settings.RepositoryDisplayLimit = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
         settings.RepositoryOwnerFilter = NormalizeRepositoryOwnerFilter(settings.RepositoryOwnerFilter);
         settings.MenuCustomization ??= new WindowsMenuCustomization();

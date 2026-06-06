@@ -67,6 +67,22 @@ public sealed class WindowsSettingsStoreTests
             store.VisibleRepositories.Select(repository => repository.FullName));
     }
 
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(2, 2)]
+    [InlineData(120, 60)]
+    public void NormalizeSettings_clamps_local_fetch_interval(int configured, int expected)
+    {
+        var settings = new WindowsSettings
+        {
+            LocalProjectsFetchIntervalMinutes = configured,
+        };
+
+        WindowsSettingsStore.NormalizeSettings(settings);
+
+        Assert.Equal(expected, settings.LocalProjectsFetchIntervalMinutes);
+    }
+
     private static WindowsSettingsStore CreateStore(WindowsSettings settings)
     {
         var settingsPath = Path.Combine(Path.GetTempPath(), $"repobar-settings-{Guid.NewGuid():N}.json");

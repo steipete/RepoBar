@@ -102,6 +102,30 @@ public sealed class LocalGitServiceTests
     }
 
     [Fact]
+    public void ShouldFetchBeforeStatus_respects_enabled_state_and_interval()
+    {
+        var service = new LocalGitService();
+        var repoRoot = Path.Combine(Path.GetTempPath(), "repo");
+        var now = DateTimeOffset.Parse("2026-06-06T12:00:00Z");
+        var settings = new WindowsSettings
+        {
+            FetchLocalProjectsBeforeStatus = true,
+            LocalProjectsFetchIntervalMinutes = 5,
+        };
+
+        Assert.True(service.ShouldFetchBeforeStatus(repoRoot, settings, now));
+
+        service.RecordFetch(repoRoot, now);
+
+        Assert.False(service.ShouldFetchBeforeStatus(repoRoot, settings, now.AddMinutes(4)));
+        Assert.True(service.ShouldFetchBeforeStatus(repoRoot, settings, now.AddMinutes(5)));
+        Assert.False(service.ShouldFetchBeforeStatus(
+            repoRoot,
+            SettingsWithFetchBeforeStatus(enabled: false),
+            now.AddMinutes(30)));
+    }
+
+    [Fact]
     public void Local_status_can_fast_forward_only_when_clean_and_behind()
     {
         var cleanBehind = new LocalGitRepositoryStatus(
@@ -191,5 +215,14 @@ public sealed class LocalGitServiceTests
 
         Assert.Equal(["one.cs", "two.cs", "three.cs"], status.DirtyFilesForMenu(new WindowsSettings()));
         Assert.Empty(status.DirtyFilesForMenu(new WindowsSettings { ShowDirtyFilesInMenu = false }));
+    }
+
+    private static WindowsSettings SettingsWithFetchBeforeStatus(bool enabled)
+    {
+        return new WindowsSettings
+        {
+            FetchLocalProjectsBeforeStatus = enabled,
+            LocalProjectsFetchIntervalMinutes = 5,
+        };
     }
 }

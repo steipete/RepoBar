@@ -26,6 +26,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly TextBox _localWorktreeFolderName = new();
     private readonly ComboBox _terminalPreference = new();
     private readonly CheckBox _fetchLocalProjectsBeforeStatus = new();
+    private readonly NumericUpDown _localProjectsFetchIntervalMinutes = new();
     private readonly CheckBox _autoSyncLocalProjects = new();
     private readonly CheckBox _showDirtyFilesInMenu = new();
     private readonly CheckBox _enableResponseCache = new();
@@ -109,6 +110,9 @@ internal sealed class SettingsEditorForm : Form
         _terminalPreference.ValueMember = nameof(TerminalPreferenceRow.Preference);
         _terminalPreference.SelectedValue = settings.TerminalPreference;
         _fetchLocalProjectsBeforeStatus.Checked = settings.FetchLocalProjectsBeforeStatus;
+        _localProjectsFetchIntervalMinutes.Minimum = 1;
+        _localProjectsFetchIntervalMinutes.Maximum = 60;
+        _localProjectsFetchIntervalMinutes.Value = Math.Clamp(settings.LocalProjectsFetchIntervalMinutes, 1, 60);
         _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
         _showDirtyFilesInMenu.Checked = settings.ShowDirtyFilesInMenu;
         _enableResponseCache.Checked = settings.EnableResponseCache;
@@ -224,6 +228,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Local scan depth", _localProjectsDepth);
         AddLabeledControl(settingsGrid, "Worktree folder", _localWorktreeFolderName);
         AddLabeledControl(settingsGrid, "Terminal", _terminalPreference);
+        AddLabeledControl(settingsGrid, "Fetch interval minutes", _localProjectsFetchIntervalMinutes);
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
         AddLabeledControl(settingsGrid, "Repository limit", _repositoryDisplayLimit);
         AddLabeledControl(settingsGrid, "Repository scope", _repositoryMenuScope);
@@ -585,6 +590,7 @@ internal sealed class SettingsEditorForm : Form
             ? terminalPreference
             : WindowsTerminalPreference.Auto;
         settings.FetchLocalProjectsBeforeStatus = _fetchLocalProjectsBeforeStatus.Checked;
+        settings.LocalProjectsFetchIntervalMinutes = (int)_localProjectsFetchIntervalMinutes.Value;
         settings.AutoSyncLocalProjects = _autoSyncLocalProjects.Checked;
         settings.ShowDirtyFilesInMenu = _showDirtyFilesInMenu.Checked;
         settings.EnableResponseCache = _enableResponseCache.Checked;
