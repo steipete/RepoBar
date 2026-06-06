@@ -637,6 +637,15 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 }
                 actions.DropDownItems.Add(new ToolStripSeparator());
             }
+            if (_actionsInsights.ArtifactRetention.Count > 0)
+            {
+                actions.DropDownItems.Add(new ToolStripMenuItem("Artifact retention") { Enabled = false });
+                foreach (var policy in _actionsInsights.ArtifactRetention.OrderBy(policy => policy.Owner, StringComparer.OrdinalIgnoreCase))
+                {
+                    actions.DropDownItems.Add(new ToolStripMenuItem(policy.DisplayText) { Enabled = false });
+                }
+                actions.DropDownItems.Add(new ToolStripSeparator());
+            }
 
             foreach (var insight in _actionsInsights.Repositories)
             {

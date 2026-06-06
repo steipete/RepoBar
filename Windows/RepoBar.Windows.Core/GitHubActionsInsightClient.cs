@@ -49,7 +49,8 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         var owners = _monitoredOwners.Count > 0 ? _monitoredOwners : UniqueOwners(repositories);
         var billing = await LoadBillingUsageAsync(owners, cancellationToken).ConfigureAwait(false);
         var cacheUsage = await LoadCacheUsageAsync(owners, cancellationToken).ConfigureAwait(false);
-        return new ActionsInsights(results, billing, cacheUsage, _planTier, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
+        var artifactRetention = await LoadArtifactRetentionAsync(owners, cancellationToken).ConfigureAwait(false);
+        return new ActionsInsights(results, billing, cacheUsage, artifactRetention, _planTier, DateTimeOffset.UtcNow, GitHubRateLimitSnapshot.LatestByResource(_rateLimits));
     }
 
     private async Task<RepositoryActionsInsight> LoadRepositoryAsync(
@@ -173,6 +174,22 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         return results;
     }
 
+    private async Task<IReadOnlyList<ActionsArtifactRetentionPolicy>> LoadArtifactRetentionAsync(
+        IReadOnlyList<string> owners,
+        CancellationToken cancellationToken)
+    {
+        var results = new List<ActionsArtifactRetentionPolicy>();
+        foreach (var owner in owners)
+        {
+            if (await TryLoadArtifactRetentionForOwnerAsync(owner, cancellationToken).ConfigureAwait(false) is { } policy)
+            {
+                results.Add(policy);
+            }
+        }
+
+        return results;
+    }
+
     private async Task<ActionsOwnerCacheUsage?> TryLoadCacheUsageForOwnerAsync(
         string owner,
         CancellationToken cancellationToken)
@@ -194,6 +211,34 @@ internal sealed class GitHubActionsInsightClient : IDisposable
         return count == null && bytes == null
             ? null
             : new ActionsOwnerCacheUsage(owner, count ?? 0, bytes ?? 0);
+    }
+
+    private async Task<ActionsArtifactRetentionPolicy?> TryLoadArtifactRetentionForOwnerAsync(
+        string owner,
+        CancellationToken cancellationToken)
+    {
+        using var response = await _httpClient.GetAsync(
+            $"orgs/{Uri.EscapeDataString(owner)}/actions/permissions/artifact-and-log-retention",
+            cancellationToken).ConfigureAwait(false);
+        CaptureRateLimit(response);
+        if (response.StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Unauthorized or HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        var json = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        using var document = JsonDocument.Parse(json);
+        var days = TryGetInt32(document.RootElement, "days");
+        if (days == null)
+        {
+            return null;
+        }
+
+        return new ActionsArtifactRetentionPolicy(
+            owner,
+            days.Value,
+            TryGetInt32(document.RootElement, "maximum_allowed_days") ?? days.Value);
     }
 
     private async Task<IReadOnlyList<ActionsBillingUsageItem>?> TryLoadBillingUsageForOwnerAsync(
@@ -322,11 +367,12 @@ internal sealed record ActionsInsights(
     IReadOnlyList<RepositoryActionsInsight> Repositories,
     ActionsBillingUsage? Billing,
     IReadOnlyList<ActionsOwnerCacheUsage> CacheUsage,
+    IReadOnlyList<ActionsArtifactRetentionPolicy> ArtifactRetention,
     WindowsActionsPlanTier PlanTier,
     DateTimeOffset FetchedAt,
     IReadOnlyList<GitHubRateLimitSnapshot> RateLimits)
 {
-    public static readonly ActionsInsights Empty = new([], null, [], WindowsActionsPlanTier.Free, DateTimeOffset.MinValue, []);
+    public static readonly ActionsInsights Empty = new([], null, [], [], WindowsActionsPlanTier.Free, DateTimeOffset.MinValue, []);
 
     public int RunningCount => Repositories.Sum(repository => repository.Queue.InProgressCount);
     public int QueuedCount => Repositories.Sum(repository => repository.Queue.QueuedCount);
@@ -470,4 +516,11 @@ internal sealed record ActionsOwnerCacheUsage(string Owner, int TotalCachesCount
 {
     public double CacheSizeMb => TotalCachesSizeBytes / 1024d / 1024d;
     public string DisplayText => $"{Owner}: {TotalCachesCount:n0} caches  {CacheSizeMb:n0} MB";
+}
+
+internal sealed record ActionsArtifactRetentionPolicy(string Owner, int RetentionDays, int MaxAllowedDays)
+{
+    public string DisplayText => MaxAllowedDays > RetentionDays
+        ? $"{Owner}: {RetentionDays:n0} days (max {MaxAllowedDays:n0})"
+        : $"{Owner}: {RetentionDays:n0} days";
 }

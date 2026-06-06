@@ -41,6 +41,12 @@ public sealed class GitHubActionsInsightClientTests
                       "total_active_caches_size_in_bytes": 10485760
                     }
                     """),
+                "/orgs/owner/actions/permissions/artifact-and-log-retention" => JsonResponse("""
+                    {
+                      "days": 90,
+                      "maximum_allowed_days": 400
+                    }
+                    """),
                 _ => new HttpResponseMessage(HttpStatusCode.NotFound),
             };
         });
@@ -78,6 +84,11 @@ public sealed class GitHubActionsInsightClientTests
         Assert.Equal(3, cacheUsage.TotalCachesCount);
         Assert.Equal(10d, cacheUsage.CacheSizeMb);
         Assert.Contains("10 MB cache", insights.DisplayText);
+        var retention = Assert.Single(insights.ArtifactRetention);
+        Assert.Equal("owner", retention.Owner);
+        Assert.Equal(90, retention.RetentionDays);
+        Assert.Equal(400, retention.MaxAllowedDays);
+        Assert.Equal("owner: 90 days (max 400)", retention.DisplayText);
         var rateLimit = Assert.Single(insights.RateLimits);
         Assert.Equal("core", rateLimit.Resource);
         Assert.Equal(4997, rateLimit.Remaining);
@@ -128,6 +139,12 @@ public sealed class GitHubActionsInsightClientTests
                       "total_active_caches_size_in_bytes": 2097152
                     }
                     """),
+                "/orgs/actions-org/actions/permissions/artifact-and-log-retention" => JsonResponse("""
+                    {
+                      "days": 30,
+                      "maximum_allowed_days": 90
+                    }
+                    """),
                 var unexpected when unexpected.Contains("repo-owner", StringComparison.OrdinalIgnoreCase) &&
                     (unexpected.Contains("billing", StringComparison.OrdinalIgnoreCase) || unexpected.Contains("cache", StringComparison.OrdinalIgnoreCase)) =>
                     new HttpResponseMessage(HttpStatusCode.InternalServerError),
@@ -148,6 +165,9 @@ public sealed class GitHubActionsInsightClientTests
         var cacheUsage = Assert.Single(insights.CacheUsage);
         Assert.Equal("actions-org", cacheUsage.Owner);
         Assert.Equal(2d, cacheUsage.CacheSizeMb);
+        var retention = Assert.Single(insights.ArtifactRetention);
+        Assert.Equal("actions-org", retention.Owner);
+        Assert.Equal(30, retention.RetentionDays);
     }
 
     private static HttpResponseMessage JsonResponse(string json)

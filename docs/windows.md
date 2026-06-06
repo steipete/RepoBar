@@ -27,7 +27,7 @@ The Windows app currently provides:
 - optional signed-in account contribution totals and compact heatmap summary from GitHub GraphQL
 - optional GitHub API rate-limit row with REST/GraphQL bucket quota, reset, blocker, and shared-budget details
 - copyable Windows diagnostics with cache/archive state, active account, local repository inventory, compact tray tooltip rate-limit state, rate-limit snapshots, cache clearing, and forced refresh
-- optional Actions summary with latest workflow state, active queue counts, monitored-owner billing/cache usage, and self-hosted runner state per configured repository
+- optional Actions summary with latest workflow state, active queue counts, monitored-owner billing/cache/artifact-retention usage, and self-hosted runner state per configured repository
 - optional pull request notifications for new PRs, updates, closed/reopened/merged state changes, review requests, and comments through Windows tray balloons with configurable browser or Issue Navigator click-through and persistent duplicate suppression
 - Issue Navigator window for pasted GitHub URLs and issue/PR references with an embedded browser preview, plus an optional clipboard reference watcher that opens copied references in Issue Navigator from a tray balloon
 - tray-level log out for clearing the active account's stored OAuth and PAT credentials
@@ -197,7 +197,7 @@ Use **Include forked repos** and **Include archived repos** to decide whether Gi
 
 Use **Activity feed** to choose whether top-level **Commits** and **Activity** show all displayed repository events or only events by the signed-in account when viewer metadata is available. Repository submenus still keep their own per-repository Commit and Activity feeds.
 
-Use **Actions owners** to pin the owners Windows checks for Actions billing and cache usage. Leave it empty for Auto, which follows the owners of the visible repository list. Use **Actions plan** to match the GitHub plan tier used for included monthly minutes and concurrent job allowance in the Actions summary.
+Use **Actions owners** to pin the owners Windows checks for Actions billing, cache usage, and artifact-retention policy. Leave it empty for Auto, which follows the owners of the visible repository list. Use **Actions plan** to match the GitHub plan tier used for included monthly minutes and concurrent job allowance in the Actions summary.
 
 Use **Repository heatmap** to hide heatmap summaries or show them in the tray row, repository submenu, or both. Use **Heatmap window** to choose the GitHub commit-activity window used for repository heatmap totals: 1, 3, 6, or 12 months. Hidden heatmaps skip the GitHub commit-activity request.
 
