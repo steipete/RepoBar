@@ -93,6 +93,7 @@ public sealed class WindowsCredentialStoreTests
                 },
             ],
             ActiveAccountId = "work-account",
+            LocalWorktreeFolderName = "",
         };
 
         WindowsSettingsStore.NormalizeSettings(settings);
@@ -103,5 +104,6 @@ public sealed class WindowsCredentialStoreTests
         Assert.Equal("work-client", settings.GitHubOAuthClientId);
         Assert.Equal("WORK_SECRET", settings.GitHubOAuthClientSecretEnvironmentVariable);
         Assert.Equal("work-account", settings.GetActiveAccount().Id);
+        Assert.Equal(".work", settings.LocalWorktreeFolderName);
     }
 }

@@ -93,6 +93,15 @@ public sealed class LocalGitServiceTests
     }
 
     [Fact]
+    public void WorktreeDestination_uses_configured_folder_and_sanitizes_branch_name()
+    {
+        var repoRoot = Path.Combine(Path.GetTempPath(), "repo");
+        var destination = LocalGitService.WorktreeDestination(repoRoot, ".worktrees", "feature/menu cards");
+
+        Assert.Equal(Path.Combine(repoRoot, ".worktrees", "feature_menu cards"), destination);
+    }
+
+    [Fact]
     public void Local_status_can_fast_forward_only_when_clean_and_behind()
     {
         var cleanBehind = new LocalGitRepositoryStatus(

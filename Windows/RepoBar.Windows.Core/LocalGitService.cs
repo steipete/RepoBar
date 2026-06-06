@@ -182,6 +182,30 @@ internal sealed class LocalGitService
         return await RunGitAsync(parent, ["clone", remoteUrl, destination], cancellationToken).ConfigureAwait(false);
     }
 
+    internal async Task<LocalGitActionResult> CreateWorktreeAsync(string repoRoot, string destination, string branch, CancellationToken cancellationToken)
+    {
+        var parent = Path.GetDirectoryName(destination);
+        if (string.IsNullOrWhiteSpace(parent))
+        {
+            return new LocalGitActionResult(false, "", "Worktree destination is invalid.");
+        }
+
+        try
+        {
+            Directory.CreateDirectory(parent);
+            if (Directory.Exists(destination) || File.Exists(destination))
+            {
+                return new LocalGitActionResult(false, "", $"{destination} already exists.");
+            }
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            return new LocalGitActionResult(false, "", exception.Message);
+        }
+
+        return await RunGitAsync(repoRoot, ["worktree", "add", "-b", branch, destination], cancellationToken).ConfigureAwait(false);
+    }
+
     private static async Task<string?> TryGitAsync(string workingDirectory, string[] arguments, CancellationToken cancellationToken)
     {
         var result = await RunGitAsync(workingDirectory, arguments, cancellationToken).ConfigureAwait(false);
@@ -289,13 +313,23 @@ internal sealed class LocalGitService
 
     internal static string CheckoutDestination(string localProjectsRoot, string repositoryName)
     {
-        var safeName = string.Join("_", repositoryName.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Trim();
-        if (string.IsNullOrWhiteSpace(safeName))
-        {
-            safeName = "repository";
-        }
+        return Path.Combine(ExpandPath(localProjectsRoot), SanitizePathSegment(repositoryName, "repository"));
+    }
 
-        return Path.Combine(ExpandPath(localProjectsRoot), safeName);
+    internal static string WorktreeDestination(string repoRoot, string worktreeFolderName, string branchName)
+    {
+        var folder = string.IsNullOrWhiteSpace(worktreeFolderName) ? ".work" : worktreeFolderName.Trim();
+        var parent = IsHomeRelativePath(folder) || Path.IsPathRooted(folder)
+            ? ExpandPath(folder)
+            : Path.Combine(repoRoot, folder);
+        return Path.Combine(parent, SanitizePathSegment(branchName, "worktree"));
+    }
+
+    internal static string SanitizePathSegment(string value, string fallback)
+    {
+        var invalid = Path.GetInvalidFileNameChars().Append(Path.DirectorySeparatorChar).Append(Path.AltDirectorySeparatorChar).Distinct().ToArray();
+        var safeName = string.Join("_", value.Split(invalid, StringSplitOptions.RemoveEmptyEntries)).Trim();
+        return string.IsNullOrWhiteSpace(safeName) ? fallback : safeName;
     }
 
     internal static string? TryParseGitHubFullName(string remote)
@@ -468,5 +502,10 @@ internal sealed class LocalGitService
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), path[2..]);
         }
         return Environment.ExpandEnvironmentVariables(path);
+    }
+
+    private static bool IsHomeRelativePath(string path)
+    {
+        return path == "~" || path.StartsWith("~/", StringComparison.Ordinal) || path.StartsWith("~\\", StringComparison.Ordinal);
     }
 }

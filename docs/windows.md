@@ -9,14 +9,14 @@ The Windows app currently provides:
 - configured repository status rows with issue/PR counts, CI, release, stars/forks, local sync, traffic, activity, and heatmap signals
 - optional local project discovery
 - local branch, upstream, ahead/behind, dirty-file, and worktree state
-- local fetch, fast-forward sync, branch switching, and worktree navigation actions
+- local fetch, fast-forward sync, branch switching, worktree creation, and worktree navigation actions
 - issue and pull request counts
 - latest default-branch Actions run status
 - latest release link
 - optional traffic views/clones, commit activity summary, and changelog headline
 - recent issue, pull request, release, CI run, branch, tag, commit, contributor, activity, and discussion submenus
 - direct links to GitHub repository, Issues, Pull Requests, and Actions
-- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, refresh cadence, repository discovery filtering, and repository visibility
+- native Preferences window for named account profiles, GitHub host, GitHub App browser sign-in, Credential Manager token storage, token environment variable, local project scanning, local worktree folder, refresh cadence, repository discovery filtering, and repository visibility
 - filtered repository discovery from GitHub's accessible repository list
 - repository checkout from the tray into the configured local projects folder
 - ETag-backed response cache with stale reads when GitHub is temporarily unavailable
@@ -96,6 +96,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "discoverLocalProjects": true,
   "localProjectsRoot": "%USERPROFILE%\\Projects",
   "localProjectsMaxDepth": 3,
+  "localWorktreeFolderName": ".work",
   "fetchLocalProjectsBeforeStatus": true,
   "autoSyncLocalProjects": false,
   "enableResponseCache": true,
@@ -175,7 +176,7 @@ Set `gitHubArchiveDatabasePath` to a RepoBar-owned archive SQLite database produ
 
 ## Local Projects
 
-When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, local branch switching, worktree, fetch, sync, and folder/terminal actions to the tray menu. Repositories without a local match can be checked out into `localProjectsRoot` from the tray.
+When `discoverLocalProjects` is enabled, RepoBar scans `localProjectsRoot` for Git checkouts. It matches each checkout's `origin` remote to configured repositories and adds branch, upstream, ahead/behind, dirty-file, local branch switching, worktree creation/navigation, fetch, sync, and folder/terminal actions to the tray menu. Repositories without a local match can be checked out into `localProjectsRoot` from the tray.
 
 Sync is intentionally conservative: manual and automatic sync use `git pull --ff-only`, and auto-sync only runs for clean repositories that are behind their upstream.
 

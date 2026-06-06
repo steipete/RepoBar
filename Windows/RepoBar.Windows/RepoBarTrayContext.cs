@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Drawing;
 using System.Windows.Forms;
 
 namespace RepoBar.Windows;
@@ -541,6 +542,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             submenu.DropDownItems.Add(new ToolStripMenuItem("Loading...") { Enabled = false });
             var worktrees = await _localGitService.ListWorktreesAsync(local.Path, _shutdown.Token).ConfigureAwait(true);
             submenu.DropDownItems.Clear();
+            submenu.DropDownItems.Add(new ToolStripMenuItem("Create worktree...", null, async (_, _) => await CreateWorktreeAsync(local)));
+            submenu.DropDownItems.Add(new ToolStripSeparator());
             if (worktrees.Count == 0)
             {
                 submenu.DropDownItems.Add(new ToolStripMenuItem("No worktrees") { Enabled = false });
@@ -559,6 +562,29 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
         };
         items.Add(submenu);
+    }
+
+    private async Task CreateWorktreeAsync(LocalGitRepositoryStatus local)
+    {
+        var branch = PromptForText("RepoBar Worktree", "New branch name");
+        if (string.IsNullOrWhiteSpace(branch))
+        {
+            return;
+        }
+
+        var defaultPath = LocalGitService.WorktreeDestination(
+            local.Path,
+            _settingsStore.Settings.LocalWorktreeFolderName,
+            branch);
+        var destination = PromptForText("RepoBar Worktree", "Worktree folder", defaultPath);
+        if (string.IsNullOrWhiteSpace(destination))
+        {
+            return;
+        }
+
+        await RunLocalGitActionAsync(
+            "Create worktree",
+            token => _localGitService.CreateWorktreeAsync(local.Path, destination.Trim(), branch.Trim(), token)).ConfigureAwait(true);
     }
 
     private async Task RunLocalGitActionAsync(
@@ -602,6 +628,57 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         }
 
         items.Add(submenu);
+    }
+
+    private static string? PromptForText(string title, string prompt, string defaultValue = "")
+    {
+        using var form = new Form
+        {
+            Text = title,
+            StartPosition = FormStartPosition.CenterScreen,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+            MinimizeBox = false,
+            MaximizeBox = false,
+            ClientSize = new Size(420, 126),
+        };
+        var label = new Label
+        {
+            Text = prompt,
+            AutoSize = true,
+            Left = 12,
+            Top = 12,
+        };
+        var input = new TextBox
+        {
+            Text = defaultValue,
+            Left = 12,
+            Top = 38,
+            Width = 396,
+        };
+        var ok = new Button
+        {
+            Text = "OK",
+            DialogResult = DialogResult.OK,
+            Left = 252,
+            Top = 82,
+            Width = 75,
+        };
+        var cancel = new Button
+        {
+            Text = "Cancel",
+            DialogResult = DialogResult.Cancel,
+            Left = 333,
+            Top = 82,
+            Width = 75,
+        };
+        form.Controls.Add(label);
+        form.Controls.Add(input);
+        form.Controls.Add(ok);
+        form.Controls.Add(cancel);
+        form.AcceptButton = ok;
+        form.CancelButton = cancel;
+        input.SelectAll();
+        return form.ShowDialog() == DialogResult.OK ? input.Text.Trim() : null;
     }
 
     private void AddVisibilityItems(ToolStripItemCollection items, string fullName)

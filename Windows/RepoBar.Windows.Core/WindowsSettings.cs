@@ -17,6 +17,7 @@ internal sealed class WindowsSettings
     public bool DiscoverLocalProjects { get; set; } = true;
     public string? LocalProjectsRoot { get; set; }
     public int LocalProjectsMaxDepth { get; set; } = 3;
+    public string LocalWorktreeFolderName { get; set; } = ".work";
     public bool FetchLocalProjectsBeforeStatus { get; set; } = true;
     public bool AutoSyncLocalProjects { get; set; }
     public bool EnableResponseCache { get; set; } = true;
@@ -182,6 +183,9 @@ internal sealed class WindowsSettingsStore
                 "Projects");
         }
         settings.LocalProjectsMaxDepth = Math.Clamp(settings.LocalProjectsMaxDepth, 0, 8);
+        settings.LocalWorktreeFolderName = string.IsNullOrWhiteSpace(settings.LocalWorktreeFolderName)
+            ? ".work"
+            : settings.LocalWorktreeFolderName.Trim();
         settings.RefreshIntervalMinutes = Math.Clamp(settings.RefreshIntervalMinutes, 1, 60);
         settings.GitHubArchiveDatabasePath = string.IsNullOrWhiteSpace(settings.GitHubArchiveDatabasePath)
             ? null

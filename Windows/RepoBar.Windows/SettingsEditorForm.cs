@@ -23,6 +23,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _discoverLocalProjects = new();
     private readonly TextBox _localProjectsRoot = new();
     private readonly NumericUpDown _localProjectsDepth = new();
+    private readonly TextBox _localWorktreeFolderName = new();
     private readonly CheckBox _fetchLocalProjectsBeforeStatus = new();
     private readonly CheckBox _autoSyncLocalProjects = new();
     private readonly CheckBox _enableResponseCache = new();
@@ -79,6 +80,7 @@ internal sealed class SettingsEditorForm : Form
         _localProjectsDepth.Minimum = 0;
         _localProjectsDepth.Maximum = 8;
         _localProjectsDepth.Value = Math.Clamp(settings.LocalProjectsMaxDepth, 0, 8);
+        _localWorktreeFolderName.Text = settings.LocalWorktreeFolderName;
         _fetchLocalProjectsBeforeStatus.Checked = settings.FetchLocalProjectsBeforeStatus;
         _autoSyncLocalProjects.Checked = settings.AutoSyncLocalProjects;
         _enableResponseCache.Checked = settings.EnableResponseCache;
@@ -136,6 +138,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "OAuth secret env", _oauthSecretEnvironmentTextBox);
         AddLabeledControl(settingsGrid, "Refresh minutes", _refreshMinutes);
         AddLabeledControl(settingsGrid, "Local scan depth", _localProjectsDepth);
+        AddLabeledControl(settingsGrid, "Worktree folder", _localWorktreeFolderName);
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
         _credentialState.AutoSize = true;
@@ -455,6 +458,7 @@ internal sealed class SettingsEditorForm : Form
         settings.DiscoverLocalProjects = _discoverLocalProjects.Checked;
         settings.LocalProjectsRoot = string.IsNullOrWhiteSpace(_localProjectsRoot.Text) ? null : _localProjectsRoot.Text.Trim();
         settings.LocalProjectsMaxDepth = (int)_localProjectsDepth.Value;
+        settings.LocalWorktreeFolderName = string.IsNullOrWhiteSpace(_localWorktreeFolderName.Text) ? ".work" : _localWorktreeFolderName.Text.Trim();
         settings.FetchLocalProjectsBeforeStatus = _fetchLocalProjectsBeforeStatus.Checked;
         settings.AutoSyncLocalProjects = _autoSyncLocalProjects.Checked;
         settings.EnableResponseCache = _enableResponseCache.Checked;
