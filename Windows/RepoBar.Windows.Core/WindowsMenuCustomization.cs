@@ -57,17 +57,30 @@ internal sealed class WindowsMenuCustomization
         WindowsRepositoryMenuItem.PushedAt,
         WindowsRepositoryMenuItem.Commits,
         WindowsRepositoryMenuItem.Activity,
-        WindowsRepositoryMenuItem.Visibility,
+        WindowsRepositoryMenuItem.PinToggle,
+        WindowsRepositoryMenuItem.SetVisible,
+        WindowsRepositoryMenuItem.HideRepository,
+        WindowsRepositoryMenuItem.MoveUp,
+        WindowsRepositoryMenuItem.MoveDown,
+    ];
+
+    private static IReadOnlyList<WindowsRepositoryMenuItem> LegacyVisibilityMenuItems { get; } =
+    [
+        WindowsRepositoryMenuItem.PinToggle,
+        WindowsRepositoryMenuItem.SetVisible,
+        WindowsRepositoryMenuItem.HideRepository,
+        WindowsRepositoryMenuItem.MoveUp,
+        WindowsRepositoryMenuItem.MoveDown,
     ];
 
     public void Normalize()
     {
         MainMenuOrder = NormalizedOrder(MainMenuOrder, DefaultMainMenuOrder);
-        RepositoryMenuOrder = NormalizedOrder(RepositoryMenuOrder, DefaultRepositoryMenuOrder);
+        RepositoryMenuOrder = NormalizedRepositoryOrder(RepositoryMenuOrder);
         HiddenMainMenuItems = NormalizedHidden(HiddenMainMenuItems, DefaultMainMenuOrder)
             .Where(item => !item.IsRequired())
             .ToList();
-        HiddenRepositoryMenuItems = NormalizedHidden(HiddenRepositoryMenuItems, DefaultRepositoryMenuOrder);
+        HiddenRepositoryMenuItems = NormalizedRepositoryHidden(HiddenRepositoryMenuItems);
     }
 
     public WindowsMenuCustomization Copy()
@@ -149,6 +162,65 @@ internal sealed class WindowsMenuCustomization
         }
         return result;
     }
+
+    private static List<WindowsRepositoryMenuItem> NormalizedRepositoryOrder(IEnumerable<WindowsRepositoryMenuItem>? order)
+    {
+        var allowed = DefaultRepositoryMenuOrder.ToHashSet();
+        var seen = new HashSet<WindowsRepositoryMenuItem>();
+        var result = new List<WindowsRepositoryMenuItem>();
+        foreach (var item in order ?? [])
+        {
+            if (item == WindowsRepositoryMenuItem.Visibility)
+            {
+                AddMissing(LegacyVisibilityMenuItems, seen, result);
+                continue;
+            }
+
+            if (allowed.Contains(item) && seen.Add(item))
+            {
+                result.Add(item);
+            }
+        }
+
+        AddMissing(DefaultRepositoryMenuOrder, seen, result);
+        return result;
+    }
+
+    private static List<WindowsRepositoryMenuItem> NormalizedRepositoryHidden(IEnumerable<WindowsRepositoryMenuItem>? hidden)
+    {
+        var allowed = DefaultRepositoryMenuOrder.ToHashSet();
+        var seen = new HashSet<WindowsRepositoryMenuItem>();
+        var result = new List<WindowsRepositoryMenuItem>();
+        foreach (var item in hidden ?? [])
+        {
+            if (item == WindowsRepositoryMenuItem.Visibility)
+            {
+                AddMissing(LegacyVisibilityMenuItems, seen, result);
+                continue;
+            }
+
+            if (allowed.Contains(item) && seen.Add(item))
+            {
+                result.Add(item);
+            }
+        }
+
+        return result;
+    }
+
+    private static void AddMissing(
+        IEnumerable<WindowsRepositoryMenuItem> items,
+        HashSet<WindowsRepositoryMenuItem> seen,
+        List<WindowsRepositoryMenuItem> result)
+    {
+        foreach (var item in items)
+        {
+            if (seen.Add(item))
+            {
+                result.Add(item);
+            }
+        }
+    }
 }
 
 internal enum WindowsMainMenuItem
@@ -201,6 +273,12 @@ internal enum WindowsRepositoryMenuItem
     Changelog,
     LocalStatus,
     PushedAt,
+    PinToggle,
+    SetVisible,
+    HideRepository,
+    MoveUp,
+    MoveDown,
+    // Legacy settings value. Normalization expands it into the granular manage actions above.
     Visibility,
 }
 
@@ -277,6 +355,11 @@ internal static class WindowsMenuCustomizationLabels
             WindowsRepositoryMenuItem.Changelog => "Changelog",
             WindowsRepositoryMenuItem.LocalStatus => "Local status",
             WindowsRepositoryMenuItem.PushedAt => "Pushed at",
+            WindowsRepositoryMenuItem.PinToggle => "Pin or unpin",
+            WindowsRepositoryMenuItem.SetVisible => "Set visible",
+            WindowsRepositoryMenuItem.HideRepository => "Hide repository",
+            WindowsRepositoryMenuItem.MoveUp => "Move up",
+            WindowsRepositoryMenuItem.MoveDown => "Move down",
             WindowsRepositoryMenuItem.Visibility => "Visibility controls",
             _ => item.ToString(),
         };
@@ -310,7 +393,12 @@ internal static class WindowsMenuCustomizationLabels
                 WindowsRepositoryMenuItem.PushedAt => WindowsRepositoryMenuGroup.Status,
             WindowsRepositoryMenuItem.Commits => WindowsRepositoryMenuGroup.Commits,
             WindowsRepositoryMenuItem.Activity => WindowsRepositoryMenuGroup.Activity,
-            WindowsRepositoryMenuItem.Visibility => WindowsRepositoryMenuGroup.Manage,
+            WindowsRepositoryMenuItem.PinToggle or
+                WindowsRepositoryMenuItem.SetVisible or
+                WindowsRepositoryMenuItem.HideRepository or
+                WindowsRepositoryMenuItem.MoveUp or
+                WindowsRepositoryMenuItem.MoveDown or
+                WindowsRepositoryMenuItem.Visibility => WindowsRepositoryMenuGroup.Manage,
             _ => WindowsRepositoryMenuGroup.Open,
         };
     }

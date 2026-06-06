@@ -753,10 +753,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             {
                 AddCheckoutItem(item.DropDownItems, status.Repository);
             }
-            if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.Visibility))
-            {
-                AddVisibilityItems(item.DropDownItems, status.Repository.FullName);
-            }
+            AddManageRepositoryItems(item.DropDownItems, status.Repository, customization);
             return item;
         }
 
@@ -890,8 +887,23 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                     items.Add(new ToolStripMenuItem($"Pushed: {status.PushedAt.Value.LocalDateTime:g}") { Enabled = false });
                 }
                 break;
+            case WindowsRepositoryMenuItem.PinToggle:
+                items.Add(MakePinToggleItem(status.Repository));
+                break;
+            case WindowsRepositoryMenuItem.SetVisible:
+                items.Add(MakeSetVisibleItem(status.Repository.FullName));
+                break;
+            case WindowsRepositoryMenuItem.HideRepository:
+                items.Add(MakeHideRepositoryItem(status.Repository.FullName));
+                break;
+            case WindowsRepositoryMenuItem.MoveUp:
+                items.Add(MakeMoveRepositoryItem(status.Repository.FullName, -1));
+                break;
+            case WindowsRepositoryMenuItem.MoveDown:
+                items.Add(MakeMoveRepositoryItem(status.Repository.FullName, 1));
+                break;
             case WindowsRepositoryMenuItem.Visibility:
-                AddVisibilityItems(items, status.Repository.FullName);
+                AddLegacyVisibilityItems(items, status.Repository);
                 break;
         }
     }
@@ -1312,21 +1324,78 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         return form.ShowDialog() == DialogResult.OK ? input.Text.Trim() : null;
     }
 
-    private void AddVisibilityItems(ToolStripItemCollection items, string fullName)
+    private void AddManageRepositoryItems(
+        ToolStripItemCollection items,
+        RepositoryRef repository,
+        WindowsMenuCustomization customization)
     {
-        items.Add(new ToolStripSeparator());
-        items.Add(new ToolStripMenuItem("Pin", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Pinned)));
-        items.Add(new ToolStripMenuItem("Set Visible", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Visible)));
-        items.Add(new ToolStripMenuItem("Hide", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Hidden)));
-        items.Add(new ToolStripSeparator());
-        items.Add(new ToolStripMenuItem("Move up", null, (_, _) => MoveRepository(fullName, -1))
+        var blockStart = items.Count;
+        if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.PinToggle))
         {
-            Enabled = _settingsStore.CanMoveRepository(fullName, -1),
-        });
-        items.Add(new ToolStripMenuItem("Move down", null, (_, _) => MoveRepository(fullName, 1))
+            items.Add(MakePinToggleItem(repository));
+        }
+        if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.SetVisible))
         {
-            Enabled = _settingsStore.CanMoveRepository(fullName, 1),
-        });
+            items.Add(MakeSetVisibleItem(repository.FullName));
+        }
+        if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.HideRepository))
+        {
+            items.Add(MakeHideRepositoryItem(repository.FullName));
+        }
+
+        var moveStart = items.Count;
+        if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.MoveUp))
+        {
+            items.Add(MakeMoveRepositoryItem(repository.FullName, -1));
+        }
+        if (customization.IsRepositoryMenuItemVisible(WindowsRepositoryMenuItem.MoveDown))
+        {
+            items.Add(MakeMoveRepositoryItem(repository.FullName, 1));
+        }
+
+        if (items.Count > moveStart && moveStart > blockStart)
+        {
+            items.Insert(moveStart, new ToolStripSeparator());
+        }
+        if (items.Count > blockStart && blockStart > 0)
+        {
+            items.Insert(blockStart, new ToolStripSeparator());
+        }
+    }
+
+    private void AddLegacyVisibilityItems(ToolStripItemCollection items, RepositoryRef repository)
+    {
+        items.Add(MakePinToggleItem(repository));
+        items.Add(MakeSetVisibleItem(repository.FullName));
+        items.Add(MakeHideRepositoryItem(repository.FullName));
+        items.Add(new ToolStripSeparator());
+        items.Add(MakeMoveRepositoryItem(repository.FullName, -1));
+        items.Add(MakeMoveRepositoryItem(repository.FullName, 1));
+    }
+
+    private ToolStripMenuItem MakePinToggleItem(RepositoryRef repository)
+    {
+        return repository.Visibility == RepositoryVisibility.Pinned
+            ? new ToolStripMenuItem("Unpin", null, (_, _) => SetVisibility(repository.FullName, RepositoryVisibility.Visible))
+            : new ToolStripMenuItem("Pin", null, (_, _) => SetVisibility(repository.FullName, RepositoryVisibility.Pinned));
+    }
+
+    private ToolStripMenuItem MakeSetVisibleItem(string fullName)
+    {
+        return new ToolStripMenuItem("Set Visible", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Visible));
+    }
+
+    private ToolStripMenuItem MakeHideRepositoryItem(string fullName)
+    {
+        return new ToolStripMenuItem("Hide", null, (_, _) => SetVisibility(fullName, RepositoryVisibility.Hidden));
+    }
+
+    private ToolStripMenuItem MakeMoveRepositoryItem(string fullName, int offset)
+    {
+        return new ToolStripMenuItem(offset < 0 ? "Move up" : "Move down", null, (_, _) => MoveRepository(fullName, offset))
+        {
+            Enabled = _settingsStore.CanMoveRepository(fullName, offset),
+        };
     }
 
     private string BuildHeaderText()

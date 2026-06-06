@@ -38,8 +38,17 @@ public sealed class WindowsMenuCustomizationTests
         Assert.Contains(WindowsMainMenuItem.Diagnostics, customization.MainMenuOrder);
         Assert.Contains(WindowsMainMenuItem.CopyUpdateDiagnostics, customization.MainMenuOrder);
         Assert.Equal(WindowsMenuCustomization.DefaultMainMenuOrder.Count, customization.MainMenuOrder.Count);
-        Assert.Equal(WindowsRepositoryMenuItem.Visibility, customization.RepositoryMenuOrder[0]);
-        Assert.Equal(WindowsRepositoryMenuItem.OpenRepository, customization.RepositoryMenuOrder[1]);
+        Assert.Equal(
+            [
+                WindowsRepositoryMenuItem.PinToggle,
+                WindowsRepositoryMenuItem.SetVisible,
+                WindowsRepositoryMenuItem.HideRepository,
+                WindowsRepositoryMenuItem.MoveUp,
+                WindowsRepositoryMenuItem.MoveDown,
+                WindowsRepositoryMenuItem.OpenRepository,
+            ],
+            customization.RepositoryMenuOrder.Take(6));
+        Assert.DoesNotContain(WindowsRepositoryMenuItem.Visibility, customization.RepositoryMenuOrder);
         Assert.Equal(WindowsMenuCustomization.DefaultRepositoryMenuOrder.Count, customization.RepositoryMenuOrder.Count);
     }
 
@@ -77,7 +86,7 @@ public sealed class WindowsMenuCustomizationTests
             [
                 WindowsRepositoryMenuItem.Heatmap,
                 WindowsRepositoryMenuItem.OpenRepository,
-                WindowsRepositoryMenuItem.Visibility,
+                WindowsRepositoryMenuItem.HideRepository,
             ],
             HiddenRepositoryMenuItems =
             [
@@ -91,7 +100,28 @@ public sealed class WindowsMenuCustomizationTests
 
         Assert.Equal(WindowsRepositoryMenuItem.Heatmap, visible[0]);
         Assert.DoesNotContain(WindowsRepositoryMenuItem.OpenRepository, visible);
-        Assert.Contains(WindowsRepositoryMenuItem.Visibility, visible);
+        Assert.Contains(WindowsRepositoryMenuItem.HideRepository, visible);
+    }
+
+    [Fact]
+    public void Normalize_expands_legacy_visibility_hidden_item_to_manage_actions()
+    {
+        var customization = new WindowsMenuCustomization
+        {
+            HiddenRepositoryMenuItems =
+            [
+                WindowsRepositoryMenuItem.Visibility,
+            ],
+        };
+
+        customization.Normalize();
+
+        Assert.DoesNotContain(WindowsRepositoryMenuItem.Visibility, customization.HiddenRepositoryMenuItems);
+        Assert.Contains(WindowsRepositoryMenuItem.PinToggle, customization.HiddenRepositoryMenuItems);
+        Assert.Contains(WindowsRepositoryMenuItem.SetVisible, customization.HiddenRepositoryMenuItems);
+        Assert.Contains(WindowsRepositoryMenuItem.HideRepository, customization.HiddenRepositoryMenuItems);
+        Assert.Contains(WindowsRepositoryMenuItem.MoveUp, customization.HiddenRepositoryMenuItems);
+        Assert.Contains(WindowsRepositoryMenuItem.MoveDown, customization.HiddenRepositoryMenuItems);
     }
 
     [Fact]
@@ -107,7 +137,8 @@ public sealed class WindowsMenuCustomizationTests
                 WindowsRepositoryMenuItem.RecentIssues,
                 WindowsRepositoryMenuItem.RecentPullRequests,
                 WindowsRepositoryMenuItem.Heatmap,
-                WindowsRepositoryMenuItem.Visibility,
+                WindowsRepositoryMenuItem.PinToggle,
+                WindowsRepositoryMenuItem.HideRepository,
             ],
             HiddenRepositoryMenuItems =
             [
@@ -147,7 +178,12 @@ public sealed class WindowsMenuCustomizationTests
             block =>
             {
                 Assert.Equal(WindowsRepositoryMenuGroup.Manage, block.Group);
-                Assert.Equal([WindowsRepositoryMenuItem.Visibility], block.Items);
+                Assert.Equal(
+                    [
+                        WindowsRepositoryMenuItem.PinToggle,
+                        WindowsRepositoryMenuItem.HideRepository,
+                    ],
+                    block.Items);
             });
     }
 
@@ -177,6 +213,17 @@ public sealed class WindowsMenuCustomizationTests
                 WindowsRepositoryMenuItem.LocalStatus,
             ],
             localBlock.Items);
+
+        var manageBlock = Assert.Single(blocks, block => block.Group == WindowsRepositoryMenuGroup.Manage);
+        Assert.Equal(
+            [
+                WindowsRepositoryMenuItem.PinToggle,
+                WindowsRepositoryMenuItem.SetVisible,
+                WindowsRepositoryMenuItem.HideRepository,
+                WindowsRepositoryMenuItem.MoveUp,
+                WindowsRepositoryMenuItem.MoveDown,
+            ],
+            manageBlock.Items);
     }
 
     [Fact]
