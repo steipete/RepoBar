@@ -18,6 +18,20 @@ internal static partial class GitHubReferenceNavigator
         var matches = new List<GitHubReferenceCandidate>();
         var claimedSpans = new List<RangeSpan>();
         var uniqueRepositoriesByName = UniqueRepositoriesByName(defaultRepositoryFullName, knownRepositoryFullNames);
+        foreach (Match match in GitHubCommitUrlRegex().Matches(text))
+        {
+            matches.Add(new GitHubReferenceCandidate(
+                match.Index,
+                new GitHubReferenceMatch(
+                    $"{match.Groups["owner"].Value}/{match.Groups["repo"].Value}",
+                    0,
+                    "commit",
+                    match.Value,
+                    GitHubHost.Normalize(match.Groups["host"].Value),
+                    NormalizeHash(match.Groups["hash"].Value))));
+            claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
+        }
+
         foreach (Match match in GitHubActionsRunUrlRegex().Matches(text))
         {
             matches.Add(new GitHubReferenceCandidate(
@@ -60,6 +74,11 @@ internal static partial class GitHubReferenceNavigator
 
         foreach (Match match in GitHubUrlRegex().Matches(text))
         {
+            if (claimedSpans.Any(span => span.Contains(match.Index)))
+            {
+                continue;
+            }
+
             matches.Add(new GitHubReferenceCandidate(
                 match.Index,
                 new GitHubReferenceMatch(
@@ -73,6 +92,11 @@ internal static partial class GitHubReferenceNavigator
 
         foreach (Match match in OwnerRepoNumberRegex().Matches(text))
         {
+            if (claimedSpans.Any(span => span.Contains(match.Index)))
+            {
+                continue;
+            }
+
             matches.Add(new GitHubReferenceCandidate(
                 match.Index,
                 new GitHubReferenceMatch(
@@ -109,6 +133,11 @@ internal static partial class GitHubReferenceNavigator
         {
             foreach (Match match in DirectBareNumberRegex().Matches(text))
             {
+                if (string.IsNullOrEmpty(match.Groups["prefix"].Value) && match.Groups["number"].Value.Length >= 7)
+                {
+                    continue;
+                }
+
                 matches.Add(new GitHubReferenceCandidate(
                     match.Groups["number"].Index,
                     new GitHubReferenceMatch(
@@ -116,6 +145,24 @@ internal static partial class GitHubReferenceNavigator
                         long.Parse(match.Groups["number"].Value),
                         "issues",
                         match.Value)));
+                claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
+            }
+
+            foreach (Match match in CommitHashRegex().Matches(text))
+            {
+                if (!HasCommitContext(text, match) || claimedSpans.Any(span => span.Contains(match.Index)))
+                {
+                    continue;
+                }
+
+                matches.Add(new GitHubReferenceCandidate(
+                    match.Index,
+                    new GitHubReferenceMatch(
+                        defaultRepositoryFullName,
+                        0,
+                        "commit",
+                        match.Value,
+                        Identifier: NormalizeHash(match.Groups["hash"].Value))));
                 claimedSpans.Add(new RangeSpan(match.Index, match.Index + match.Length));
             }
 
@@ -169,7 +216,7 @@ internal static partial class GitHubReferenceNavigator
     {
         var normalizedHost = GitHubHost.Normalize(reference.Host ?? host);
         var pathKind = PathKind(reference.Kind);
-        return new Uri($"https://{normalizedHost}/{reference.RepositoryFullName}/{pathKind}/{reference.Number}");
+        return new Uri($"https://{normalizedHost}/{reference.RepositoryFullName}/{pathKind}/{reference.ReferenceValue}");
     }
 
     private static string NormalizeKind(string value)
@@ -249,6 +296,11 @@ internal static partial class GitHubReferenceNavigator
             string.Equals(value, "workflow-run", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool IsCommitKind(string value)
+    {
+        return string.Equals(value, "commit", StringComparison.OrdinalIgnoreCase);
+    }
+
     private static string PathKind(string kind)
     {
         if (IsWorkflowRunKind(kind))
@@ -256,14 +308,35 @@ internal static partial class GitHubReferenceNavigator
             return "actions/runs";
         }
 
+        if (IsCommitKind(kind))
+        {
+            return "commit";
+        }
+
         return IsPullRequestKind(kind) ? "pull" : "issues";
     }
 
     private static string DedupeKey(GitHubReferenceMatch reference, string host)
     {
-        var kind = IsWorkflowRunKind(reference.Kind) ? "actions" : "issue";
-        return $"{reference.Host ?? GitHubHost.Normalize(host)}:{reference.RepositoryFullName}:{kind}#{reference.Number}";
+        var kind = IsWorkflowRunKind(reference.Kind) ? "actions" : IsCommitKind(reference.Kind) ? "commit" : "issue";
+        return $"{reference.Host ?? GitHubHost.Normalize(host)}:{reference.RepositoryFullName}:{kind}#{reference.ReferenceValue}";
     }
+
+    private static bool HasCommitContext(string text, Match match)
+    {
+        return string.Equals(text.Trim(), match.Value, StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("commit", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("hash", StringComparison.OrdinalIgnoreCase) ||
+            text.Contains("sha", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeHash(string value)
+    {
+        return value.ToLowerInvariant();
+    }
+
+    [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/(?:commits?|pull/\d+/changes)/(?<hash>[0-9a-f]{7,40})", RegexOptions.IgnoreCase)]
+    private static partial Regex GitHubCommitUrlRegex();
 
     [GeneratedRegex(@"https?://(?<host>[^/\s]+)/(?<owner>[^/\s]+)/(?<repo>[^/\s]+)/actions/runs/(?<number>\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex GitHubActionsRunUrlRegex();
@@ -286,8 +359,11 @@ internal static partial class GitHubReferenceNavigator
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])(?<kind>PRs?|pull requests?|issues?)\s+#?(?<number>\d+)(?:\s*(?:,|and)\s*#?(?<number>\d+))*\b", RegexOptions.IgnoreCase)]
     private static partial Regex KindedBareNumberRegex();
 
-    [GeneratedRegex(@"^\s*(?:gh-)?#?(?<number>\d+)\.?\s*$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^\s*(?<prefix>gh-|#)?(?<number>\d+)\.?\s*$", RegexOptions.IgnoreCase)]
     private static partial Regex DirectBareNumberRegex();
+
+    [GeneratedRegex(@"(?<![A-Za-z0-9])(?<hash>[0-9a-f]{7,40})(?![A-Za-z0-9])", RegexOptions.IgnoreCase)]
+    private static partial Regex CommitHashRegex();
 
     [GeneratedRegex(@"(?<![A-Za-z0-9_/.-])#(?<number>\d+)\b")]
     private static partial Regex BareNumberRegex();
@@ -305,7 +381,15 @@ internal static partial class GitHubReferenceNavigator
     private readonly record struct SeriesNumber(long Value, int Index);
 }
 
-internal sealed record GitHubReferenceMatch(string RepositoryFullName, long Number, string Kind, string RawText, string? Host = null)
+internal sealed record GitHubReferenceMatch(string RepositoryFullName, long Number, string Kind, string RawText, string? Host = null, string? Identifier = null)
 {
-    public string DisplayText => $"{RepositoryFullName} #{Number}";
+    public string ReferenceValue => Identifier ?? Number.ToString();
+
+    public string ReferenceLabel => string.Equals(Kind, "commit", StringComparison.OrdinalIgnoreCase)
+        ? $"@{ReferenceValue[..Math.Min(10, ReferenceValue.Length)]}"
+        : string.Equals(Kind, "actions", StringComparison.OrdinalIgnoreCase)
+            ? $"run {ReferenceValue}"
+            : $"#{ReferenceValue}";
+
+    public string DisplayText => $"{RepositoryFullName} {ReferenceLabel}";
 }

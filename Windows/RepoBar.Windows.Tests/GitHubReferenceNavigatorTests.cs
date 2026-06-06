@@ -45,6 +45,16 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void BuildUri_preserves_commit_references()
+    {
+        var uri = GitHubReferenceNavigator.BuildUri(
+            new GitHubReferenceMatch("owner/repo", 0, "commit", "owner/repo@ffd212ca43", Identifier: "ffd212ca43"),
+            "github.example.com");
+
+        Assert.Equal("https://github.example.com/owner/repo/commit/ffd212ca43", uri.ToString());
+    }
+
+    [Fact]
     public void Full_url_references_preserve_their_source_host()
     {
         var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
@@ -75,6 +85,38 @@ public sealed class GitHubReferenceNavigatorTests
         var uri = GitHubReferenceNavigator.BuildUri(reference, "github.com");
 
         Assert.Equal("https://github.enterprise.test/owner/repo/actions/runs/25620622163", uri.ToString());
+    }
+
+    [Fact]
+    public void Commit_url_references_preserve_source_host_hash_and_kind()
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            "https://GitHub.Enterprise.test/owner/repo/commit/FfD212Ca43abcdef",
+            "github.com",
+            null));
+
+        Assert.Equal("github.enterprise.test", reference.Host);
+        Assert.Equal("owner/repo", reference.RepositoryFullName);
+        Assert.Equal("ffd212ca43abcdef", reference.ReferenceValue);
+        Assert.Equal("commit", reference.Kind);
+        Assert.Equal("owner/repo @ffd212ca43", reference.DisplayText);
+
+        var uri = GitHubReferenceNavigator.BuildUri(reference, "github.com");
+
+        Assert.Equal("https://github.enterprise.test/owner/repo/commit/ffd212ca43abcdef", uri.ToString());
+    }
+
+    [Fact]
+    public void Pull_request_changes_urls_resolve_to_commit_references()
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            "https://github.com/openclaw/openclaw/pull/57843/changes/d04517cefff3af339f560a8e388cacc3898e6562",
+            "github.com",
+            null));
+
+        Assert.Equal("openclaw/openclaw", reference.RepositoryFullName);
+        Assert.Equal("d04517cefff3af339f560a8e388cacc3898e6562", reference.ReferenceValue);
+        Assert.Equal("commit", reference.Kind);
     }
 
     [Fact]
@@ -136,6 +178,60 @@ public sealed class GitHubReferenceNavigatorTests
         Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
         Assert.Equal(42L, reference.Number);
         Assert.Equal("issues", reference.Kind);
+    }
+
+    [Theory]
+    [InlineData("ffd212ca43")]
+    [InlineData("4992546")]
+    [InlineData("commit d04517cefff3af339f560a8e388cacc3898e6562")]
+    [InlineData(" - bare short SHA: 4992546")]
+    public void FindReferences_resolves_commit_hashes_against_default_repository(string input)
+    {
+        var reference = Assert.Single(GitHubReferenceNavigator.FindReferences(
+            input,
+            "github.com",
+            "steipete/RepoBar"));
+
+        Assert.Equal("steipete/RepoBar", reference.RepositoryFullName);
+        Assert.Equal("commit", reference.Kind);
+        Assert.Matches("^[0-9a-f]{7,40}$", reference.ReferenceValue);
+        Assert.Equal($"https://github.com/steipete/RepoBar/commit/{reference.ReferenceValue}", GitHubReferenceNavigator.BuildUri(reference, "github.com").ToString());
+    }
+
+    [Fact]
+    public void FindReferences_keeps_hashes_with_shared_display_prefix_distinct()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "commits abcdef1234000000000000000000000000000000 abcdef1234ffffffffffffffffffffffffffffff",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Collection(
+            references,
+            reference => Assert.Equal("abcdef1234000000000000000000000000000000", reference.ReferenceValue),
+            reference => Assert.Equal("abcdef1234ffffffffffffffffffffffffffffff", reference.ReferenceValue));
+    }
+
+    [Fact]
+    public void FindReferences_does_not_resolve_commit_hashes_without_default_repository()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "commit ffd212ca43",
+            "github.com",
+            null);
+
+        Assert.Empty(references);
+    }
+
+    [Fact]
+    public void FindReferences_ignores_short_hex_words_as_commit_hashes()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            "commit abcdef",
+            "github.com",
+            "steipete/RepoBar");
+
+        Assert.Empty(references);
     }
 
     [Fact]

@@ -100,6 +100,24 @@ public sealed class GitHubReferenceClipboardMonitorTests
     }
 
     [Fact]
+    public void Observe_displays_commit_hash_references()
+    {
+        var monitor = new GitHubReferenceClipboardMonitor();
+        var settings = Settings();
+
+        Assert.Null(monitor.Observe("baseline", settings));
+
+        var notification = monitor.Observe("commit ffd212ca43abcdef", settings);
+
+        Assert.NotNull(notification);
+        Assert.Equal("steipete/RepoBar @ffd212ca43", notification.DisplayText);
+        Assert.Contains(notification.References, reference =>
+            reference.RepositoryFullName == "steipete/RepoBar" &&
+            reference.Kind == "commit" &&
+            reference.ReferenceValue == "ffd212ca43abcdef");
+    }
+
+    [Fact]
     public void Observe_treats_same_reference_on_different_hosts_as_distinct()
     {
         var monitor = new GitHubReferenceClipboardMonitor();

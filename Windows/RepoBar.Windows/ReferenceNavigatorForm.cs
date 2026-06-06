@@ -124,9 +124,9 @@ internal sealed class ReferenceNavigatorForm : Form
         });
         _referenceGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            DataPropertyName = nameof(ReferenceRow.Number),
-            HeaderText = "#",
-            Width = 80,
+            DataPropertyName = nameof(ReferenceRow.Reference),
+            HeaderText = "Reference",
+            Width = 120,
         });
         _referenceGrid.Columns.Add(new DataGridViewTextBoxColumn
         {
@@ -180,7 +180,7 @@ internal sealed class ReferenceNavigatorForm : Form
         {
             _references.Add(new ReferenceRow(
                 reference.RepositoryFullName,
-                reference.Number,
+                reference.ReferenceLabel,
                 GitHubReferenceNavigator.BuildUri(reference, _settings.GitHubHost).ToString()));
         }
 
@@ -251,5 +251,5 @@ internal sealed class ReferenceNavigatorForm : Form
         Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
-    private sealed record ReferenceRow(string Repository, long Number, string Url);
+    private sealed record ReferenceRow(string Repository, string Reference, string Url);
 }

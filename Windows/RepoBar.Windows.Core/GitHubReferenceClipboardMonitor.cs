@@ -49,7 +49,7 @@ internal sealed class GitHubReferenceClipboardMonitor
                 reference.Host?.ToLowerInvariant() ?? GitHubHost.Normalize(settings.GitHubHost),
                 reference.RepositoryFullName.ToLowerInvariant(),
                 reference.Kind.ToLowerInvariant(),
-                reference.Number)));
+                reference.ReferenceValue.ToLowerInvariant())));
         if (string.Equals(referenceKey, _lastReferenceKey, StringComparison.Ordinal))
         {
             return null;
@@ -92,8 +92,7 @@ internal sealed class GitHubReferenceClipboardMonitor
     {
         if (references.Count == 1)
         {
-            var reference = references[0];
-            return $"{reference.RepositoryFullName} #{reference.Number}";
+            return references[0].DisplayText;
         }
 
         return $"{references.Count:n0} GitHub references copied";
