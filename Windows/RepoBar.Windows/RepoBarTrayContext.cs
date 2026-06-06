@@ -156,10 +156,13 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
 
             var displayedStatuses = WindowsRepositoryDisplay.Apply(_statuses, _settingsStore.Settings);
+            var renderedMenu = CaptureRenderedMenu(displayedStatuses);
             var activeAccount = _settingsStore.Settings.GetActiveAccount();
             var logFilePath = WindowsDiagnosticsLogger.LogFilePath ?? WindowsDiagnosticsLogger.DefaultLogFilePath();
             var responseCacheDirectory = GitHubResponseCache.DirectoryForSettings(_settingsStore.Settings);
             var pullRequestNotificationStatePath = _pullRequestNotificationTracker.StatePath;
+            var missingMainMenuItems = WindowsSmokeMenuProof.MissingMainMenuItems(renderedMenu.TopLevelItems);
+            var missingRepositoryMenuItems = WindowsSmokeMenuProof.MissingRepositoryMenuItems(renderedMenu.RepositoryMenuItems);
             WindowsDiagnosticsLogger.Log(
                 WindowsLogVerbosity.Debug,
                 "smoke",
@@ -183,6 +186,15 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 responseCacheDirectory,
                 responseCacheEntryCount = GitHubResponseCache.EntryCountForSettings(_settingsStore.Settings),
                 pullRequestNotificationStatePath,
+                renderedTopLevelMenuItems = renderedMenu.TopLevelItems,
+                renderedRepositoryMenuItems = renderedMenu.RepositoryMenuItems,
+                renderedMenuProof = new
+                {
+                    missingMainMenuItems,
+                    missingRepositoryMenuItems,
+                    mainMenuComplete = missingMainMenuItems.Count == 0,
+                    repositoryMenuComplete = missingRepositoryMenuItems.Count == 0,
+                },
                 localRepositories = _localGitIndex.Repositories.Select(repository => new
                 {
                     repository.DisplayName,
@@ -208,6 +220,49 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             // Smoke diagnostics must not affect normal tray behavior.
         }
+    }
+
+    private RenderedMenuSnapshot CaptureRenderedMenu(IReadOnlyList<RepositoryStatus> displayedStatuses)
+    {
+        var topLevelItems = MenuItemTexts(_menu.Items);
+        var repositoryMenuItems = FirstRepositoryMenuItems(displayedStatuses);
+        return new RenderedMenuSnapshot(topLevelItems, repositoryMenuItems);
+    }
+
+    private IReadOnlyList<string> FirstRepositoryMenuItems(IReadOnlyList<RepositoryStatus> displayedStatuses)
+    {
+        var repositoryNames = displayedStatuses
+            .Select(status => status.Repository.FullName)
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .ToArray();
+
+        foreach (var item in _menu.Items.OfType<ToolStripMenuItem>())
+        {
+            if (repositoryNames.Any(name => item.Text.Contains(name, StringComparison.OrdinalIgnoreCase)))
+            {
+                return MenuItemTexts(item.DropDownItems);
+            }
+        }
+
+        foreach (var item in _menu.Items.OfType<ToolStripMenuItem>())
+        {
+            var labels = MenuItemTexts(item.DropDownItems);
+            if (labels.Contains("Open repository", StringComparer.OrdinalIgnoreCase))
+            {
+                return labels;
+            }
+        }
+
+        return [];
+    }
+
+    private static IReadOnlyList<string> MenuItemTexts(ToolStripItemCollection items)
+    {
+        return items
+            .OfType<ToolStripMenuItem>()
+            .Select(item => item.Text)
+            .Where(text => !string.IsNullOrWhiteSpace(text))
+            .ToArray();
     }
 
     private void BuildMenu()
