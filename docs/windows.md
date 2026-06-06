@@ -106,6 +106,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "enableResponseCache": true,
   "gitHubArchiveDatabasePath": "%APPDATA%\\RepoBar\\Archives\\example.sqlite",
   "repositoryDisplayLimit": 6,
+  "repositoryMenuScope": "all",
   "repositorySortKey": "activity",
   "includeForkedRepositories": false,
   "includeArchivedRepositories": false,
@@ -174,7 +175,7 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 }
 ```
 
-Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Owner filter** to limit normal displayed repositories to specific owners, and use **Only repos with issues** or **Only repos with PRs** to show only repositories with matching open work. Pinned repositories stay visible ahead of filtered normal repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name.
+Use **Include forked repos** and **Include archived repos** to decide whether GitHub repository discovery imports forks and archived repositories. Use **Repository scope** to switch the tray menu between all repositories, pinned repositories, local repositories, or the work-focused view that keeps repositories with open issues or pull requests. Use **Owner filter** to limit normal displayed repositories to specific owners, and use **Only repos with issues** or **Only repos with PRs** to show only repositories with matching open work. Pinned repositories stay visible ahead of filtered normal repositories. Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name.
 
 Use **Activity feed** to choose whether top-level **Commits** and **Activity** show all displayed repository events or only events by the signed-in account when viewer metadata is available. Repository submenus still keep their own per-repository Commit and Activity feeds.
 

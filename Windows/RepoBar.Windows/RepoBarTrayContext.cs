@@ -137,21 +137,26 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         _menu.Items.Add(new ToolStripSeparator());
 
         var visibleRepositories = _settingsStore.VisibleRepositories;
+        var renderedRepositoryCount = 0;
         if (visibleRepositories.Count == 0)
         {
-            AddLocalOnlyRepositories();
-            if (_localGitIndex.Repositories.Count == 0)
+            if (ShouldShowLocalOnlyRepositories())
             {
-                _menu.Items.Add(new ToolStripMenuItem("No repositories configured") { Enabled = false });
+                renderedRepositoryCount += AddLocalOnlyRepositories();
+            }
+            if (renderedRepositoryCount == 0)
+            {
+                _menu.Items.Add(new ToolStripMenuItem(EmptyRepositoryText()) { Enabled = false });
             }
             _menu.Items.Add(new ToolStripMenuItem("Open settings file", null, (_, _) => OpenFile(_settingsStore.SettingsPath)));
             _menu.Items.Add(new ToolStripMenuItem("Open Windows setup doc", null, (_, _) => OpenUrl("https://github.com/steipete/RepoBar/blob/main/docs/windows.md")));
         }
-        else if (_statuses.Count == 0)
+        else if (_statuses.Count == 0 && _settingsStore.Settings.RepositoryMenuScope != RepositoryMenuScope.Local)
         {
             foreach (var repository in visibleRepositories)
             {
                 _menu.Items.Add(new ToolStripMenuItem($"[ ] {repository.FullName}") { Enabled = false });
+                renderedRepositoryCount++;
             }
         }
         else
@@ -159,8 +164,16 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             foreach (var status in WindowsRepositoryDisplay.Apply(_statuses, _settingsStore.Settings))
             {
                 _menu.Items.Add(BuildRepositoryMenu(status));
+                renderedRepositoryCount++;
             }
-            AddLocalOnlyRepositories();
+            if (ShouldShowLocalOnlyRepositories())
+            {
+                renderedRepositoryCount += AddLocalOnlyRepositories();
+            }
+            if (renderedRepositoryCount == 0)
+            {
+                _menu.Items.Add(new ToolStripMenuItem(EmptyRepositoryText()) { Enabled = false });
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(_lastError))
@@ -174,6 +187,22 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         {
             AddMainMenuItem(_menu.Items, item);
         }
+    }
+
+    private bool ShouldShowLocalOnlyRepositories()
+    {
+        return _settingsStore.Settings.RepositoryMenuScope is RepositoryMenuScope.All or RepositoryMenuScope.Local;
+    }
+
+    private string EmptyRepositoryText()
+    {
+        return _settingsStore.Settings.RepositoryMenuScope switch
+        {
+            RepositoryMenuScope.Pinned => "No pinned repositories",
+            RepositoryMenuScope.Local => "No local repositories",
+            RepositoryMenuScope.Work => "No repositories with issues or pull requests",
+            _ => "No repositories configured",
+        };
     }
 
     private void AddMainMenuItem(ToolStripItemCollection items, WindowsMainMenuItem item)
@@ -621,7 +650,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
         items.Add(new ToolStripMenuItem("Checkout locally", null, async (_, _) => await CheckoutRepositoryAsync(repository)));
     }
 
-    private void AddLocalOnlyRepositories()
+    private int AddLocalOnlyRepositories()
     {
         var configured = _settingsStore.Settings.Repositories
             .Select(repository => repository.FullName)
@@ -632,7 +661,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             .ToArray();
         if (localOnly.Length == 0)
         {
-            return;
+            return 0;
         }
 
         _menu.Items.Add(new ToolStripSeparator());
@@ -648,6 +677,8 @@ internal sealed class RepoBarTrayContext : ApplicationContext
             }
             _menu.Items.Add(item);
         }
+
+        return localOnly.Length;
     }
 
     private void AddLocalStatusItems(ToolStripItemCollection items, LocalGitRepositoryStatus local)

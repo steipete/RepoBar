@@ -29,6 +29,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _enableResponseCache = new();
     private readonly TextBox _gitHubArchiveDatabasePath = new();
     private readonly NumericUpDown _repositoryDisplayLimit = new();
+    private readonly ComboBox _repositoryMenuScope = new();
     private readonly ComboBox _repositorySortKey = new();
     private readonly CheckBox _includeForkedRepositories = new();
     private readonly CheckBox _includeArchivedRepositories = new();
@@ -63,7 +64,7 @@ internal sealed class SettingsEditorForm : Form
         MinimizeBox = false;
         MaximizeBox = false;
         FormBorderStyle = FormBorderStyle.FixedDialog;
-        ClientSize = new Size(820, 660);
+        ClientSize = new Size(820, 700);
 
         LoadSettings();
         BuildControls();
@@ -105,6 +106,13 @@ internal sealed class SettingsEditorForm : Form
         _repositoryDisplayLimit.Minimum = 1;
         _repositoryDisplayLimit.Maximum = 100;
         _repositoryDisplayLimit.Value = Math.Clamp(settings.RepositoryDisplayLimit, 1, 100);
+        _repositoryMenuScope.DropDownStyle = ComboBoxStyle.DropDownList;
+        _repositoryMenuScope.DataSource = Enum.GetValues<RepositoryMenuScope>()
+            .Select(RepositoryMenuScopeRow.FromScope)
+            .ToArray();
+        _repositoryMenuScope.DisplayMember = nameof(RepositoryMenuScopeRow.DisplayName);
+        _repositoryMenuScope.ValueMember = nameof(RepositoryMenuScopeRow.Scope);
+        _repositoryMenuScope.SelectedValue = settings.RepositoryMenuScope;
         _repositorySortKey.DropDownStyle = ComboBoxStyle.DropDownList;
         _repositorySortKey.DataSource = Enum.GetValues<RepositorySortKey>()
             .Select(RepositorySortKeyRow.FromSortKey)
@@ -207,6 +215,7 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Worktree folder", _localWorktreeFolderName);
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
         AddLabeledControl(settingsGrid, "Repository limit", _repositoryDisplayLimit);
+        AddLabeledControl(settingsGrid, "Repository scope", _repositoryMenuScope);
         AddLabeledControl(settingsGrid, "Repository sort", _repositorySortKey);
         AddLabeledControl(settingsGrid, "Owner filter", _repositoryOwnerFilter);
         AddLabeledControl(settingsGrid, "Repository heatmap", _heatmapDisplay);
@@ -566,6 +575,9 @@ internal sealed class SettingsEditorForm : Form
             ? null
             : _gitHubArchiveDatabasePath.Text.Trim();
         settings.RepositoryDisplayLimit = (int)_repositoryDisplayLimit.Value;
+        settings.RepositoryMenuScope = _repositoryMenuScope.SelectedValue is RepositoryMenuScope menuScope
+            ? menuScope
+            : RepositoryMenuScope.All;
         settings.RepositorySortKey = _repositorySortKey.SelectedValue is RepositorySortKey sortKey
             ? sortKey
             : RepositorySortKey.Activity;
@@ -626,6 +638,9 @@ internal sealed class SettingsEditorForm : Form
                 : _gitHubArchiveDatabasePath.Text.Trim(),
             IncludeForkedRepositories = _includeForkedRepositories.Checked,
             IncludeArchivedRepositories = _includeArchivedRepositories.Checked,
+            RepositoryMenuScope = _repositoryMenuScope.SelectedValue is RepositoryMenuScope menuScope
+                ? menuScope
+                : RepositoryMenuScope.All,
             RepositoryOwnerFilter = ParseRepositoryOwnerFilter(_repositoryOwnerFilter.Text),
             ShowOnlyRepositoriesWithIssues = _showOnlyRepositoriesWithIssues.Checked,
             ShowOnlyRepositoriesWithPullRequests = _showOnlyRepositoriesWithPullRequests.Checked,
@@ -856,6 +871,14 @@ internal sealed class SettingsEditorForm : Form
         public static RepositorySortKeyRow FromSortKey(RepositorySortKey sortKey)
         {
             return new RepositorySortKeyRow(sortKey, sortKey.DisplayName());
+        }
+    }
+
+    private sealed record RepositoryMenuScopeRow(RepositoryMenuScope Scope, string DisplayName)
+    {
+        public static RepositoryMenuScopeRow FromScope(RepositoryMenuScope scope)
+        {
+            return new RepositoryMenuScopeRow(scope, scope.DisplayName());
         }
     }
 

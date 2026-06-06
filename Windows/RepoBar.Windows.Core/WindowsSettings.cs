@@ -23,6 +23,7 @@ internal sealed class WindowsSettings
     public bool EnableResponseCache { get; set; } = true;
     public string? GitHubArchiveDatabasePath { get; set; }
     public int RepositoryDisplayLimit { get; set; } = 6;
+    public RepositoryMenuScope RepositoryMenuScope { get; set; } = RepositoryMenuScope.All;
     public RepositorySortKey RepositorySortKey { get; set; } = RepositorySortKey.Activity;
     public bool IncludeForkedRepositories { get; set; }
     public bool IncludeArchivedRepositories { get; set; }
@@ -98,6 +99,14 @@ internal enum RepositoryVisibility
     Visible,
     Pinned,
     Hidden,
+}
+
+internal enum RepositoryMenuScope
+{
+    All,
+    Pinned,
+    Local,
+    Work,
 }
 
 internal enum RepositorySortKey
@@ -200,6 +209,20 @@ internal static class RepositorySortKeyLabels
             RepositorySortKey.Stars => "Most stars",
             RepositorySortKey.Name => "Repository name",
             _ => "Latest activity",
+        };
+    }
+}
+
+internal static class RepositoryMenuScopeLabels
+{
+    public static string DisplayName(this RepositoryMenuScope scope)
+    {
+        return scope switch
+        {
+            RepositoryMenuScope.Pinned => "Pinned",
+            RepositoryMenuScope.Local => "Local",
+            RepositoryMenuScope.Work => "Work",
+            _ => "All",
         };
     }
 }
@@ -489,6 +512,25 @@ internal static class WindowsRepositoryDisplay
             .GroupBy(pair => pair.FullName, StringComparer.OrdinalIgnoreCase)
             .Select(group => group.First())
             .ToDictionary(pair => pair.FullName, pair => pair.index, StringComparer.OrdinalIgnoreCase);
+
+        if (settings.RepositoryMenuScope == RepositoryMenuScope.Pinned)
+        {
+            return statuses
+                .Where(status => pinnedOrder.ContainsKey(status.Repository.FullName))
+                .OrderBy(status => pinnedOrder[status.Repository.FullName])
+                .Take(Math.Clamp(settings.RepositoryDisplayLimit, 1, 100))
+                .ToArray();
+        }
+
+        if (settings.RepositoryMenuScope == RepositoryMenuScope.Local)
+        {
+            return statuses
+                .Where(status => status.LocalStatus != null)
+                .OrderBy(status => status.LocalStatus?.DisplayName ?? status.Repository.FullName, StringComparer.OrdinalIgnoreCase)
+                .Take(Math.Clamp(settings.RepositoryDisplayLimit, 1, 100))
+                .ToArray();
+        }
+
         var pinned = statuses
             .Where(status => pinnedOrder.ContainsKey(status.Repository.FullName))
             .OrderBy(status => pinnedOrder[status.Repository.FullName]);
@@ -533,8 +575,8 @@ internal static class WindowsRepositoryDisplay
             return false;
         }
 
-        var onlyWithIssues = settings.ShowOnlyRepositoriesWithIssues;
-        var onlyWithPullRequests = settings.ShowOnlyRepositoriesWithPullRequests;
+        var onlyWithIssues = settings.ShowOnlyRepositoriesWithIssues || settings.RepositoryMenuScope == RepositoryMenuScope.Work;
+        var onlyWithPullRequests = settings.ShowOnlyRepositoriesWithPullRequests || settings.RepositoryMenuScope == RepositoryMenuScope.Work;
         if (!onlyWithIssues && !onlyWithPullRequests)
         {
             return true;

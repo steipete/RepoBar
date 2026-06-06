@@ -91,6 +91,86 @@ public sealed class WindowsRepositoryDisplayTests
     }
 
     [Fact]
+    public void Apply_pinned_scope_returns_only_pinned_repositories_in_configured_order()
+    {
+        var settings = new WindowsSettings
+        {
+            RepositoryDisplayLimit = 10,
+            RepositoryMenuScope = RepositoryMenuScope.Pinned,
+            Repositories =
+            [
+                new RepositoryRef { Owner = "owner", Name = "second", Visibility = RepositoryVisibility.Pinned },
+                new RepositoryRef { Owner = "owner", Name = "visible", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "owner", Name = "first", Visibility = RepositoryVisibility.Pinned },
+            ],
+        };
+        var statuses = new[]
+        {
+            Status("owner/first"),
+            Status("owner/visible", issues: 4),
+            Status("owner/second"),
+        };
+
+        var displayed = WindowsRepositoryDisplay.Apply(statuses, settings);
+
+        Assert.Equal(["owner/second", "owner/first"], displayed.Select(status => status.Repository.FullName));
+    }
+
+    [Fact]
+    public void Apply_local_scope_returns_only_repositories_with_local_status()
+    {
+        var settings = new WindowsSettings
+        {
+            RepositoryDisplayLimit = 10,
+            RepositoryMenuScope = RepositoryMenuScope.Local,
+            Repositories =
+            [
+                new RepositoryRef { Owner = "owner", Name = "remote", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "owner", Name = "local-b", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "owner", Name = "local-a", Visibility = RepositoryVisibility.Pinned },
+            ],
+        };
+        var statuses = new[]
+        {
+            Status("owner/remote"),
+            Status("owner/local-b", local: true),
+            Status("owner/local-a", local: true),
+        };
+
+        var displayed = WindowsRepositoryDisplay.Apply(statuses, settings);
+
+        Assert.Equal(["owner/local-a", "owner/local-b"], displayed.Select(status => status.Repository.FullName));
+    }
+
+    [Fact]
+    public void Apply_work_scope_filters_normal_repositories_with_issues_or_pull_requests_and_keeps_pinned()
+    {
+        var settings = new WindowsSettings
+        {
+            RepositoryDisplayLimit = 10,
+            RepositoryMenuScope = RepositoryMenuScope.Work,
+            Repositories =
+            [
+                new RepositoryRef { Owner = "owner", Name = "quiet-pinned", Visibility = RepositoryVisibility.Pinned },
+                new RepositoryRef { Owner = "owner", Name = "issues", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "owner", Name = "pulls", Visibility = RepositoryVisibility.Visible },
+                new RepositoryRef { Owner = "owner", Name = "quiet", Visibility = RepositoryVisibility.Visible },
+            ],
+        };
+        var statuses = new[]
+        {
+            Status("owner/quiet"),
+            Status("owner/pulls", pulls: 1),
+            Status("owner/issues", issues: 2),
+            Status("owner/quiet-pinned"),
+        };
+
+        var displayed = WindowsRepositoryDisplay.Apply(statuses, settings);
+
+        Assert.Equal(["owner/quiet-pinned", "owner/issues", "owner/pulls"], displayed.Select(status => status.Repository.FullName));
+    }
+
+    [Fact]
     public void NormalizeSettings_clamps_repository_display_limit_normalizes_owner_filter_and_preserves_sort_key()
     {
         var settings = new WindowsSettings
@@ -112,7 +192,8 @@ public sealed class WindowsRepositoryDisplayTests
         int issues = 0,
         int pulls = 0,
         int stars = 0,
-        DateTimeOffset? pushedAt = null)
+        DateTimeOffset? pushedAt = null,
+        bool local = false)
     {
         var parts = fullName.Split('/', 2);
         return new RepositoryStatus(
@@ -129,7 +210,25 @@ public sealed class WindowsRepositoryDisplayTests
             Traffic: null,
             Heatmap: null,
             Changelog: null,
-            LocalStatus: null,
+            LocalStatus: local ? LocalStatus(fullName) : null,
             ErrorMessage: null);
+    }
+
+    private static LocalGitRepositoryStatus LocalStatus(string fullName)
+    {
+        var parts = fullName.Split('/', 2);
+        return new LocalGitRepositoryStatus(
+            Path: Path.Combine("C:\\Projects", parts[1]),
+            Name: parts[1],
+            FullName: fullName,
+            Branch: "main",
+            IsClean: true,
+            AheadCount: 0,
+            BehindCount: 0,
+            SyncState: LocalSyncState.Synced,
+            DirtyCounts: LocalDirtyCounts.Empty,
+            DirtyFiles: [],
+            WorktreeName: null,
+            UpstreamBranch: "origin/main");
     }
 }
