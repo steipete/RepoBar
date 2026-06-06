@@ -140,6 +140,18 @@ internal static class LocalGitSyncNotification
     }
 }
 
+internal sealed record LocalGitScanSummary(string? Root, int RepositoryCount, bool RootExists)
+{
+    public string DisplayText => Root switch
+    {
+        null => "Choose a local projects folder.",
+        _ when !RootExists => "Folder not found.",
+        _ when RepositoryCount == 0 => "No repositories found.",
+        _ when RepositoryCount == 1 => "Found 1 local repository.",
+        _ => $"Found {RepositoryCount:n0} local repositories.",
+    };
+}
+
 internal sealed record LocalGitWorktree(string Path, string? Branch, string? Head, bool IsBare);
 
 internal sealed record LocalGitBranch(string Name, bool IsCurrent);

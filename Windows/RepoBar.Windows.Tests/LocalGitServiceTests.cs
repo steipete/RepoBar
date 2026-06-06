@@ -45,6 +45,32 @@ public sealed class LocalGitServiceTests
     }
 
     [Fact]
+    public void ScanSummary_reports_missing_empty_and_found_roots()
+    {
+        var root = Path.Combine(Path.GetTempPath(), $"repobar-localgit-{Guid.NewGuid():N}");
+        var missing = Path.Combine(root, "missing");
+        try
+        {
+            Assert.Equal("Choose a local projects folder.", LocalGitService.ScanSummary("", 2).DisplayText);
+            Assert.Equal("Folder not found.", LocalGitService.ScanSummary(missing, 2).DisplayText);
+
+            Directory.CreateDirectory(root);
+            Assert.Equal("No repositories found.", LocalGitService.ScanSummary(root, 2).DisplayText);
+
+            Directory.CreateDirectory(Path.Combine(root, "one", ".git"));
+            Directory.CreateDirectory(Path.Combine(root, "two", ".git"));
+            Assert.Equal("Found 2 local repositories.", LocalGitService.ScanSummary(root, 2).DisplayText);
+        }
+        finally
+        {
+            if (Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void ParseWorktrees_reads_porcelain_output()
     {
         var worktrees = LocalGitService.ParseWorktrees("""

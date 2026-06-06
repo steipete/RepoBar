@@ -101,6 +101,25 @@ internal sealed class LocalGitService
         }
     }
 
+    internal static LocalGitScanSummary ScanSummary(string? root, int maxDepth)
+    {
+        if (string.IsNullOrWhiteSpace(root))
+        {
+            return new LocalGitScanSummary(null, 0, false);
+        }
+
+        var expandedRoot = ExpandPath(root);
+        if (!Directory.Exists(expandedRoot))
+        {
+            return new LocalGitScanSummary(expandedRoot, 0, false);
+        }
+
+        return new LocalGitScanSummary(
+            expandedRoot,
+            DiscoverRepositoryRoots(expandedRoot, maxDepth).Count,
+            true);
+    }
+
     internal async Task<LocalGitRepositoryStatus?> LoadStatusAsync(string repoRoot, CancellationToken cancellationToken)
     {
         var branchOutput = await TryGitAsync(repoRoot, ["status", "--porcelain=v1", "-b"], cancellationToken).ConfigureAwait(false);

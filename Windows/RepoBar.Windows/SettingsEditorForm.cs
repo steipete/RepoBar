@@ -25,6 +25,7 @@ internal sealed class SettingsEditorForm : Form
     private readonly CheckBox _checkForUpdatesAutomatically = new();
     private readonly CheckBox _discoverLocalProjects = new();
     private readonly TextBox _localProjectsRoot = new();
+    private readonly Label _localProjectsScanState = new();
     private readonly NumericUpDown _localProjectsDepth = new();
     private readonly TextBox _localWorktreeFolderName = new();
     private readonly ComboBox _terminalPreference = new();
@@ -227,9 +228,10 @@ internal sealed class SettingsEditorForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 6,
+            RowCount = 7,
             Padding = new Padding(12),
         };
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -349,13 +351,20 @@ internal sealed class SettingsEditorForm : Form
 
         var localRootPanel = new Panel { Dock = DockStyle.Top, Height = 34 };
         _localProjectsRoot.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
-        _localProjectsRoot.Width = 570;
-        var browseButton = new Button { Text = "Browse", Left = 580, Width = 90 };
+        _localProjectsRoot.Width = 460;
+        var scanButton = new Button { Text = "Scan", Left = 470, Width = 80 };
+        scanButton.Click += (_, _) => RefreshLocalProjectsScanState();
+        var browseButton = new Button { Text = "Browse", Left = 560, Width = 90 };
         browseButton.Click += (_, _) => BrowseLocalProjectsRoot();
         localRootPanel.Controls.Add(_localProjectsRoot);
+        localRootPanel.Controls.Add(scanButton);
         localRootPanel.Controls.Add(browseButton);
         root.Controls.Add(new Label { Text = "Local projects root", Dock = DockStyle.Top });
         root.Controls.Add(localRootPanel);
+        _localProjectsScanState.AutoSize = true;
+        _localProjectsScanState.ForeColor = SystemColors.GrayText;
+        RefreshLocalProjectsScanState();
+        root.Controls.Add(_localProjectsScanState);
 
         var repositoryFilterPanel = new TableLayoutPanel
         {
@@ -641,7 +650,16 @@ internal sealed class SettingsEditorForm : Form
         if (dialog.ShowDialog(this) == DialogResult.OK)
         {
             _localProjectsRoot.Text = dialog.SelectedPath;
+            RefreshLocalProjectsScanState();
         }
+    }
+
+    private void RefreshLocalProjectsScanState()
+    {
+        var summary = LocalGitService.ScanSummary(
+            _localProjectsRoot.Text,
+            (int)_localProjectsDepth.Value);
+        _localProjectsScanState.Text = summary.DisplayText;
     }
 
     private void RemoveSelectedRepositories()
