@@ -112,7 +112,9 @@ public sealed class WindowsCredentialStoreTests
     [InlineData(null, "github.com")]
     [InlineData("", "github.com")]
     [InlineData("GitHub.EXAMPLE.com/", "github.example.com")]
+    [InlineData("github.enterprise.test/org/repo", "github.enterprise.test")]
     [InlineData("https://github.example.com/org/repo", "github.example.com")]
+    [InlineData("https://github.enterprise.test:8443/org", "github.enterprise.test:8443")]
     public void Normalize_host_accepts_urls_and_plain_hosts(string? host, string expected)
     {
         Assert.Equal(expected, GitHubHost.Normalize(host));
@@ -121,6 +123,7 @@ public sealed class WindowsCredentialStoreTests
     [Theory]
     [InlineData("github.com", "https://github.com/apps/repobar/installations/new")]
     [InlineData("GitHub.EXAMPLE.com/", "https://github.example.com/github-apps/repobar/installations/new")]
+    [InlineData("github.enterprise.test/org", "https://github.enterprise.test/github-apps/repobar/installations/new")]
     [InlineData("https://github.enterprise.test/org", "https://github.enterprise.test/github-apps/repobar/installations/new")]
     public void GitHubAppInstallUrl_uses_host_specific_install_path(string host, string expected)
     {

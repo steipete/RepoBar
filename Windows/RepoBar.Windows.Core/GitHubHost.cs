@@ -7,7 +7,11 @@ internal static class GitHubHost
         var host = string.IsNullOrWhiteSpace(value) ? "github.com" : value.Trim();
         if (Uri.TryCreate(host, UriKind.Absolute, out var uri) && !string.IsNullOrWhiteSpace(uri.Host))
         {
-            host = uri.Host;
+            host = uri.IsDefaultPort ? uri.Host : $"{uri.Host}:{uri.Port}";
+        }
+        else
+        {
+            host = host.Split(['/', '\\', '?', '#'], 2, StringSplitOptions.RemoveEmptyEntries)[0];
         }
 
         host = host.Trim().TrimEnd('/');
