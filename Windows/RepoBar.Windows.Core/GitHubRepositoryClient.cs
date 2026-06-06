@@ -13,6 +13,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
 
     private readonly HttpClient _httpClient;
     private readonly HttpClient _graphQlClient;
+    private readonly WindowsSettings _settings;
     private readonly string _host;
     private readonly GitHubResponseCache? _cache;
     private readonly WindowsGitHubArchiveReader? _archiveReader;
@@ -34,6 +35,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
         HttpMessageHandler graphQlMessageHandler,
         GitHubResponseCache? cache)
     {
+        _settings = settings;
         _host = GitHubHost.Normalize(settings.GitHubHost);
         var apiRoot = string.Equals(_host, "github.com", StringComparison.OrdinalIgnoreCase)
             ? "https://api.github.com/"
@@ -648,6 +650,11 @@ internal sealed class GitHubRepositoryClient : IDisposable
 
     private async Task<HeatmapStatus?> LoadHeatmapAsync(RepositoryRef repository, CancellationToken cancellationToken)
     {
+        if (_settings.HeatmapDisplay == WindowsHeatmapDisplay.Hidden)
+        {
+            return null;
+        }
+
         var json = await TryReadJsonAsync(
             $"repos/{Uri.EscapeDataString(repository.Owner)}/{Uri.EscapeDataString(repository.Name)}/stats/commit_activity",
             cancellationToken).ConfigureAwait(false);
@@ -666,7 +673,10 @@ internal sealed class GitHubRepositoryClient : IDisposable
         var activeWeeks = 0;
         DateTimeOffset? firstWeek = null;
         DateTimeOffset? lastWeek = null;
-        foreach (var week in document.RootElement.EnumerateArray())
+        var weeks = document.RootElement.EnumerateArray()
+            .Where(week => week.ValueKind == JsonValueKind.Object)
+            .ToArray();
+        foreach (var week in weeks.TakeLast(_settings.HeatmapSpan.Weeks()))
         {
             var weekTotal = week.TryGetProperty("total", out var total) && total.ValueKind == JsonValueKind.Number
                 ? total.GetInt32()
@@ -684,7 +694,7 @@ internal sealed class GitHubRepositoryClient : IDisposable
             }
         }
 
-        return new HeatmapStatus(totalCommits, activeWeeks, firstWeek, lastWeek);
+        return new HeatmapStatus(totalCommits, activeWeeks, firstWeek, lastWeek, _settings.HeatmapSpan);
     }
 
     private async Task<ChangelogStatus?> LoadChangelogAsync(
@@ -1057,11 +1067,11 @@ internal sealed record TrafficStatus(int? Views, int? UniqueViews, int? Clones, 
     }
 }
 
-internal sealed record HeatmapStatus(int TotalCommits, int ActiveWeeks, DateTimeOffset? FirstWeek, DateTimeOffset? LastWeek)
+internal sealed record HeatmapStatus(int TotalCommits, int ActiveWeeks, DateTimeOffset? FirstWeek, DateTimeOffset? LastWeek, WindowsHeatmapSpan Span)
 {
     public string DisplayText => LastWeek == null
         ? $"{TotalCommits:n0} commits"
-        : $"{TotalCommits:n0} commits across {ActiveWeeks:n0} active weeks";
+        : $"{TotalCommits:n0} commits across {ActiveWeeks:n0} active weeks ({Span.DisplayName()})";
 }
 
 internal sealed record ChangelogStatus(string Headline, string Url);

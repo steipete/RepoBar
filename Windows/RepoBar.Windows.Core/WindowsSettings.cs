@@ -24,6 +24,8 @@ internal sealed class WindowsSettings
     public string? GitHubArchiveDatabasePath { get; set; }
     public int RepositoryDisplayLimit { get; set; } = 6;
     public RepositorySortKey RepositorySortKey { get; set; } = RepositorySortKey.Activity;
+    public WindowsHeatmapDisplay HeatmapDisplay { get; set; } = WindowsHeatmapDisplay.RowAndSubmenu;
+    public WindowsHeatmapSpan HeatmapSpan { get; set; } = WindowsHeatmapSpan.TwelveMonths;
     public bool ShowRateLimits { get; set; } = true;
     public bool ShowContributionSummary { get; set; } = true;
     public bool EnableGitHubReferenceMonitor { get; set; }
@@ -99,6 +101,68 @@ internal enum RepositorySortKey
     PullRequests,
     Stars,
     Name,
+}
+
+internal enum WindowsHeatmapDisplay
+{
+    Hidden,
+    Row,
+    Submenu,
+    RowAndSubmenu,
+}
+
+internal enum WindowsHeatmapSpan
+{
+    OneMonth,
+    ThreeMonths,
+    SixMonths,
+    TwelveMonths,
+}
+
+internal static class WindowsHeatmapSettingsLabels
+{
+    public static string DisplayName(this WindowsHeatmapDisplay display)
+    {
+        return display switch
+        {
+            WindowsHeatmapDisplay.Hidden => "Hidden",
+            WindowsHeatmapDisplay.Row => "Tray row",
+            WindowsHeatmapDisplay.Submenu => "Repository submenu",
+            _ => "Tray row and submenu",
+        };
+    }
+
+    public static string DisplayName(this WindowsHeatmapSpan span)
+    {
+        return span switch
+        {
+            WindowsHeatmapSpan.OneMonth => "1 month",
+            WindowsHeatmapSpan.ThreeMonths => "3 months",
+            WindowsHeatmapSpan.SixMonths => "6 months",
+            _ => "12 months",
+        };
+    }
+
+    public static int Weeks(this WindowsHeatmapSpan span)
+    {
+        return span switch
+        {
+            WindowsHeatmapSpan.OneMonth => 4,
+            WindowsHeatmapSpan.ThreeMonths => 13,
+            WindowsHeatmapSpan.SixMonths => 26,
+            _ => 52,
+        };
+    }
+
+    public static bool ShowsRow(this WindowsHeatmapDisplay display)
+    {
+        return display is WindowsHeatmapDisplay.Row or WindowsHeatmapDisplay.RowAndSubmenu;
+    }
+
+    public static bool ShowsSubmenu(this WindowsHeatmapDisplay display)
+    {
+        return display is WindowsHeatmapDisplay.Submenu or WindowsHeatmapDisplay.RowAndSubmenu;
+    }
 }
 
 internal static class RepositorySortKeyLabels

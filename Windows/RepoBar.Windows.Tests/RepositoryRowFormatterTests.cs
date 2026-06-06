@@ -32,7 +32,7 @@ public sealed class RepositoryRowFormatterTests
             LatestRelease: new ReleaseStatus("v1.2.3", "https://github.example/releases/v1.2.3", DateTimeOffset.UtcNow),
             RecentLists: RecentRepositoryLists.Empty,
             Traffic: new TrafficStatus(42, 12, 8, 3),
-            Heatmap: new HeatmapStatus(99, 4, null, DateTimeOffset.UtcNow),
+            Heatmap: new HeatmapStatus(99, 4, null, DateTimeOffset.UtcNow, WindowsHeatmapSpan.TwelveMonths),
             Changelog: null,
             LocalStatus: local,
             ErrorMessage: null);
@@ -62,5 +62,32 @@ public sealed class RepositoryRowFormatterTests
             errorMessage: "boom"));
 
         Assert.StartsWith("[!] owner/broken", label);
+    }
+
+    [Fact]
+    public void BuildLabel_hides_heatmap_when_row_display_is_disabled()
+    {
+        var status = new RepositoryStatus(
+            new RepositoryRef { Owner = "owner", Name = "name" },
+            Stars: 0,
+            Forks: 0,
+            IssueCount: 1,
+            PullRequestCount: 2,
+            DefaultBranch: "main",
+            PushedAt: null,
+            LatestRun: null,
+            LatestRelease: null,
+            RecentLists: RecentRepositoryLists.Empty,
+            Traffic: null,
+            Heatmap: new HeatmapStatus(99, 4, null, DateTimeOffset.UtcNow, WindowsHeatmapSpan.ThreeMonths),
+            Changelog: null,
+            LocalStatus: null,
+            ErrorMessage: null);
+
+        var label = RepositoryRowFormatter.BuildLabel(
+            status,
+            new WindowsSettings { HeatmapDisplay = WindowsHeatmapDisplay.Submenu });
+
+        Assert.DoesNotContain("heatmap", label);
     }
 }

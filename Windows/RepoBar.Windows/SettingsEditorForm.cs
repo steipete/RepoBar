@@ -30,6 +30,8 @@ internal sealed class SettingsEditorForm : Form
     private readonly TextBox _gitHubArchiveDatabasePath = new();
     private readonly NumericUpDown _repositoryDisplayLimit = new();
     private readonly ComboBox _repositorySortKey = new();
+    private readonly ComboBox _heatmapDisplay = new();
+    private readonly ComboBox _heatmapSpan = new();
     private readonly CheckBox _showRateLimits = new();
     private readonly CheckBox _showContributionSummary = new();
     private readonly CheckBox _showActionsUsage = new();
@@ -104,6 +106,20 @@ internal sealed class SettingsEditorForm : Form
         _repositorySortKey.DisplayMember = nameof(RepositorySortKeyRow.DisplayName);
         _repositorySortKey.ValueMember = nameof(RepositorySortKeyRow.SortKey);
         _repositorySortKey.SelectedValue = settings.RepositorySortKey;
+        _heatmapDisplay.DropDownStyle = ComboBoxStyle.DropDownList;
+        _heatmapDisplay.DataSource = Enum.GetValues<WindowsHeatmapDisplay>()
+            .Select(HeatmapDisplayRow.FromDisplay)
+            .ToArray();
+        _heatmapDisplay.DisplayMember = nameof(HeatmapDisplayRow.DisplayName);
+        _heatmapDisplay.ValueMember = nameof(HeatmapDisplayRow.Display);
+        _heatmapDisplay.SelectedValue = settings.HeatmapDisplay;
+        _heatmapSpan.DropDownStyle = ComboBoxStyle.DropDownList;
+        _heatmapSpan.DataSource = Enum.GetValues<WindowsHeatmapSpan>()
+            .Select(HeatmapSpanRow.FromSpan)
+            .ToArray();
+        _heatmapSpan.DisplayMember = nameof(HeatmapSpanRow.DisplayName);
+        _heatmapSpan.ValueMember = nameof(HeatmapSpanRow.Span);
+        _heatmapSpan.SelectedValue = settings.HeatmapSpan;
         _showRateLimits.Checked = settings.ShowRateLimits;
         _showContributionSummary.Checked = settings.ShowContributionSummary;
         _showActionsUsage.Checked = settings.ShowActionsUsage;
@@ -174,6 +190,8 @@ internal sealed class SettingsEditorForm : Form
         AddLabeledControl(settingsGrid, "Archive DB path", _gitHubArchiveDatabasePath);
         AddLabeledControl(settingsGrid, "Repository limit", _repositoryDisplayLimit);
         AddLabeledControl(settingsGrid, "Repository sort", _repositorySortKey);
+        AddLabeledControl(settingsGrid, "Repository heatmap", _heatmapDisplay);
+        AddLabeledControl(settingsGrid, "Heatmap window", _heatmapSpan);
         AddLabeledControl(settingsGrid, "PR notification click", _pullRequestNotificationClickAction);
         AddLabeledControl(settingsGrid, "Personal access token", _personalAccessTokenTextBox);
         _credentialState.AutoSize = true;
@@ -523,6 +541,12 @@ internal sealed class SettingsEditorForm : Form
         settings.RepositorySortKey = _repositorySortKey.SelectedValue is RepositorySortKey sortKey
             ? sortKey
             : RepositorySortKey.Activity;
+        settings.HeatmapDisplay = _heatmapDisplay.SelectedValue is WindowsHeatmapDisplay heatmapDisplay
+            ? heatmapDisplay
+            : WindowsHeatmapDisplay.RowAndSubmenu;
+        settings.HeatmapSpan = _heatmapSpan.SelectedValue is WindowsHeatmapSpan heatmapSpan
+            ? heatmapSpan
+            : WindowsHeatmapSpan.TwelveMonths;
         settings.ShowRateLimits = _showRateLimits.Checked;
         settings.ShowContributionSummary = _showContributionSummary.Checked;
         settings.ShowActionsUsage = _showActionsUsage.Checked;
@@ -777,6 +801,22 @@ internal sealed class SettingsEditorForm : Form
         public static RepositorySortKeyRow FromSortKey(RepositorySortKey sortKey)
         {
             return new RepositorySortKeyRow(sortKey, sortKey.DisplayName());
+        }
+    }
+
+    private sealed record HeatmapDisplayRow(WindowsHeatmapDisplay Display, string DisplayName)
+    {
+        public static HeatmapDisplayRow FromDisplay(WindowsHeatmapDisplay display)
+        {
+            return new HeatmapDisplayRow(display, display.DisplayName());
+        }
+    }
+
+    private sealed record HeatmapSpanRow(WindowsHeatmapSpan Span, string DisplayName)
+    {
+        public static HeatmapSpanRow FromSpan(WindowsHeatmapSpan span)
+        {
+            return new HeatmapSpanRow(span, span.DisplayName());
         }
     }
 }

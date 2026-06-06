@@ -2,7 +2,7 @@ namespace RepoBar.Windows;
 
 internal static class RepositoryRowFormatter
 {
-    public static string BuildLabel(RepositoryStatus status)
+    public static string BuildLabel(RepositoryStatus status, WindowsSettings? settings = null)
     {
         var parts = new List<string>
         {
@@ -32,7 +32,7 @@ internal static class RepositoryRowFormatter
         {
             parts.Add($"traffic {status.Traffic.DisplayText}");
         }
-        if (status.Heatmap != null)
+        if (status.Heatmap != null && (settings?.HeatmapDisplay ?? WindowsHeatmapDisplay.RowAndSubmenu).ShowsRow())
         {
             parts.Add($"heatmap {status.Heatmap.TotalCommits:n0} commits");
         }

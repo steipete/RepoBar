@@ -398,7 +398,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
 
     private ToolStripMenuItem BuildRepositoryMenu(RepositoryStatus status)
     {
-        var item = new ToolStripMenuItem(RepositoryRowFormatter.BuildLabel(status));
+        var item = new ToolStripMenuItem(RepositoryRowFormatter.BuildLabel(status, _settingsStore.Settings));
 
         if (status.ErrorMessage != null)
         {
@@ -505,7 +505,7 @@ internal sealed class RepoBarTrayContext : ApplicationContext
                 }
                 break;
             case WindowsRepositoryMenuItem.Heatmap:
-                if (status.Heatmap != null)
+                if (status.Heatmap != null && _settingsStore.Settings.HeatmapDisplay.ShowsSubmenu())
                 {
                     items.Add(new ToolStripMenuItem($"Heatmap: {status.Heatmap.DisplayText}") { Enabled = false });
                 }

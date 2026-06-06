@@ -154,6 +154,88 @@ public sealed class GitHubResponseCacheTests
     }
 
     [Fact]
+    public async Task Repository_client_skips_heatmap_request_when_heatmap_is_hidden()
+    {
+        var heatmapCalls = 0;
+        var handler = new StubHandler(request =>
+        {
+            var path = request.RequestUri?.PathAndQuery ?? "";
+            if (path == "/repos/owner/name/stats/commit_activity")
+            {
+                heatmapCalls++;
+                return JsonResponse("""[]""");
+            }
+
+            return MinimalRepositoryResponse(path);
+        });
+        var settings = new WindowsSettings
+        {
+            EnableResponseCache = false,
+            HeatmapDisplay = WindowsHeatmapDisplay.Hidden,
+        };
+        using var client = new GitHubRepositoryClient(
+            settings,
+            token: null,
+            handler,
+            EmptyGraphQlHandler(),
+            cache: null);
+
+        var statuses = await client.LoadRepositoriesAsync(
+            [new RepositoryRef { Owner = "owner", Name = "name" }],
+            LocalGitIndex.Empty,
+            CancellationToken.None);
+
+        Assert.Single(statuses);
+        Assert.Null(statuses[0].Heatmap);
+        Assert.Equal(0, heatmapCalls);
+    }
+
+    [Fact]
+    public async Task Repository_client_limits_heatmap_to_configured_recent_window()
+    {
+        var handler = new StubHandler(request =>
+        {
+            var path = request.RequestUri?.PathAndQuery ?? "";
+            if (path == "/repos/owner/name/stats/commit_activity")
+            {
+                return JsonResponse("""
+                    [
+                      {"week": 1773014400, "total": 50},
+                      {"week": 1773619200, "total": 1},
+                      {"week": 1774224000, "total": 1},
+                      {"week": 1774828800, "total": 1},
+                      {"week": 1775433600, "total": 1}
+                    ]
+                    """);
+            }
+
+            return MinimalRepositoryResponse(path);
+        });
+        var settings = new WindowsSettings
+        {
+            EnableResponseCache = false,
+            HeatmapSpan = WindowsHeatmapSpan.OneMonth,
+        };
+        using var client = new GitHubRepositoryClient(
+            settings,
+            token: null,
+            handler,
+            EmptyGraphQlHandler(),
+            cache: null);
+
+        var statuses = await client.LoadRepositoriesAsync(
+            [new RepositoryRef { Owner = "owner", Name = "name" }],
+            LocalGitIndex.Empty,
+            CancellationToken.None);
+
+        Assert.Single(statuses);
+        Assert.Equal(4, statuses[0].Heatmap?.TotalCommits);
+        Assert.Equal(4, statuses[0].Heatmap?.ActiveWeeks);
+        Assert.Equal(WindowsHeatmapSpan.OneMonth, statuses[0].Heatmap?.Span);
+        Assert.Contains("1 month", statuses[0].Heatmap?.DisplayText);
+    }
+
+    [Fact]
     public void Rate_limit_snapshot_detects_active_blockers()
     {
         var reset = DateTimeOffset.UtcNow.AddMinutes(20);
@@ -184,6 +266,45 @@ public sealed class GitHubResponseCacheTests
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json"),
         };
+    }
+
+    private static HttpResponseMessage MinimalRepositoryResponse(string path)
+    {
+        return path switch
+        {
+            "/repos/owner/name" => JsonResponse("""
+                {
+                  "open_issues_count": 0,
+                  "stargazers_count": 0,
+                  "forks_count": 0,
+                  "default_branch": "main",
+                  "pushed_at": "2026-06-01T00:00:00Z"
+                }
+                """),
+            "/repos/owner/name/actions/runs?branch=main&per_page=1" => JsonResponse("""{"workflow_runs":[]}"""),
+            "/repos/owner/name/actions/runs?per_page=5" => JsonResponse("""{"workflow_runs":[]}"""),
+            "/repos/owner/name/releases/latest" => new HttpResponseMessage(HttpStatusCode.NotFound),
+            "/repos/owner/name/traffic/views" => new HttpResponseMessage(HttpStatusCode.NotFound),
+            "/repos/owner/name/traffic/clones" => new HttpResponseMessage(HttpStatusCode.NotFound),
+            "/repos/owner/name/contents/CHANGELOG.md?ref=main" => new HttpResponseMessage(HttpStatusCode.NotFound),
+            "/repos/owner/name/contents/CHANGELOG?ref=main" => new HttpResponseMessage(HttpStatusCode.NotFound),
+            _ => JsonResponse("[]"),
+        };
+    }
+
+    private static StubHandler EmptyGraphQlHandler()
+    {
+        return new StubHandler(_ => JsonResponse("""
+            {
+              "data": {
+                "repository": {
+                  "discussions": {
+                    "nodes": []
+                  }
+                }
+              }
+            }
+            """));
     }
 
     private static HttpResponseMessage ChangelogResponse(string markdown)

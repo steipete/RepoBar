@@ -7,6 +7,7 @@ The Windows app currently provides:
 - a single-instance tray process
 - left-click or right-click taskbar menu access
 - configured repository status rows with issue/PR counts, CI, release, stars/forks, local sync, traffic, activity, and heatmap signals
+- configurable repository heatmap placement and activity window
 - optional local project discovery
 - local branch, upstream, ahead/behind, dirty-file, and worktree state
 - local fetch, fast-forward sync, branch switching, worktree creation, and worktree navigation actions
@@ -105,6 +106,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
   "gitHubArchiveDatabasePath": "%APPDATA%\\RepoBar\\Archives\\example.sqlite",
   "repositoryDisplayLimit": 6,
   "repositorySortKey": "activity",
+  "heatmapDisplay": "rowAndSubmenu",
+  "heatmapSpan": "twelveMonths",
   "showRateLimits": true,
   "showContributionSummary": true,
   "enableGitHubReferenceMonitor": false,
@@ -163,6 +166,8 @@ Use **Preferences** from the tray menu to choose repositories and local project 
 ```
 
 Use **Repository limit** to choose how many refreshed repositories appear in the tray menu. Use **Repository sort** to order normal visible repositories by latest activity, issues, PRs, stars, or name; pinned repositories stay ahead of the normal sorted list.
+
+Use **Repository heatmap** to hide heatmap summaries or show them in the tray row, repository submenu, or both. Use **Heatmap window** to choose the GitHub commit-activity window used for repository heatmap totals: 1, 3, 6, or 12 months. Hidden heatmaps skip the GitHub commit-activity request.
 
 Use **Customize menu** in Preferences to hide or reorder main tray actions and repository submenu entries. Preferences and Quit remain required so a customized menu cannot trap the app without settings or exit controls.
 
