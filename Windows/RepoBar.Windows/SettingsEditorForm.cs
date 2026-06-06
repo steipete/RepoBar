@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -375,8 +376,12 @@ internal sealed class SettingsEditorForm : Form
         clearTokenButton.Click += (_, _) => ClearCredentialToken();
         var checkTokenButton = new Button { Text = "Check token" };
         checkTokenButton.Click += async (_, _) => await CheckTokenAsync();
+        var createTokenButton = new Button { Text = "Create PAT" };
+        createTokenButton.Click += (_, _) => OpenExternalUrl(CreateTokenUrl());
         var signInButton = new Button { Text = "Sign in with GitHub" };
         signInButton.Click += async (_, _) => await SignInWithGitHubAsync();
+        var installAppButton = new Button { Text = "Install GitHub App" };
+        installAppButton.Click += (_, _) => OpenExternalUrl("https://github.com/apps/repobar/installations/new");
         var refreshOAuthButton = new Button { Text = "Refresh OAuth" };
         refreshOAuthButton.Click += async (_, _) => await RefreshOAuthAsync();
         var clearOAuthButton = new Button { Text = "Clear OAuth" };
@@ -391,7 +396,9 @@ internal sealed class SettingsEditorForm : Form
         footer.Controls.Add(addAccountButton);
         footer.Controls.Add(clearOAuthButton);
         footer.Controls.Add(refreshOAuthButton);
+        footer.Controls.Add(installAppButton);
         footer.Controls.Add(signInButton);
+        footer.Controls.Add(createTokenButton);
         footer.Controls.Add(checkTokenButton);
         footer.Controls.Add(clearTokenButton);
         footer.Controls.Add(removeButton);
@@ -804,6 +811,17 @@ internal sealed class SettingsEditorForm : Form
         return Environment.GetEnvironmentVariable("REPOBAR_GITHUB_TOKEN") ??
             Environment.GetEnvironmentVariable("GITHUB_TOKEN") ??
             Environment.GetEnvironmentVariable("GH_TOKEN");
+    }
+
+    private string CreateTokenUrl()
+    {
+        var account = CurrentSettingsSnapshot().GetActiveAccount();
+        return $"https://{GitHubHost.Normalize(account.GitHubHost)}/settings/tokens/new?scopes=repo,read:org&description=RepoBar";
+    }
+
+    private static void OpenExternalUrl(string url)
+    {
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
     }
 
     private void SaveCredentialTokenIfNeeded()
