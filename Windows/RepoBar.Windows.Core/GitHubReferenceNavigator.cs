@@ -221,6 +221,7 @@ internal static partial class GitHubReferenceNavigator
     {
         string? headingRepository = null;
         var headingIndent = 0;
+        var previousHeadingChildHadCommitContext = false;
         var lineStart = 0;
         while (lineStart <= text.Length)
         {
@@ -253,6 +254,26 @@ internal static partial class GitHubReferenceNavigator
 
             if (!string.IsNullOrWhiteSpace(headingRepository) && indent > headingIndent)
             {
+                var headingChildHasCommitContext = HasCommitContext(line);
+                if (previousHeadingChildHadCommitContext || headingChildHasCommitContext)
+                {
+                    foreach (Match match in CommitHashRegex().Matches(line))
+                    {
+                        var index = lineStart + match.Index;
+                        AddCandidateIfUnclaimed(
+                            matches,
+                            claimedSpans,
+                            index,
+                            match.Length,
+                            new GitHubReferenceMatch(
+                                headingRepository,
+                                0,
+                                "commit",
+                                match.Value,
+                                Identifier: NormalizeHash(match.Groups["hash"].Value)));
+                    }
+                }
+
                 foreach (Match match in BareNumberRegex().Matches(line))
                 {
                     var index = lineStart + match.Index;
@@ -267,10 +288,13 @@ internal static partial class GitHubReferenceNavigator
                             "issues",
                             match.Value));
                 }
+
+                previousHeadingChildHadCommitContext = headingChildHasCommitContext;
             }
             else
             {
                 headingRepository = null;
+                previousHeadingChildHadCommitContext = false;
             }
 
             var heading = RepositoryCountHeadingRegex().Match(line);
@@ -278,6 +302,7 @@ internal static partial class GitHubReferenceNavigator
             {
                 headingRepository = $"{heading.Groups["owner"].Value}/{heading.Groups["repo"].Value}";
                 headingIndent = indent;
+                previousHeadingChildHadCommitContext = false;
                 claimedSpans.Add(new RangeSpan(lineStart + heading.Index, lineStart + heading.Index + heading.Length));
             }
 
@@ -430,6 +455,12 @@ internal static partial class GitHubReferenceNavigator
     private static bool HasCommitContext(string text, Match match)
     {
         return string.Equals(text.Trim(), match.Value, StringComparison.OrdinalIgnoreCase) ||
+            HasCommitContext(text);
+    }
+
+    private static bool HasCommitContext(string text)
+    {
+        return
             text.Contains("commit", StringComparison.OrdinalIgnoreCase) ||
             text.Contains("hash", StringComparison.OrdinalIgnoreCase) ||
             text.Contains("sha", StringComparison.OrdinalIgnoreCase);

@@ -461,6 +461,58 @@ public sealed class GitHubReferenceNavigatorTests
     }
 
     [Fact]
+    public void FindReferences_resolves_repository_heading_child_commit_hashes()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 0 issues / 1 PR
+              commit 4992546
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/Tachikoma", reference.RepositoryFullName);
+        Assert.Equal("commit", reference.Kind);
+        Assert.Equal("4992546", reference.ReferenceValue);
+    }
+
+    [Fact]
+    public void FindReferences_carries_repository_heading_commit_context_across_child_lines()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 0 issues / 1 PR
+              commit:
+              4992546
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/Tachikoma", reference.RepositoryFullName);
+        Assert.Equal("commit", reference.Kind);
+        Assert.Equal("4992546", reference.ReferenceValue);
+    }
+
+    [Fact]
+    public void FindReferences_does_not_parse_heading_child_hex_words_without_commit_context()
+    {
+        var references = GitHubReferenceNavigator.FindReferences(
+            """
+            - openclaw/Tachikoma: 1 issue / 1 PR
+              #18 defaced parser.
+            """,
+            "github.com",
+            "steipete/RepoBar");
+
+        var reference = Assert.Single(references);
+        Assert.Equal("openclaw/Tachikoma", reference.RepositoryFullName);
+        Assert.Equal(18L, reference.Number);
+        Assert.Equal("issues", reference.Kind);
+    }
+
+    [Fact]
     public void FindReferences_stops_repository_heading_context_at_unindented_lines()
     {
         var references = GitHubReferenceNavigator.FindReferences(
