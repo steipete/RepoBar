@@ -563,7 +563,6 @@ struct IssueNavigatorView: View {
 
         let pending = matches.filter {
             $0.isResolved
-                && settings.includes(kind: $0.kind)
                 && self.aiSummariesByURL[$0.url]?.signature != Self.aiSummarySignature(for: $0, settings: settings)
         }
         guard pending.isEmpty == false else { return }
@@ -611,7 +610,6 @@ struct IssueNavigatorView: View {
     private static func aiSummarySignature(for match: GitHubReferenceMatch, settings: AISummarySettings) -> String {
         [
             settings.model,
-            settings.scope.rawValue,
             match.updatedAt.timeIntervalSinceReferenceDate.description,
             match.title,
             match.bodyPreview ?? "",

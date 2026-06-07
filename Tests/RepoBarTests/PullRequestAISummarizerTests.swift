@@ -16,24 +16,23 @@ struct PullRequestAISummarizerTests {
     }
 
     @Test
-    func `legacy enabled AI summary settings stay pull request scoped`() throws {
+    func `legacy enabled AI summary settings decode without scope`() throws {
         let data = try JSONEncoder().encode(LegacyAISummarySettings(enabled: true, model: "chat-latest"))
 
         let settings = try JSONDecoder().decode(AISummarySettings.self, from: data)
 
-        #expect(settings.scope == .pullRequests)
-        #expect(settings.includes(kind: .pullRequest))
-        #expect(settings.includes(kind: .issue) == false)
+        #expect(settings.enabled)
+        #expect(settings.model == "chat-latest")
     }
 
     @Test
-    func `legacy disabled AI summary settings default to all items for later opt in`() throws {
+    func `legacy disabled AI summary settings decode without scope`() throws {
         let data = try JSONEncoder().encode(LegacyAISummarySettings(enabled: false, model: "chat-latest"))
 
         let settings = try JSONDecoder().decode(AISummarySettings.self, from: data)
 
-        #expect(settings.scope == .allItems)
-        #expect(settings.includes(kind: .issue))
+        #expect(settings.enabled == false)
+        #expect(settings.model == "chat-latest")
     }
 
     @Test

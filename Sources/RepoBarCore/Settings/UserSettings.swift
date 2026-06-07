@@ -308,7 +308,6 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
 
     public var enabled = false
     public var model = defaultModel
-    public var scope = AISummaryScope.allItems
 
     public init() {}
 
@@ -322,7 +321,6 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case enabled
         case model
-        case scope
     }
 
     public init(from decoder: Decoder) throws {
@@ -330,30 +328,6 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
         self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
         let decodedModel = try container.decodeIfPresent(String.self, forKey: .model) ?? Self.defaultModel
         self.model = Self.normalizedModel(decodedModel)
-        self.scope = try container.decodeIfPresent(AISummaryScope.self, forKey: .scope) ?? (self.enabled ? .pullRequests : .allItems)
-    }
-
-    public func includes(kind: GitHubReferenceKind) -> Bool {
-        switch self.scope {
-        case .pullRequests:
-            kind == .pullRequest
-        case .allItems:
-            true
-        }
-    }
-}
-
-public enum AISummaryScope: String, CaseIterable, Codable, Sendable {
-    case pullRequests = "pull-requests"
-    case allItems = "all-items"
-
-    public var label: String {
-        switch self {
-        case .pullRequests:
-            "Pull requests"
-        case .allItems:
-            "All items"
-        }
     }
 }
 

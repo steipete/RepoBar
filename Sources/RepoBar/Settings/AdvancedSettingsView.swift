@@ -198,56 +198,54 @@ struct AdvancedSettingsView: View {
                         self.appState.persistSettings()
                     }
 
-                LabeledContent("Model") {
+                HStack {
+                    Text("Model")
+                    Spacer()
                     Picker("", selection: self.aiSummaryModelBinding) {
                         ForEach(AISummarySettings.modelOptions) { option in
                             Text(option.label).tag(option.id)
                         }
                     }
+                    .pickerStyle(.menu)
                     .labelsHidden()
-                    .frame(width: 190)
                 }
 
-                LabeledContent("Scope") {
-                    Picker("", selection: self.$session.settings.aiSummaries.scope) {
-                        ForEach(AISummaryScope.allCases, id: \.self) { scope in
-                            Text(scope.label).tag(scope)
-                        }
+                HStack(spacing: 8) {
+                    Text("OpenAI API key")
+                        .fixedSize()
+                    Spacer(minLength: 12)
+                    SecureField("API key", text: self.$openAIAPIKey)
+                        .frame(width: 240)
+                        .layoutPriority(1)
+                    Button {
+                        self.saveOpenAIAPIKey()
+                    } label: {
+                        Image(systemName: "tray.and.arrow.down")
                     }
-                    .labelsHidden()
-                    .frame(width: 190)
-                    .onChange(of: self.session.settings.aiSummaries.scope) { _, _ in
-                        self.appState.persistSettings()
-                    }
-                }
-
-                LabeledContent("OpenAI API key") {
-                    HStack(spacing: 8) {
-                        SecureField("API key", text: self.$openAIAPIKey)
-                            .frame(width: 190)
-                        Button("Save") {
-                            self.saveOpenAIAPIKey()
-                        }
-                        .disabled(self.openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        Button("Clear") {
-                            self.clearOpenAIAPIKey()
-                        }
-                    }
-                }
-
-                LabeledContent("Connection") {
+                    .buttonStyle(.borderless)
+                    .disabled(self.openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .help("Save API key")
                     Button {
                         Task { await self.testAISummary() }
                     } label: {
                         if self.isTestingAISummary {
                             ProgressView()
                                 .controlSize(.small)
-                                .frame(width: 38)
+                                .frame(width: 16, height: 16)
                         } else {
-                            Text("Test")
+                            Image(systemName: "play.fill")
                         }
                     }
+                    .buttonStyle(.borderless)
                     .disabled(self.isTestingAISummary)
+                    .help("Test AI summaries")
+                    Button {
+                        self.clearOpenAIAPIKey()
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Clear stored API key")
                 }
 
                 Text(self.openAIKeyStatus)
