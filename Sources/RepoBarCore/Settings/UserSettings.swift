@@ -299,23 +299,71 @@ public struct GitHubReferenceMonitorSettings: Equatable, Codable, Sendable {
 
 public struct AISummarySettings: Equatable, Codable, Sendable {
     public static let defaultModel = "chat-latest"
+    public static let modelOptions: [AISummaryModelOption] = [
+        AISummaryModelOption(id: "chat-latest", label: "Chat latest"),
+        AISummaryModelOption(id: "gpt-5.5", label: "GPT-5.5"),
+        AISummaryModelOption(id: "gpt-5.4", label: "GPT-5.4"),
+        AISummaryModelOption(id: "gpt-5.4-mini", label: "GPT-5.4 mini")
+    ]
 
     public var enabled = false
     public var model = defaultModel
+    public var scope = AISummaryScope.allItems
 
     public init() {}
+
+    public static func normalizedModel(_ model: String) -> String {
+        let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return Self.defaultModel }
+
+        return Self.modelOptions.first { $0.id == trimmed }?.id ?? Self.defaultModel
+    }
 
     enum CodingKeys: String, CodingKey {
         case enabled
         case model
+        case scope
     }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
         let decodedModel = try container.decodeIfPresent(String.self, forKey: .model) ?? Self.defaultModel
-        let trimmed = decodedModel.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.model = trimmed.isEmpty ? Self.defaultModel : trimmed
+        self.model = Self.normalizedModel(decodedModel)
+        self.scope = try container.decodeIfPresent(AISummaryScope.self, forKey: .scope) ?? (self.enabled ? .pullRequests : .allItems)
+    }
+
+    public func includes(kind: GitHubReferenceKind) -> Bool {
+        switch self.scope {
+        case .pullRequests:
+            kind == .pullRequest
+        case .allItems:
+            true
+        }
+    }
+}
+
+public enum AISummaryScope: String, CaseIterable, Codable, Sendable {
+    case pullRequests = "pull-requests"
+    case allItems = "all-items"
+
+    public var label: String {
+        switch self {
+        case .pullRequests:
+            "Pull requests"
+        case .allItems:
+            "All items"
+        }
+    }
+}
+
+public struct AISummaryModelOption: Equatable, Identifiable, Sendable {
+    public let id: String
+    public let label: String
+
+    public init(id: String, label: String) {
+        self.id = id
+        self.label = label
     }
 }
 

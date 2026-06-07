@@ -4,6 +4,7 @@
 
 - Add optional OpenAI-powered PR summaries to the Issue Navigator sidebar using Tachikoma `chat-latest`, with settings for model and API key storage.
 - Give AI PR summaries more Issue Navigator sidebar room and tune generated summary length to the visible row budget.
+- Summarize all resolved Issue Navigator items with AI, add an AI settings test button, and replace the model text field with a fixed OpenAI model selector.
 - Keep the separate Issue Navigator window from auto-scrolling embedded GitHub issue previews while preserving the menu dropdown preview scroll offset.
 - Keep Issue Navigator reference clicks from being overwritten by clipboard seeding, and show unresolved GitHub metadata as the reference label instead of "preview unavailable."
 - Keep the Repositories settings table from rendering duplicate rows when the same repository is both pinned and hidden (thanks @devYRPauli). (#73)

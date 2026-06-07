@@ -9,6 +9,8 @@ struct AdvancedSettingsView: View {
     @State private var cliStatus: String?
     @State private var openAIAPIKey = ""
     @State private var openAIKeyStatus = OpenAIAPIKeySource.missing.label
+    @State private var isTestingAISummary = false
+    @State private var aiSummaryTestStatus: String?
 
     var body: some View {
         Form {
@@ -191,20 +193,37 @@ struct AdvancedSettingsView: View {
             }
 
             Section {
-                Toggle("Summarize Issue Navigator PRs", isOn: self.$session.settings.aiSummaries.enabled)
+                Toggle("Summarize Issue Navigator items", isOn: self.$session.settings.aiSummaries.enabled)
                     .onChange(of: self.session.settings.aiSummaries.enabled) { _, _ in
                         self.appState.persistSettings()
                     }
 
                 LabeledContent("Model") {
-                    TextField("", text: self.aiSummaryModelBinding)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 170)
+                    Picker("", selection: self.aiSummaryModelBinding) {
+                        ForEach(AISummarySettings.modelOptions) { option in
+                            Text(option.label).tag(option.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 190)
+                }
+
+                LabeledContent("Scope") {
+                    Picker("", selection: self.$session.settings.aiSummaries.scope) {
+                        ForEach(AISummaryScope.allCases, id: \.self) { scope in
+                            Text(scope.label).tag(scope)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(width: 190)
+                    .onChange(of: self.session.settings.aiSummaries.scope) { _, _ in
+                        self.appState.persistSettings()
+                    }
                 }
 
                 LabeledContent("OpenAI API key") {
                     HStack(spacing: 8) {
-                        SecureField("OPENAI_API_KEY", text: self.$openAIAPIKey)
+                        SecureField("API key", text: self.$openAIAPIKey)
                             .frame(width: 190)
                         Button("Save") {
                             self.saveOpenAIAPIKey()
@@ -216,9 +235,29 @@ struct AdvancedSettingsView: View {
                     }
                 }
 
+                LabeledContent("Connection") {
+                    Button {
+                        Task { await self.testAISummary() }
+                    } label: {
+                        if self.isTestingAISummary {
+                            ProgressView()
+                                .controlSize(.small)
+                                .frame(width: 38)
+                        } else {
+                            Text("Test")
+                        }
+                    }
+                    .disabled(self.isTestingAISummary)
+                }
+
                 Text(self.openAIKeyStatus)
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                if let aiSummaryTestStatus {
+                    Text(aiSummaryTestStatus)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             } header: {
                 Text("AI Summaries")
             } footer: {
@@ -455,10 +494,9 @@ struct AdvancedSettingsView: View {
 
     private var aiSummaryModelBinding: Binding<String> {
         Binding(
-            get: { self.session.settings.aiSummaries.model },
+            get: { AISummarySettings.normalizedModel(self.session.settings.aiSummaries.model) },
             set: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                self.session.settings.aiSummaries.model = trimmed.isEmpty ? AISummarySettings.defaultModel : trimmed
+                self.session.settings.aiSummaries.model = AISummarySettings.normalizedModel(newValue)
                 self.appState.persistSettings()
             }
         )
@@ -482,6 +520,25 @@ struct AdvancedSettingsView: View {
         self.appState.clearOpenAIAPIKey()
         self.openAIAPIKey = ""
         self.refreshOpenAIKeyStatus()
+    }
+
+    private func testAISummary() async {
+        self.isTestingAISummary = true
+        self.aiSummaryTestStatus = nil
+        defer { self.isTestingAISummary = false }
+
+        do {
+            let typedKey = self.openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines)
+            let keyOverride = typedKey.isEmpty ? nil : typedKey
+            let summary = try await PullRequestAISummarizer().test(
+                settings: self.session.settings.aiSummaries,
+                apiKeyOverride: keyOverride
+            )
+            let suffix = typedKey.isEmpty ? "" : " Typed key was not saved."
+            self.aiSummaryTestStatus = "Test passed: \(summary)\(suffix)"
+        } catch {
+            self.aiSummaryTestStatus = "Test failed: \(error.localizedDescription)"
+        }
     }
 
     private func pickProjectFolder() {

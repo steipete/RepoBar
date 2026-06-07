@@ -23,6 +23,7 @@ struct SettingsCommandTests {
         #expect(lines.contains("PR notification click: Issue Navigator"))
         #expect(lines.contains("AI summaries: on"))
         #expect(lines.contains("AI summary model: chat-latest"))
+        #expect(lines.contains("AI summary scope: All items"))
     }
 
     @Test
@@ -51,10 +52,29 @@ struct SettingsCommandTests {
         var settings = UserSettings()
 
         #expect(try applySetting(.aiSummaries, value: "on", settings: &settings) == "on")
-        #expect(try applySetting(.aiSummaryModel, value: "chat-latest", settings: &settings) == "chat-latest")
+        #expect(try applySetting(.aiSummaryModel, value: "gpt-5.5", settings: &settings) == "gpt-5.5")
+        #expect(try applySetting(.aiSummaryScope, value: "all-items", settings: &settings) == "All items")
 
         #expect(settings.aiSummaries.enabled)
-        #expect(settings.aiSummaries.model == "chat-latest")
+        #expect(settings.aiSummaries.model == "gpt-5.5")
+        #expect(settings.aiSummaries.scope == .allItems)
+    }
+
+    @Test
+    func `AI summary model setting normalizes unsupported values`() throws {
+        var settings = UserSettings()
+
+        #expect(try applySetting(.aiSummaryModel, value: "custom-model", settings: &settings) == "chat-latest")
+        #expect(settings.aiSummaries.model == AISummarySettings.defaultModel)
+    }
+
+    @Test
+    func `AI summary scope setting rejects unknown values`() {
+        var settings = UserSettings()
+
+        #expect(throws: ValidationError.self) {
+            _ = try applySetting(.aiSummaryScope, value: "everything-private", settings: &settings)
+        }
     }
 
     @Test

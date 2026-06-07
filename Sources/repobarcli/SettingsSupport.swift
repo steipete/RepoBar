@@ -38,6 +38,7 @@ enum SettingsKey: String, CaseIterable {
     case localShowDirtyFiles = "local-show-dirty-files"
     case aiSummaries = "ai-summaries"
     case aiSummaryModel = "ai-summary-model"
+    case aiSummaryScope = "ai-summary-scope"
     case launchAtLogin = "launch-at-login"
 
     init?(argument: String) {
@@ -105,6 +106,8 @@ enum SettingsKey: String, CaseIterable {
             self = .aiSummaries
         case "ai-summary-model", "ai-model", "summary-model":
             self = .aiSummaryModel
+        case "ai-summary-scope", "ai-scope", "summary-scope":
+            self = .aiSummaryScope
         case "launch-at-login":
             self = .launchAtLogin
         default:
@@ -266,9 +269,20 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         settings.aiSummaries.enabled = flag
         return flag ? "on" : "off"
     case .aiSummaryModel:
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        settings.aiSummaries.model = trimmed.isEmpty ? AISummarySettings.defaultModel : trimmed
+        settings.aiSummaries.model = AISummarySettings.normalizedModel(value)
         return settings.aiSummaries.model
+    case .aiSummaryScope:
+        let scope: AISummaryScope
+        switch value.lowercased() {
+        case "pull-requests", "pullrequests", "prs", "pr":
+            scope = .pullRequests
+        case "all-items", "allitems", "items", "all":
+            scope = .allItems
+        default:
+            throw ValidationError("Invalid ai-summary-scope value: \(value)")
+        }
+        settings.aiSummaries.scope = scope
+        return scope.label
     case .launchAtLogin:
         let flag = try parseBool(value)
         settings.launchAtLogin = flag
@@ -310,6 +324,7 @@ func settingsSummaryLines(settings: UserSettings) -> [String] {
         "Local show dirty files: \(settings.localProjects.showDirtyFilesInMenu ? "on" : "off")",
         "AI summaries: \(settings.aiSummaries.enabled ? "on" : "off")",
         "AI summary model: \(settings.aiSummaries.model)",
+        "AI summary scope: \(settings.aiSummaries.scope.label)",
         "GitHub archives: \(archives.isEmpty ? "-" : archives.map(\.name).joined(separator: ", "))",
         "Archive fallback on rate limit: \(settings.githubArchives.preferArchiveWhenRateLimited ? "on" : "off")",
         "Launch at login: \(settings.launchAtLogin ? "on" : "off")",
