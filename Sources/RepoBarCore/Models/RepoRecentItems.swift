@@ -74,6 +74,7 @@ public struct RepoPullRequestSummary: Sendable, Hashable {
     public let labels: [RepoIssueLabel]
     public let headRefName: String?
     public let baseRefName: String?
+    public let bodyPreview: String?
     public let requestedReviewerLogins: [String]
     public let requestedTeamNames: [String]
 
@@ -93,6 +94,7 @@ public struct RepoPullRequestSummary: Sendable, Hashable {
         labels: [RepoIssueLabel],
         headRefName: String?,
         baseRefName: String?,
+        bodyPreview: String? = nil,
         requestedReviewerLogins: [String] = [],
         requestedTeamNames: [String] = []
     ) {
@@ -111,6 +113,7 @@ public struct RepoPullRequestSummary: Sendable, Hashable {
         self.labels = labels
         self.headRefName = headRefName
         self.baseRefName = baseRefName
+        self.bodyPreview = bodyPreview
         self.requestedReviewerLogins = requestedReviewerLogins
         self.requestedTeamNames = requestedTeamNames
     }

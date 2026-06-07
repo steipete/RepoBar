@@ -392,7 +392,7 @@ struct LoginCommand: CommanderRunnableCommand {
             throw ValidationError("--loopback-port must be between 1 and 65535")
         }
 
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         let rawHost: URL = if let host {
             try parseHost(host)
@@ -487,12 +487,11 @@ struct LogoutCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
 
         if self.all {
-            TokenStore.shared.clear()
-            TokenStore.shared.clearPAT()
+            TokenStore.shared.clearAllCredentials()
             let scopedAccountIDs = Set(settings.accounts.map(\.id))
                 .union((try? TokenStore.shared.allAccountIDs()) ?? [])
             for accountID in scopedAccountIDs {
@@ -507,7 +506,6 @@ struct LogoutCommand: CommanderRunnableCommand {
 
         if settings.accounts.isEmpty {
             TokenStore.shared.clear()
-            TokenStore.shared.clearPAT()
             print("Logged out.")
             return
         }
@@ -547,7 +545,7 @@ struct ImportGHTokenCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         let rawHost: URL = if let host {
             try parseHost(host)
@@ -656,7 +654,7 @@ struct StatusCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         // When the user explicitly targets an account, read account-scoped tokens.
         if self.account != nil || settings.accounts.isEmpty == false {
             let resolved: Account
@@ -728,7 +726,7 @@ struct StatusCommand: CommanderRunnableCommand {
             return
         }
 
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let host = (settings.enterpriseHost ?? settings.githubHost).absoluteString
         let now = Date()
         let expiresAt = tokens.expiresAt

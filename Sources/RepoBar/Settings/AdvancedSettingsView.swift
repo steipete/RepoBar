@@ -7,6 +7,8 @@ struct AdvancedSettingsView: View {
     let appState: AppState
     @State private var isInstallingCLI = false
     @State private var cliStatus: String?
+    @State private var openAIAPIKey = ""
+    @State private var openAIKeyStatus = OpenAIAPIKeySource.missing.label
 
     var body: some View {
         Form {
@@ -189,6 +191,41 @@ struct AdvancedSettingsView: View {
             }
 
             Section {
+                Toggle("Summarize Issue Navigator PRs", isOn: self.$session.settings.aiSummaries.enabled)
+                    .onChange(of: self.session.settings.aiSummaries.enabled) { _, _ in
+                        self.appState.persistSettings()
+                    }
+
+                LabeledContent("Model") {
+                    TextField("", text: self.aiSummaryModelBinding)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 170)
+                }
+
+                LabeledContent("OpenAI API key") {
+                    HStack(spacing: 8) {
+                        SecureField("OPENAI_API_KEY", text: self.$openAIAPIKey)
+                            .frame(width: 190)
+                        Button("Save") {
+                            self.saveOpenAIAPIKey()
+                        }
+                        .disabled(self.openAIAPIKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        Button("Clear") {
+                            self.clearOpenAIAPIKey()
+                        }
+                    }
+                }
+
+                Text(self.openAIKeyStatus)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } header: {
+                Text("AI Summaries")
+            } footer: {
+                Text("Uses the stored key first, then OPENAI_API_KEY or REPOBAR_OPENAI_API_KEY from the app environment.")
+            }
+
+            Section {
                 HStack(spacing: 10) {
                     Button {
                         Task { await self.installCLI() }
@@ -239,6 +276,7 @@ struct AdvancedSettingsView: View {
             self.appState.updateGitHubReferenceMonitor()
             self.appState.refreshLocalProjects()
             self.cliStatus = self.currentCLIStatus()
+            self.refreshOpenAIKeyStatus()
         }
     }
 
@@ -413,6 +451,37 @@ struct AdvancedSettingsView: View {
                 self.appState.persistSettings()
             }
         )
+    }
+
+    private var aiSummaryModelBinding: Binding<String> {
+        Binding(
+            get: { self.session.settings.aiSummaries.model },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                self.session.settings.aiSummaries.model = trimmed.isEmpty ? AISummarySettings.defaultModel : trimmed
+                self.appState.persistSettings()
+            }
+        )
+    }
+
+    private func refreshOpenAIKeyStatus() {
+        self.openAIKeyStatus = self.appState.openAIAPIKeySource().label
+    }
+
+    private func saveOpenAIAPIKey() {
+        do {
+            try self.appState.saveOpenAIAPIKey(self.openAIAPIKey)
+            self.openAIAPIKey = ""
+            self.refreshOpenAIKeyStatus()
+        } catch {
+            self.openAIKeyStatus = "Save failed: \(error.localizedDescription)"
+        }
+    }
+
+    private func clearOpenAIAPIKey() {
+        self.appState.clearOpenAIAPIKey()
+        self.openAIAPIKey = ""
+        self.refreshOpenAIKeyStatus()
     }
 
     private func pickProjectFolder() {

@@ -2,6 +2,10 @@ import Commander
 import Foundation
 import RepoBarCore
 
+func cliSettingsStore() -> SettingsStore {
+    SettingsStore(defaults: SettingsStore.mainAppDefaults())
+}
+
 enum SettingsKey: String, CaseIterable {
     case refreshInterval = "refresh-interval"
     case repoLimit = "repo-limit"
@@ -32,6 +36,8 @@ enum SettingsKey: String, CaseIterable {
     case localPreferredTerminal = "local-preferred-terminal"
     case localGhosttyMode = "local-ghostty-mode"
     case localShowDirtyFiles = "local-show-dirty-files"
+    case aiSummaries = "ai-summaries"
+    case aiSummaryModel = "ai-summary-model"
     case launchAtLogin = "launch-at-login"
 
     init?(argument: String) {
@@ -95,6 +101,10 @@ enum SettingsKey: String, CaseIterable {
             self = .localGhosttyMode
         case "local-show-dirty-files", "show-dirty-files":
             self = .localShowDirtyFiles
+        case "ai-summaries", "ai-summary", "pr-summaries", "pr-summary":
+            self = .aiSummaries
+        case "ai-summary-model", "ai-model", "summary-model":
+            self = .aiSummaryModel
         case "launch-at-login":
             self = .launchAtLogin
         default:
@@ -251,6 +261,14 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         let flag = try parseBool(value)
         settings.localProjects.showDirtyFilesInMenu = flag
         return flag ? "on" : "off"
+    case .aiSummaries:
+        let flag = try parseBool(value)
+        settings.aiSummaries.enabled = flag
+        return flag ? "on" : "off"
+    case .aiSummaryModel:
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        settings.aiSummaries.model = trimmed.isEmpty ? AISummarySettings.defaultModel : trimmed
+        return settings.aiSummaries.model
     case .launchAtLogin:
         let flag = try parseBool(value)
         settings.launchAtLogin = flag
@@ -290,6 +308,8 @@ func settingsSummaryLines(settings: UserSettings) -> [String] {
         "Local preferred terminal: \(settings.localProjects.preferredTerminal ?? "-")",
         "Local Ghostty mode: \(settings.localProjects.ghosttyOpenMode.rawValue)",
         "Local show dirty files: \(settings.localProjects.showDirtyFilesInMenu ? "on" : "off")",
+        "AI summaries: \(settings.aiSummaries.enabled ? "on" : "off")",
+        "AI summary model: \(settings.aiSummaries.model)",
         "GitHub archives: \(archives.isEmpty ? "-" : archives.map(\.name).joined(separator: ", "))",
         "Archive fallback on rate limit: \(settings.githubArchives.preferArchiveWhenRateLimited ? "on" : "off")",
         "Launch at login: \(settings.launchAtLogin ? "on" : "off")",

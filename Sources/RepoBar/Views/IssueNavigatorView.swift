@@ -1,6 +1,14 @@
+import Algorithms
 import AppKit
 import RepoBarCore
 import SwiftUI
+
+// swiftlint:disable file_length
+
+private struct IssueNavigatorAISummary {
+    let signature: String
+    let text: String
+}
 
 struct IssueNavigatorView: View {
     private enum Metrics {
@@ -22,6 +30,8 @@ struct IssueNavigatorView: View {
     @State private var statusText = "Loading recent issues and pull requests."
     @State private var errorText: String?
     @State private var searchTask: Task<Void, Never>?
+    @State private var summaryTask: Task<Void, Never>?
+    @State private var aiSummariesByURL: [URL: IssueNavigatorAISummary] = [:]
     @State private var searchGeneration = UUID()
     @State private var clipboardText: String?
     @State private var clipboardQueries: [GitHubReferenceQuery] = []
@@ -77,11 +87,13 @@ struct IssueNavigatorView: View {
                 self.scheduleSearch(immediate: true)
             } else {
                 self.preloadPreviews(for: self.results)
+                self.scheduleAISummaries(for: self.results, generation: self.searchGeneration)
             }
         }
         .onDisappear {
             self.searchGeneration = UUID()
             self.searchTask?.cancel()
+            self.summaryTask?.cancel()
             self.browserStore.onNavigationStateChange = nil
             self.browserStore.clear()
         }
@@ -109,6 +121,13 @@ struct IssueNavigatorView: View {
         .onChange(of: self.searchText) { _, _ in self.scheduleSearch() }
         .onChange(of: self.kindFilter) { _, _ in self.scheduleSearch(immediate: true) }
         .onChange(of: self.selectedScope) { _, _ in self.scheduleSearch(immediate: true) }
+        .onChange(of: self.appState.session.settings.aiSummaries) { _, settings in
+            self.summaryTask?.cancel()
+            self.aiSummariesByURL = [:]
+            if settings.enabled {
+                self.scheduleAISummaries(for: self.results, generation: self.searchGeneration)
+            }
+        }
     }
 
     private var sidebar: some View {
@@ -213,7 +232,7 @@ struct IssueNavigatorView: View {
                     LazyVStack(spacing: 1) {
                         ForEach(self.results, id: \.url) { match in
                             IssueNavigatorResultRow(
-                                match: match,
+                                match: self.displayMatch(match),
                                 now: Date(),
                                 isSelected: self.selectedURL == match.url,
                                 onOpen: { self.open(match) }
@@ -361,6 +380,7 @@ struct IssueNavigatorView: View {
         let generation = UUID()
         self.searchGeneration = generation
         self.searchTask?.cancel()
+        self.summaryTask?.cancel()
         self.searchTask = Task {
             if !immediate {
                 try? await Task.sleep(for: .milliseconds(250))
@@ -408,6 +428,7 @@ struct IssueNavigatorView: View {
                 self.results = matches
                 self.selectedURL = matches.first?.url
                 self.preloadPreviews(for: matches)
+                self.scheduleAISummaries(for: matches, generation: generation)
                 if matches.isEmpty {
                     self.statusText = "No recent issues or pull requests in this scope."
                 } else if trimmed.isEmpty {
@@ -467,6 +488,7 @@ struct IssueNavigatorView: View {
             self.results = combined
             self.selectedURL = combined.first?.url
             self.preloadPreviews(for: combined)
+            self.scheduleAISummaries(for: combined, generation: generation)
             self.statusText = self.status(for: combined, searchedText: trimmed, preservesReferenceOrder: queries.isEmpty == false)
         } catch is CancellationError {
             return
@@ -479,7 +501,7 @@ struct IssueNavigatorView: View {
         }
     }
 
-    private func isCurrentSearch(_ generation: UUID) -> Bool {
+    func isCurrentSearch(_ generation: UUID) -> Bool {
         !Task.isCancelled && self.searchGeneration == generation
     }
 
@@ -516,6 +538,82 @@ struct IssueNavigatorView: View {
                 .prefix(AppLimits.IssueNavigator.webPreviewPreloadLimit)
                 .map(\.url)
         )
+    }
+
+    private func displayMatch(_ match: GitHubReferenceMatch) -> GitHubReferenceMatch {
+        let settings = self.appState.session.settings.aiSummaries
+        guard settings.enabled,
+              let summary = self.aiSummariesByURL[match.url],
+              summary.signature == Self.aiSummarySignature(for: match, settings: settings)
+        else { return match }
+
+        return match.withAISummary(summary.text)
+    }
+
+    private func scheduleAISummaries(for matches: [GitHubReferenceMatch], generation: UUID) {
+        self.summaryTask?.cancel()
+        let urls = Set(matches.map(\.url))
+        self.aiSummariesByURL = self.aiSummariesByURL.filter { urls.contains($0.key) }
+
+        let settings = self.appState.session.settings.aiSummaries
+        guard settings.enabled else {
+            self.aiSummariesByURL = [:]
+            return
+        }
+
+        let pending = matches.filter {
+            $0.kind == .pullRequest && self.aiSummariesByURL[$0.url]?.signature != Self.aiSummarySignature(for: $0, settings: settings)
+        }
+        guard pending.isEmpty == false else { return }
+
+        self.summaryTask = Task {
+            await self.loadAISummaries(for: pending, settings: settings, generation: generation)
+        }
+    }
+
+    @MainActor
+    private func loadAISummaries(for matches: [GitHubReferenceMatch], settings: AISummarySettings, generation: UUID) async {
+        let summarizer = PullRequestAISummarizer()
+        for chunk in matches.chunks(ofCount: AppLimits.IssueNavigator.aiSummaryConcurrencyLimit) {
+            guard self.isCurrentSearch(generation),
+                  self.appState.session.settings.aiSummaries == settings,
+                  settings.enabled
+            else { return }
+
+            await withTaskGroup(of: (url: URL, signature: String, summary: String?).self) { group in
+                for match in chunk {
+                    let signature = Self.aiSummarySignature(for: match, settings: settings)
+                    group.addTask {
+                        let summary = try? await summarizer.summarize(match, settings: settings)
+                        return (match.url, signature, summary)
+                    }
+                }
+
+                for await (url, signature, summary) in group {
+                    guard self.isCurrentSearch(generation),
+                          self.appState.session.settings.aiSummaries == settings,
+                          settings.enabled
+                    else {
+                        group.cancelAll()
+                        return
+                    }
+
+                    if let summary {
+                        self.aiSummariesByURL[url] = IssueNavigatorAISummary(signature: signature, text: summary)
+                    }
+                }
+            }
+        }
+    }
+
+    private static func aiSummarySignature(for match: GitHubReferenceMatch, settings: AISummarySettings) -> String {
+        [
+            settings.model,
+            match.updatedAt.timeIntervalSinceReferenceDate.description,
+            match.title,
+            match.bodyPreview ?? "",
+            match.authorLogin ?? ""
+        ].joined(separator: "\u{1f}")
     }
 
     private static func deduped(_ matches: [GitHubReferenceMatch]) -> [GitHubReferenceMatch] {
@@ -617,8 +715,9 @@ private struct IssueNavigatorResultRow: View {
                 }
                 .font(.caption)
                 .foregroundStyle(self.secondaryForeground)
-                if let bodyPreview = match.bodyPreview, bodyPreview.isEmpty == false {
-                    Text(bodyPreview)
+                let summary = self.match.aiSummary ?? self.match.bodyPreview
+                if let summary, summary.isEmpty == false {
+                    Text(summary)
                         .font(.caption)
                         .foregroundStyle(self.secondaryForeground)
                         .lineLimit(2)

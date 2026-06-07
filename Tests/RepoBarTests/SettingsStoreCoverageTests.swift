@@ -26,6 +26,8 @@ struct SettingsStoreCoverageTests {
         settings.gitHubPullRequestNotifications.enabled = true
         settings.gitHubPullRequestNotifications.reviewRequests = true
         settings.gitHubPullRequestNotifications.clickAction = .openIssueNavigator
+        settings.aiSummaries.enabled = true
+        settings.aiSummaries.model = "chat-latest"
         settings.githubHost = try #require(URL(string: "https://github.example.com"))
         settings.githubArchives.sources = [
             GitHubArchiveSource(
@@ -43,6 +45,8 @@ struct SettingsStoreCoverageTests {
         #expect(loaded.gitHubPullRequestNotifications.enabled)
         #expect(loaded.gitHubPullRequestNotifications.reviewRequests)
         #expect(loaded.gitHubPullRequestNotifications.clickAction == .openIssueNavigator)
+        #expect(loaded.aiSummaries.enabled)
+        #expect(loaded.aiSummaries.model == "chat-latest")
         #expect(loaded.githubHost == URL(string: "https://github.example.com")!)
         #expect(loaded.githubArchives.sources.first?.name == "openclaw")
         #expect(loaded.githubArchives.sources.first?.format == .discrawlSnapshot)

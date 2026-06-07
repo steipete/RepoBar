@@ -48,6 +48,7 @@ enum AppLimits {
         static let minimumSearchCharacters = 2
         static let webPreviewPreloadLimit = 4
         static let webPreviewCacheLimit = 6
+        static let aiSummaryConcurrencyLimit = 2
     }
 
     enum RepoCommits {

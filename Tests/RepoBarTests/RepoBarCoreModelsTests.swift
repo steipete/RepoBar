@@ -154,10 +154,12 @@ struct RepoBarCoreModelsTests {
             createdAt: Date(timeIntervalSinceReferenceDate: 10),
             updatedAt: Date(timeIntervalSinceReferenceDate: 20),
             bodyPreview: "Preview text",
+            aiSummary: "AI summary",
             authorLogin: "alice"
         )
 
         #expect(match.bodyPreview == "Preview text")
+        #expect(match.aiSummary == "AI summary")
         #expect(match.authorLogin == "alice")
     }
 

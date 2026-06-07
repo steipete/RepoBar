@@ -6,6 +6,7 @@ public struct UserSettings: Equatable, Codable {
     public var repoList = RepoListSettings()
     public var localProjects = LocalProjectsSettings()
     public var gitHubReferenceMonitor = GitHubReferenceMonitorSettings()
+    public var aiSummaries = AISummarySettings()
     public var gitHubPullRequestNotifications = GitHubPullRequestNotificationSettings()
     public var githubArchives = GitHubArchiveSettings()
     public var menuCustomization = MenuCustomization()
@@ -36,6 +37,7 @@ public struct UserSettings: Equatable, Codable {
         case repoList
         case localProjects
         case gitHubReferenceMonitor
+        case aiSummaries
         case gitHubPullRequestNotifications
         case legacyIssueNumberMonitor = "issueNumberMonitor"
         case githubArchives
@@ -67,6 +69,7 @@ public struct UserSettings: Equatable, Codable {
         self.gitHubReferenceMonitor = try container.decodeIfPresent(GitHubReferenceMonitorSettings.self, forKey: .gitHubReferenceMonitor)
             ?? container.decodeIfPresent(GitHubReferenceMonitorSettings.self, forKey: .legacyIssueNumberMonitor)
             ?? GitHubReferenceMonitorSettings()
+        self.aiSummaries = try container.decodeIfPresent(AISummarySettings.self, forKey: .aiSummaries) ?? AISummarySettings()
         self.gitHubPullRequestNotifications = try container.decodeIfPresent(
             GitHubPullRequestNotificationSettings.self,
             forKey: .gitHubPullRequestNotifications
@@ -112,6 +115,7 @@ public struct UserSettings: Equatable, Codable {
         try container.encode(self.repoList, forKey: .repoList)
         try container.encode(self.localProjects, forKey: .localProjects)
         try container.encode(self.gitHubReferenceMonitor, forKey: .gitHubReferenceMonitor)
+        try container.encode(self.aiSummaries, forKey: .aiSummaries)
         try container.encode(self.gitHubPullRequestNotifications, forKey: .gitHubPullRequestNotifications)
         try container.encode(self.githubArchives, forKey: .githubArchives)
         try container.encode(self.menuCustomization, forKey: .menuCustomization)
@@ -291,6 +295,28 @@ public struct GitHubReferenceMonitorSettings: Equatable, Codable, Sendable {
     public var enabled = false
 
     public init() {}
+}
+
+public struct AISummarySettings: Equatable, Codable, Sendable {
+    public static let defaultModel = "chat-latest"
+
+    public var enabled = false
+    public var model = defaultModel
+
+    public init() {}
+
+    enum CodingKeys: String, CodingKey {
+        case enabled
+        case model
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
+        let decodedModel = try container.decodeIfPresent(String.self, forKey: .model) ?? Self.defaultModel
+        let trimmed = decodedModel.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.model = trimmed.isEmpty ? Self.defaultModel : trimmed
+    }
 }
 
 public struct GitHubPullRequestNotificationSettings: Equatable, Codable, Sendable {

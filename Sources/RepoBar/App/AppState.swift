@@ -147,6 +147,18 @@ final class AppState {
         self.settingsStore.save(self.session.settings)
     }
 
+    func openAIAPIKeySource() -> OpenAIAPIKeySource {
+        OpenAIAPIKeyStore().resolve().source
+    }
+
+    func saveOpenAIAPIKey(_ key: String) throws {
+        try OpenAIAPIKeyStore().save(key)
+    }
+
+    func clearOpenAIAPIKey() {
+        OpenAIAPIKeyStore().clearStoredKey()
+    }
+
     func updateGitHubReferenceMonitor() {
         guard self.session.settings.gitHubReferenceMonitor.enabled else {
             Task { await DiagnosticsLogger.shared.message("GitHub reference monitor disabled") }
@@ -498,6 +510,7 @@ final class AppState {
                 state: .open,
                 createdAt: $0.createdAt,
                 updatedAt: $0.updatedAt,
+                bodyPreview: $0.bodyPreview,
                 authorLogin: $0.authorLogin
             )
         })

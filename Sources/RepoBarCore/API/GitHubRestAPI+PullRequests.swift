@@ -73,6 +73,7 @@ extension GitHubRestAPI {
             labels: pullRequest.labels,
             headRefName: pullRequest.headRefName,
             baseRefName: pullRequest.baseRefName,
+            bodyPreview: pullRequest.bodyPreview,
             requestedReviewerLogins: pullRequest.requestedReviewerLogins,
             requestedTeamNames: pullRequest.requestedTeamNames
         )

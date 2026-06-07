@@ -82,6 +82,11 @@ public struct TokenStore: Sendable {
         self.clearPAT()
     }
 
+    public func clearAllCredentials() {
+        self.clear()
+        self.clearOpenAIAPIKey()
+    }
+
     // MARK: - PAT Storage
 
     public func savePAT(_ token: String) throws {
@@ -97,6 +102,30 @@ public struct TokenStore: Sendable {
 
     public func clearPAT() {
         self.clear(account: "pat")
+    }
+
+    // MARK: - OpenAI API Key Storage
+
+    public func saveOpenAIAPIKey(_ key: String) throws {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else {
+            self.clearOpenAIAPIKey()
+            return
+        }
+
+        try self.save(data: Data(trimmed.utf8), account: "openai-api-key")
+    }
+
+    public func loadOpenAIAPIKey() throws -> String? {
+        guard let data = try self.loadData(account: "openai-api-key") else { return nil }
+
+        let key = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return key?.isEmpty == false ? key : nil
+    }
+
+    public func clearOpenAIAPIKey() {
+        self.clear(account: "openai-api-key")
     }
 
     // MARK: - Account-Scoped Storage (Phase 1)

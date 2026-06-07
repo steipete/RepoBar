@@ -98,6 +98,7 @@ struct RecentRepoItemsDecodingTests {
             ],
             "head": { "ref": "feature/menu-rows" },
             "base": { "ref": "main" },
+            "body": "Adds sidebar rows.\\n\\nKeeps summaries compact.",
             "user": { "login": "steipete", "avatar_url": "https://avatars.githubusercontent.com/u/583?v=4" }
           }
         ]
@@ -118,6 +119,7 @@ struct RecentRepoItemsDecodingTests {
         #expect(items.first?.labels.first?.name == "bug")
         #expect(items.first?.headRefName == "feature/menu-rows")
         #expect(items.first?.baseRefName == "main")
+        #expect(items.first?.bodyPreview == "Adds sidebar rows. Keeps summaries compact.")
     }
 
     @Test

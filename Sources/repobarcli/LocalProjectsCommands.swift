@@ -40,7 +40,7 @@ struct LocalProjectsCommand: CommanderRunnableCommand {
         if self.depth < 0 { throw ValidationError("--depth must be >= 0") }
         if let limit, limit <= 0 { throw ValidationError("--limit must be > 0") }
 
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let rootPath = self.root
             ?? settings.localProjects.rootPath
             ?? "~/Projects"

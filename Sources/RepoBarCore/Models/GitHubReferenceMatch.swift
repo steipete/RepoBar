@@ -106,6 +106,7 @@ public struct GitHubReferenceMatch: Sendable, Hashable {
     public let createdAt: Date?
     public let updatedAt: Date
     public let bodyPreview: String?
+    public let aiSummary: String?
     public let authorLogin: String?
     public let isResolved: Bool
 
@@ -119,6 +120,7 @@ public struct GitHubReferenceMatch: Sendable, Hashable {
         createdAt: Date?,
         updatedAt: Date,
         bodyPreview: String? = nil,
+        aiSummary: String? = nil,
         authorLogin: String? = nil,
         isResolved: Bool = true
     ) {
@@ -131,6 +133,7 @@ public struct GitHubReferenceMatch: Sendable, Hashable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.bodyPreview = bodyPreview
+        self.aiSummary = aiSummary
         self.authorLogin = authorLogin
         self.isResolved = isResolved
     }
@@ -167,8 +170,26 @@ public struct GitHubReferenceMatch: Sendable, Hashable {
             createdAt: match.createdAt,
             updatedAt: now,
             bodyPreview: match.bodyPreview,
+            aiSummary: match.aiSummary,
             authorLogin: match.authorLogin,
             isResolved: false
+        )
+    }
+
+    public func withAISummary(_ summary: String?) -> GitHubReferenceMatch {
+        GitHubReferenceMatch(
+            query: self.query,
+            title: self.title,
+            url: self.url,
+            repositoryFullName: self.repositoryFullName,
+            kind: self.kind,
+            state: self.state,
+            createdAt: self.createdAt,
+            updatedAt: self.updatedAt,
+            bodyPreview: self.bodyPreview,
+            aiSummary: summary,
+            authorLogin: self.authorLogin,
+            isResolved: self.isResolved
         )
     }
 

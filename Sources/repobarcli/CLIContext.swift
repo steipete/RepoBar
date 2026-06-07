@@ -22,7 +22,7 @@ struct RepoIdentifier: Equatable {
 }
 
 func makeAuthenticatedClient() async throws -> AuthContext {
-    let settings = SettingsStore().load()
+    let settings = cliSettingsStore().load()
     if let account = settings.resolvedActiveAccount() {
         guard (try? TokenStore.shared.loadTokens(accountID: account.id)) != nil
             || (try? TokenStore.shared.loadPAT(accountID: account.id)) != nil
@@ -30,7 +30,11 @@ func makeAuthenticatedClient() async throws -> AuthContext {
             throw CLIError.notAuthenticated
         }
 
-        let client = GitHubClient(accountID: account.id)
+        let archiveSettings = settings.githubArchives
+        let client = GitHubClient(
+            accountID: account.id,
+            archiveSettingsProvider: { archiveSettings }
+        )
         await client.setAPIHost(account.apiHost)
         await client.setTokenProvider { @Sendable () async throws -> OAuthTokens? in
             if account.authMethod == .pat, let pat = try? TokenStore.shared.loadPAT(accountID: account.id) {
@@ -55,7 +59,8 @@ func makeAuthenticatedClient() async throws -> AuthContext {
         RepoBarAuthDefaults.apiHost
     }
 
-    let client = GitHubClient()
+    let archiveSettings = settings.githubArchives
+    let client = GitHubClient(archiveSettingsProvider: { archiveSettings })
     await client.setAPIHost(apiHost)
     await client.setTokenProvider { @Sendable () async throws -> OAuthTokens? in
         try await OAuthTokenRefresher().refreshIfNeeded(host: host)

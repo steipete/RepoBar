@@ -4,11 +4,26 @@ import Foundation
 public struct SettingsStore {
     private let defaults: UserDefaults
     static let storageKey = "com.steipete.repobar.settings"
+    public static let mainAppSuiteName = "com.steipete.repobar"
     private let key = Self.storageKey
     private static let currentVersion = 3
 
-    public init(defaults: UserDefaults = .standard) {
+    public init(defaults: UserDefaults = Self.defaultDefaults()) {
         self.defaults = defaults
+    }
+
+    public static func defaultDefaults() -> UserDefaults {
+        if let bundleIdentifier = Bundle.main.bundleIdentifier {
+            if let defaults = UserDefaults(suiteName: bundleIdentifier) {
+                return defaults
+            }
+        }
+
+        return .standard
+    }
+
+    public static func mainAppDefaults() -> UserDefaults {
+        UserDefaults(suiteName: self.mainAppSuiteName) ?? .standard
     }
 
     public func load() -> UserSettings {

@@ -20,6 +20,7 @@ enum GitHubRecentDecoders {
                 labels: ($0.labels ?? []).map { RepoIssueLabel(name: $0.name, colorHex: $0.color) },
                 headRefName: $0.head?.refName,
                 baseRefName: $0.base?.refName,
+                bodyPreview: Self.bodyPreview(from: $0.body),
                 requestedReviewerLogins: ($0.requestedReviewers ?? []).map(\.login),
                 requestedTeamNames: ($0.requestedTeams ?? []).map(\.name)
             )
@@ -213,11 +214,12 @@ enum GitHubRecentDecoders {
         let labels: [IssueLabel]?
         let head: PullRequestRef?
         let base: PullRequestRef?
+        let body: String?
         let requestedReviewers: [RecentUser]?
         let requestedTeams: [RequestedTeam]?
 
         enum CodingKeys: String, CodingKey {
-            case number, title, state, user, draft, comments, labels, head, base
+            case number, title, state, user, draft, comments, labels, head, base, body
             case htmlUrl = "html_url"
             case updatedAt = "updated_at"
             case createdAt = "created_at"
@@ -226,6 +228,21 @@ enum GitHubRecentDecoders {
             case requestedReviewers = "requested_reviewers"
             case requestedTeams = "requested_teams"
         }
+    }
+
+    private static func bodyPreview(from body: String?) -> String? {
+        guard let body else { return nil }
+
+        let collapsed = body
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .split(whereSeparator: \.isNewline)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { $0.isEmpty == false }
+            .joined(separator: " ")
+        guard collapsed.isEmpty == false else { return nil }
+
+        if collapsed.count <= 240 { return collapsed }
+        return "\(collapsed.prefix(237))..."
     }
 
     private struct RequestedTeam: Decodable {

@@ -56,7 +56,7 @@ struct AccountsListCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let activeAccountID = settings.resolvedActiveAccount()?.id
         if self.output.jsonOutput {
             let payload = AccountListOutput(
@@ -97,7 +97,7 @@ struct AccountsUseCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         let account = try AccountResolver.resolve(self.target, settings: settings)
         try mirrorAccountCredentialsToLegacy(account)
@@ -126,7 +126,7 @@ struct AccountsRemoveCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         let account = try AccountResolver.resolve(self.target, settings: settings)
         TokenStore.shared.clear(accountID: account.id)

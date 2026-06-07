@@ -26,7 +26,7 @@ struct PinCommand: CommanderRunnableCommand {
     mutating func run() async throws {
         let repoName = try requireRepoName(self.repoName)
         let normalized = try normalizeRepoFullName(repoName)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
 
         settings.repoList.hiddenRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
@@ -68,7 +68,7 @@ struct UnpinCommand: CommanderRunnableCommand {
     mutating func run() async throws {
         let repoName = try requireRepoName(self.repoName)
         let normalized = try normalizeRepoFullName(repoName)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
 
         settings.repoList.pinnedRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
@@ -107,7 +107,7 @@ struct HideCommand: CommanderRunnableCommand {
     mutating func run() async throws {
         let repoName = try requireRepoName(self.repoName)
         let normalized = try normalizeRepoFullName(repoName)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
 
         settings.repoList.pinnedRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
@@ -149,7 +149,7 @@ struct ShowCommand: CommanderRunnableCommand {
     mutating func run() async throws {
         let repoName = try requireRepoName(self.repoName)
         let normalized = try normalizeRepoFullName(repoName)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
 
         settings.repoList.hiddenRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
@@ -180,7 +180,7 @@ struct SettingsShowCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        var settings = SettingsStore().load()
+        var settings = cliSettingsStore().load()
         settings.menuCustomization.normalize()
         if self.output.jsonOutput {
             try printJSON(settings)
@@ -227,7 +227,7 @@ struct SettingsSetCommand: CommanderRunnableCommand {
             throw ValidationError("Unknown settings key: \(key)")
         }
 
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         let summary = try applySetting(settingKey, value: value, settings: &settings)
         store.save(settings)

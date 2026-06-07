@@ -18,7 +18,7 @@ struct ArchivesListCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         if self.output.jsonOutput {
             try printJSON(settings.githubArchives)
             return
@@ -66,7 +66,7 @@ struct ArchivesStatusCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let statuses = try GitHubArchiveStore.statuses(settings: settings.githubArchives, name: self.name)
         let payload = GitHubArchiveStatusOutput(sources: statuses)
         if self.output.jsonOutput {
@@ -119,7 +119,7 @@ struct ArchivesValidateCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let statuses = try GitHubArchiveStore.statuses(settings: settings.githubArchives, name: self.name)
         let payload = GitHubArchiveStatusOutput(sources: statuses)
         if self.output.jsonOutput {
@@ -163,7 +163,7 @@ struct ArchivesUpdateCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let name = try GitHubArchiveStore.requireName(self.name)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         guard let index = settings.githubArchives.sources.firstIndex(where: { $0.name.equalsCaseInsensitive(name) || $0.id == name }) else {
             throw ValidationError("Archive not found: \(name)")
@@ -231,7 +231,7 @@ struct ArchivesAddCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         let source = try Self.archiveSource(
             repository: self.repository,
@@ -384,7 +384,7 @@ struct ArchivesRemoveCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let name = try GitHubArchiveStore.requireName(self.name)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         let before = settings.githubArchives.sources.count
         settings.githubArchives.sources.removeAll { $0.name.equalsCaseInsensitive(name) || $0.id == name }
@@ -428,7 +428,7 @@ struct ArchivesEnableCommand: CommanderRunnableCommand {
 
     private func update(enabled: Bool) throws {
         let name = try GitHubArchiveStore.requireName(self.name)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         guard let index = settings.githubArchives.sources.firstIndex(where: { $0.name.equalsCaseInsensitive(name) || $0.id == name }) else {
             throw ValidationError("Archive not found: \(name)")
@@ -467,7 +467,7 @@ struct ArchivesDisableCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let name = try GitHubArchiveStore.requireName(self.name)
-        let store = SettingsStore()
+        let store = cliSettingsStore()
         var settings = store.load()
         guard let index = settings.githubArchives.sources.firstIndex(where: { $0.name.equalsCaseInsensitive(name) || $0.id == name }) else {
             throw ValidationError("Archive not found: \(name)")

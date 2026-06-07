@@ -12,6 +12,8 @@ struct SettingsCommandTests {
         settings.gitHubPullRequestNotifications.reviewRequests = true
         settings.gitHubPullRequestNotifications.comments = true
         settings.gitHubPullRequestNotifications.clickAction = .openIssueNavigator
+        settings.aiSummaries.enabled = true
+        settings.aiSummaries.model = "chat-latest"
 
         let lines = settingsSummaryLines(settings: settings)
 
@@ -19,6 +21,8 @@ struct SettingsCommandTests {
         #expect(lines.contains("PR notifications: on"))
         #expect(lines.contains("PR notification events: new pull requests, updates, review requests, comments"))
         #expect(lines.contains("PR notification click: Issue Navigator"))
+        #expect(lines.contains("AI summaries: on"))
+        #expect(lines.contains("AI summary model: chat-latest"))
     }
 
     @Test
@@ -40,6 +44,17 @@ struct SettingsCommandTests {
         #expect(settings.gitHubPullRequestNotifications.reviewRequests)
         #expect(settings.gitHubPullRequestNotifications.comments)
         #expect(settings.gitHubPullRequestNotifications.clickAction == .openIssueNavigator)
+    }
+
+    @Test
+    func `settings set supports AI summary settings`() throws {
+        var settings = UserSettings()
+
+        #expect(try applySetting(.aiSummaries, value: "on", settings: &settings) == "on")
+        #expect(try applySetting(.aiSummaryModel, value: "chat-latest", settings: &settings) == "chat-latest")
+
+        #expect(settings.aiSummaries.enabled)
+        #expect(settings.aiSummaries.model == "chat-latest")
     }
 
     @Test

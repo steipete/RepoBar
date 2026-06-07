@@ -24,6 +24,7 @@ let package = Package(
         .package(url: "https://github.com/steipete/Swiftdansi", from: "0.1.1"),
         .package(url: "https://github.com/apple/swift-markdown", from: "0.7.3"),
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.10.0"),
+        .package(url: "https://github.com/openclaw/Tachikoma.git", branch: "main"),
     ],
     targets: [
         .target(
@@ -33,6 +34,7 @@ let package = Package(
                 .product(name: "GRDB", package: "GRDB.swift"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Markdown", package: "swift-markdown"),
+                .product(name: "Tachikoma", package: "tachikoma"),
             ],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),

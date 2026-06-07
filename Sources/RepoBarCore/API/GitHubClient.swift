@@ -12,6 +12,7 @@ public actor GitHubClient {
     private let diag = DiagnosticsLogger.shared
     private let requestRunner: GitHubRequestRunner
     private let responseDiskCache: HTTPResponseDiskCache?
+    private let archiveSettingsProvider: @Sendable () -> GitHubArchiveSettings
     private lazy var restAPI = GitHubRestAPI(
         apiHost: { [weak self] in await self?.apiHost ?? URL(string: "https://api.github.com")! },
         tokenProvider: { [weak self] in
@@ -32,10 +33,16 @@ public actor GitHubClient {
     private var prefetchedReposExpiry: Date?
     private var inflightRepoDetails: [String: Task<Repository, Error>] = [:]
 
-    public init(accountID: String? = nil) {
+    public init(
+        accountID: String? = nil,
+        archiveSettingsProvider: @Sendable @escaping () -> GitHubArchiveSettings = {
+            SettingsStore().load().githubArchives
+        }
+    ) {
         self.responseDiskCache = HTTPResponseDiskCache.scoped(accountID: accountID)
         self.requestRunner = GitHubRequestRunner(etagCache: ETagCache.persistent(accountID: accountID))
         self.graphQL = GraphQLClient(responseCache: GraphQLResponseDiskCache.scoped(accountID: accountID))
+        self.archiveSettingsProvider = archiveSettingsProvider
     }
 
     // MARK: - Config
@@ -578,7 +585,7 @@ public actor GitHubClient {
     private func archiveIssueFallback(owner: String, name: String, limit: Int, error: Error) -> [RepoIssueSummary]? {
         guard self.shouldUseArchiveFallback(for: error) else { return nil }
 
-        let archiveSettings = SettingsStore().load().githubArchives
+        let archiveSettings = self.archiveSettingsProvider()
         guard archiveSettings.preferArchiveWhenRateLimited else { return nil }
 
         return GitHubArchiveReader.recentIssues(settings: archiveSettings, owner: owner, name: name, limit: limit)
@@ -587,7 +594,7 @@ public actor GitHubClient {
     private func archivePullRequestFallback(owner: String, name: String, limit: Int, error: Error) -> [RepoPullRequestSummary]? {
         guard self.shouldUseArchiveFallback(for: error) else { return nil }
 
-        let archiveSettings = SettingsStore().load().githubArchives
+        let archiveSettings = self.archiveSettingsProvider()
         guard archiveSettings.preferArchiveWhenRateLimited else { return nil }
 
         return GitHubArchiveReader.recentPullRequests(settings: archiveSettings, owner: owner, name: name, limit: limit)

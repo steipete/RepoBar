@@ -25,7 +25,7 @@ struct LocalSyncCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let target = try requireLocalTarget(self.target)
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         let result = try LocalGitService().smartSync(at: resolved.path)
 
@@ -74,7 +74,7 @@ struct LocalRebaseCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let target = try requireLocalTarget(self.target)
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         try LocalGitService().rebaseOntoUpstream(at: resolved.path)
 
@@ -123,7 +123,7 @@ struct LocalResetCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let target = try requireLocalTarget(self.target)
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
 
         if self.assumeYes == false {
@@ -173,7 +173,7 @@ struct LocalBranchesCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let target = try requireLocalTarget(self.target)
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         let snapshot = try LocalGitService().branchDetails(at: resolved.path)
 
@@ -220,7 +220,7 @@ struct WorktreesCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let target = try requireLocalTarget(self.target)
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         let worktrees = try LocalGitService().worktrees(at: resolved.path)
 
@@ -262,7 +262,7 @@ struct OpenFinderCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let target = try requireLocalTarget(self.target)
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         try openPath(resolved.path.path)
         print("Opened Finder at \(resolved.displayName)")
@@ -288,7 +288,7 @@ struct OpenTerminalCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let target = try requireLocalTarget(self.target)
-        let settings = SettingsStore().load()
+        let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         try openTerminal(at: resolved.path, settings: settings)
         print("Opened terminal at \(resolved.displayName)")
@@ -330,7 +330,7 @@ struct CheckoutCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         let repo = try requireRepoIdentifier(self.repoName)
-        let settingsStore = SettingsStore()
+        let settingsStore = cliSettingsStore()
         var settings = settingsStore.load()
         let host = settings.enterpriseHost ?? settings.githubHost
 
