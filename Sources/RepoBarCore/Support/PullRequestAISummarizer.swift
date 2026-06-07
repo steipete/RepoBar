@@ -2,6 +2,14 @@ import Foundation
 import Tachikoma
 
 public struct PullRequestAISummarizer: Sendable {
+    static let maximumSummaryCharacters = 280
+    private static let systemPrompt = [
+        "You write pull request summaries for a macOS sidebar.",
+        "Return one complete sentence, 24-34 words, no more than 280 characters, ending with punctuation.",
+        "Use no markdown and no labels.",
+        "Prefer concrete implementation details over generic phrasing."
+    ].joined(separator: " ")
+
     private let keyStore: OpenAIAPIKeyStore
 
     public init(keyStore: OpenAIAPIKeyStore = OpenAIAPIKeyStore()) {
@@ -19,8 +27,8 @@ public struct PullRequestAISummarizer: Sendable {
         let summary = try await generate(
             Self.prompt(for: match),
             using: model,
-            system: "You write compact pull request sidebar summaries. Return one sentence, no markdown, no labels.",
-            maxTokens: 80,
+            system: Self.systemPrompt,
+            maxTokens: 120,
             configuration: configuration
         )
 
@@ -50,11 +58,11 @@ public struct PullRequestAISummarizer: Sendable {
         if let body = match.bodyPreview, body.isEmpty == false {
             parts.append("Body preview: \(body)")
         }
-        parts.append("Summarize what this pull request appears to change and why it matters.")
+        parts.append("Summarize what this pull request changes and why it matters in one sidebar-sized sentence.")
         return parts.joined(separator: "\n")
     }
 
-    private static func clean(_ raw: String) -> String? {
+    static func clean(_ raw: String) -> String? {
         let summary = raw
             .replacingOccurrences(of: "\r\n", with: "\n")
             .split(whereSeparator: \.isNewline)
@@ -63,7 +71,16 @@ public struct PullRequestAISummarizer: Sendable {
             .joined(separator: " ")
         guard summary.isEmpty == false else { return nil }
 
-        if summary.count <= 220 { return summary }
-        return "\(summary.prefix(217))..."
+        if summary.count <= Self.maximumSummaryCharacters { return summary }
+
+        let prefix = String(summary.prefix(Self.maximumSummaryCharacters - 3))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let lastSpace = prefix.lastIndex(where: \.isWhitespace) {
+            let cutIndex = prefix.distance(from: prefix.startIndex, to: lastSpace)
+            if cutIndex > Self.maximumSummaryCharacters / 2 {
+                return "\(prefix[..<lastSpace])..."
+            }
+        }
+        return "\(prefix)..."
     }
 }

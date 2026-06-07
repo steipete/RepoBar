@@ -11,7 +11,7 @@ final class IssueNavigatorWindowController: NSObject, NSWindowDelegate {
             width: Self.baseContentSize.width * Self.defaultContentScale,
             height: Self.baseContentSize.height * Self.defaultContentScale
         )
-        static let minimumContentSize = NSSize(width: 980, height: 620)
+        static let minimumContentSize = NSSize(width: 1080, height: 620)
     }
 
     private let appState: AppState

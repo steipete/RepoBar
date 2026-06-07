@@ -12,9 +12,9 @@ private struct IssueNavigatorAISummary {
 
 struct IssueNavigatorView: View {
     private enum Metrics {
-        static let sidebarMinWidth: CGFloat = 340
-        static let sidebarIdealWidth: CGFloat = 390
-        static let sidebarMaxWidth: CGFloat = 430
+        static let sidebarMinWidth: CGFloat = 380
+        static let sidebarIdealWidth: CGFloat = 470
+        static let sidebarMaxWidth: CGFloat = 560
         static let sidebarPadding: CGFloat = 14
         static let controlHeight: CGFloat = 28
         static let controlCornerRadius: CGFloat = 10
@@ -77,7 +77,7 @@ struct IssueNavigatorView: View {
                 .frame(minWidth: 560, maxWidth: .infinity, maxHeight: .infinity)
         }
         .background(.ultraThinMaterial)
-        .frame(minWidth: 980, minHeight: 620)
+        .frame(minWidth: 1080, minHeight: 620)
         .onAppear {
             self.browserStore.onNavigationStateChange = {
                 self.browserNavigationVersion &+= 1
@@ -715,12 +715,12 @@ private struct IssueNavigatorResultRow: View {
                 }
                 .font(.caption)
                 .foregroundStyle(self.secondaryForeground)
-                let summary = self.match.aiSummary ?? self.match.bodyPreview
-                if let summary, summary.isEmpty == false {
+                if let summary = self.summaryDisplayText, summary.isEmpty == false {
                     Text(summary)
                         .font(.caption)
                         .foregroundStyle(self.secondaryForeground)
-                        .lineLimit(2)
+                        .lineLimit(self.summaryLineLimit)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             Spacer(minLength: 0)
@@ -769,6 +769,14 @@ private struct IssueNavigatorResultRow: View {
 
     private var iconForeground: Color {
         self.isSelected ? Color.white.opacity(0.92) : self.tint
+    }
+
+    private var summaryDisplayText: String? {
+        self.match.aiSummary ?? self.match.bodyPreview
+    }
+
+    private var summaryLineLimit: Int {
+        self.match.aiSummary == nil ? 2 : 4
     }
 
     private var rowBackground: Color {
