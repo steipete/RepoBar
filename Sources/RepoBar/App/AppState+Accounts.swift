@@ -23,6 +23,13 @@ extension AppState {
         await manager.bootstrap(from: self.session.settings)
         await self.syncPrimaryGitHubClientToActiveAccount()
         self.session.activeAccountID = manager.activeAccountID
+        if let active = manager.activeAccount(), manager.hasStoredCredentials(accountID: active.id) {
+            self.session.account = .loggedIn(UserIdentity(username: active.username, host: active.host))
+            self.session.hasStoredTokens = true
+        } else {
+            self.session.account = .loggedOut
+            self.session.hasStoredTokens = false
+        }
         self.session.accountSessions = self.session.settings.accounts.map { account in
             AccountSession(account: account)
         }

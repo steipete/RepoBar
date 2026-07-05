@@ -2,6 +2,8 @@
 
 ## 0.8.5 - Unreleased
 
+- Restore the signed-in account immediately after restarting RepoBar when its persisted credentials are still available.
+
 ## 0.8.4 - 2026-07-02
 
 - Coalesce concurrent OAuth token refreshes per account so rotating refresh tokens cannot race or overwrite newer credentials.

@@ -55,6 +55,17 @@ final class AccountManager {
         return self.accounts.first(where: { $0.id == activeAccountID })
     }
 
+    func hasStoredCredentials(accountID: String) -> Bool {
+        guard let account = self.accounts.first(where: { $0.id == accountID }) else { return false }
+
+        switch account.authMethod {
+        case .oauth:
+            return (try? self.tokenStore.loadTokens(accountID: accountID)) != nil
+        case .pat:
+            return (try? self.tokenStore.loadPAT(accountID: accountID)) != nil
+        }
+    }
+
     /// Sets the active account by ID. Returns whether the change took effect.
     @discardableResult
     func setActive(accountID: String?) -> Bool {
