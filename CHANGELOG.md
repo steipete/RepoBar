@@ -2,6 +2,8 @@
 
 ## 0.8.6 - Unreleased
 
+- Reimagine the repobar.app website as a dark, menu-bar-themed page with a live menu mockup, a contribution-graph wordmark, current features like the reference monitor and multi-account support, and the corrected macOS 15 minimum system requirement.
+
 ## 0.8.5 - 2026-07-05
 
 - Restore the signed-in account immediately after restarting RepoBar when its persisted credentials are still available.
