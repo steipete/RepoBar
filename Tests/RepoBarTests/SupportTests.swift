@@ -6,6 +6,26 @@ import Testing
 @MainActor
 struct RefreshAndBackoffTests {
     @Test
+    func `pasteboard polling backs off when unchanged and resets after activity`() {
+        var cadence = PasteboardPollCadence()
+        #expect(cadence.nextInterval == .seconds(1))
+        #expect(cadence.nextLeeway == .milliseconds(500))
+
+        for _ in 0 ..< 4 {
+            cadence.record(didChange: false)
+        }
+        #expect(cadence.nextInterval == .seconds(1))
+
+        cadence.record(didChange: false)
+        #expect(cadence.nextInterval == .seconds(5))
+        #expect(cadence.nextLeeway == .seconds(2))
+
+        cadence.record(didChange: true)
+        #expect(cadence.nextInterval == .seconds(1))
+        #expect(cadence.nextLeeway == .milliseconds(500))
+    }
+
+    @Test
     func `force refresh triggers tick`() {
         let scheduler = RefreshScheduler()
         var fired = false

@@ -2,6 +2,8 @@
 
 ## 0.8.5 - Unreleased
 
+- Reduce idle wakeups from the opt-in GitHub reference watcher by backing off clipboard polling after inactivity while restoring one-second polling after changes.
+
 ## 0.8.4 - 2026-07-02
 
 - Coalesce concurrent OAuth token refreshes per account so rotating refresh tokens cannot race or overwrite newer credentials.

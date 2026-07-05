@@ -66,14 +66,29 @@ final class GitHubReferenceMonitor {
     }
 }
 
+struct PasteboardPollCadence {
+    private(set) var unchangedPollCount = 0
+
+    var nextInterval: DispatchTimeInterval {
+        self.unchangedPollCount >= 5 ? .seconds(5) : .seconds(1)
+    }
+
+    var nextLeeway: DispatchTimeInterval {
+        self.unchangedPollCount >= 5 ? .seconds(2) : .milliseconds(500)
+    }
+
+    mutating func record(didChange: Bool) {
+        self.unchangedPollCount = didChange ? 0 : self.unchangedPollCount + 1
+    }
+}
+
 private final class PasteboardTextPoller: @unchecked Sendable {
     private let pasteboard: NSPasteboard
     private let queue = DispatchQueue(label: "com.steipete.repobar.github-reference-pasteboard", qos: .background)
     private let onText: @Sendable (String) -> Void
     private var timer: DispatchSourceTimer?
     private var lastChangeCount: Int
-    private let pollInterval: DispatchTimeInterval = .seconds(1)
-    private let pollLeeway: DispatchTimeInterval = .milliseconds(500)
+    private var cadence = PasteboardPollCadence()
     private let graceDelay: DispatchTimeInterval = .milliseconds(100)
 
     init(pasteboard: NSPasteboard, onText: @escaping @Sendable (String) -> Void) {
@@ -87,12 +102,12 @@ private final class PasteboardTextPoller: @unchecked Sendable {
             guard let self, self.timer == nil else { return }
 
             let timer = DispatchSource.makeTimerSource(queue: self.queue)
-            timer.schedule(deadline: .now() + self.pollInterval, repeating: self.pollInterval, leeway: self.pollLeeway)
             timer.setEventHandler { [weak self] in
                 self?.tick()
             }
-            timer.resume()
             self.timer = timer
+            self.scheduleNextPoll()
+            timer.resume()
         }
     }
 
@@ -105,15 +120,24 @@ private final class PasteboardTextPoller: @unchecked Sendable {
 
     private func tick() {
         self.readPasteboardChangeCount { [weak self] changeCount in
-            guard let self else { return }
-            guard changeCount != self.lastChangeCount else { return }
+            guard let self, self.timer != nil else { return }
+
+            let didChange = changeCount != self.lastChangeCount
+            self.cadence.record(didChange: didChange)
+            guard didChange else {
+                self.scheduleNextPoll()
+                return
+            }
 
             self.lastChangeCount = changeCount
             self.queue.asyncAfter(deadline: .now() + self.graceDelay) { [weak self] in
-                guard let self else { return }
+                guard let self, self.timer != nil else { return }
 
                 self.readPasteboardSnapshot { [weak self] delayedSnapshot in
-                    guard let self else { return }
+                    guard let self, self.timer != nil else { return }
+
+                    defer { self.scheduleNextPoll() }
+
                     guard changeCount == delayedSnapshot.changeCount else { return }
                     guard let text = delayedSnapshot.text else { return }
 
@@ -121,6 +145,13 @@ private final class PasteboardTextPoller: @unchecked Sendable {
                 }
             }
         }
+    }
+
+    private func scheduleNextPoll() {
+        self.timer?.schedule(
+            deadline: .now() + self.cadence.nextInterval,
+            leeway: self.cadence.nextLeeway
+        )
     }
 
     private func readPasteboardChangeCount(_ completion: @escaping @Sendable (Int) -> Void) {
