@@ -308,13 +308,15 @@ struct MenuLoadingRowView: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.regular)
+        VStack(spacing: 12) {
+            RepoBarLoadingGridView()
+                .frame(height: 44)
             Text(self.text)
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, minHeight: 120)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(self.text)
     }
 }

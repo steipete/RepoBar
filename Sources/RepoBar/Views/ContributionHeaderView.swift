@@ -56,8 +56,9 @@ struct ContributionHeaderView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(Color.gray.opacity(0.12))
                 if showProgress {
-                    ProgressView()
-                        .controlSize(.regular)
+                    RepoBarLoadingGridView()
+                        .frame(height: Self.graphHeight - 8)
+                        .padding(.horizontal, 8)
                 }
             }
             .frame(maxWidth: .infinity, minHeight: Self.loadingHeight)
