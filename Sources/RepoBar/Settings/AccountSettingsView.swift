@@ -101,10 +101,11 @@ struct AccountSettingsView: View {
                     .pickerStyle(.segmented)
 
                     if self.authMethod == .pat {
-                        LabeledContent("Token") {
-                            SecureField("ghp_...", text: self.$patInput)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Token")
+                            SecureField("ghp_… or github_pat_…", text: self.$patInput)
+                                .textFieldStyle(.roundedBorder)
                                 .frame(minWidth: self.enterpriseFieldMinWidth)
-                                .layoutPriority(1)
                         }
                         Text("Recommended for SAML SSO organizations. Required scopes: repo, read:org")
                             .font(.caption)
