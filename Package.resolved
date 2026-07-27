@@ -1,13 +1,13 @@
 {
-  "originHash" : "bf9950d42b5ec432d4b7c3b3b0de9344a757aebffe8e60aafc3679692c7b7fdd",
+  "originHash" : "ce363525a7fc2d5df7e60cd885b7aca447defb1fe96b98934bf21490c5eaf9c8",
   "pins" : [
     {
       "identity" : "apollo-ios",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apollographql/apollo-ios",
       "state" : {
-        "revision" : "5a8d18cc239dd3c4b31c9e13e671dbcef5e4072a",
-        "version" : "2.2.0"
+        "revision" : "a6668545666c48b25ddb67c1329048633f45168b",
+        "version" : "2.3.0"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/onevcat/Kingfisher",
       "state" : {
-        "revision" : "ac632bd26a1c00f139ff62fd01806f21cf67325e",
-        "version" : "8.10.0"
+        "revision" : "410984bf301f4fa224fe56277b3f8672cc465c79",
+        "version" : "8.11.0"
       }
     },
     {
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/sparkle-project/Sparkle",
       "state" : {
-        "revision" : "d46d456107feacc80711b21847b82b07bd9fb46e",
-        "version" : "2.9.3"
+        "revision" : "b6496a74a087257ef5e6da1c5b29a447a60f5bd7",
+        "version" : "2.9.4"
       }
     },
     {
@@ -132,8 +132,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/steipete/Swiftdansi",
       "state" : {
-        "revision" : "94b7818be2103ef7c466027bcfce1657833c83bb",
-        "version" : "0.2.1"
+        "revision" : "66b33f2bb01d0484ede2504f3d89b1941941bf72",
+        "version" : "0.2.2"
       }
     }
   ],

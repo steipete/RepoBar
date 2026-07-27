@@ -2,6 +2,8 @@
 
 ## 0.8.7 - Unreleased
 
+- Refresh npm and Swift package resolutions, keep Commander pinned to its compatible positional-argument contract, and make SwiftPM tests load Sparkle from the Xcode 26 product layout.
+
 ## 0.8.6 - 2026-07-06
 
 - Replace the loading spinners in the menu with an animated contribution graph that spells "REPOBAR" while repositories and the contribution heatmap load, matching the repobar.app wordmark animation.

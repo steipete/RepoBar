@@ -13,7 +13,7 @@ let package = Package(
         .executable(name: "repobarcli", targets: ["repobarcli"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/steipete/Commander", from: "0.2.0"),
+        .package(url: "https://github.com/steipete/Commander", exact: "0.2.2"),
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.8.1"),
         .package(url: "https://github.com/orchetect/MenuBarExtraAccess", from: "1.3.0"),
         .package(url: "https://github.com/apple/swift-algorithms", from: "1.2.1"),

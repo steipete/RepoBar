@@ -25,15 +25,15 @@
     "ghrest": "pnpm exec tsx Scripts/ghrest.ts"
   },
   "dependencies": {
-    "graphql": "^17.0.1"
+    "graphql": "^17.0.2"
   },
   "devDependencies": {
     "@octokit/request": "^10.0.11",
-    "chalk": "^5.6.2",
+    "chalk": "^6.0.0",
     "commander": "^15.0.0",
     "dotenv-cli": "^11.0.0",
     "ora": "^9.4.1",
-    "tsx": "^4.22.4",
+    "tsx": "^4.23.1",
     "zod": "^4.4.3"
   }
 }
