@@ -686,7 +686,9 @@ struct StatusCommand: CommanderRunnableCommand {
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
                 let data = try encoder.encode(output)
-                if let json = String(data: data, encoding: .utf8) { print(json) }
+                if let json = String(data: data, encoding: .utf8) {
+                    print(json)
+                }
             } else if authenticated == false {
                 print("Logged out (\(resolved.id)).")
             } else {
@@ -719,7 +721,9 @@ struct StatusCommand: CommanderRunnableCommand {
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
                 let data = try encoder.encode(output)
-                if let json = String(data: data, encoding: .utf8) { print(json) }
+                if let json = String(data: data, encoding: .utf8) {
+                    print(json)
+                }
             } else {
                 print("Logged out.")
             }
@@ -744,7 +748,9 @@ struct StatusCommand: CommanderRunnableCommand {
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(output)
-            if let json = String(data: data, encoding: .utf8) { print(json) }
+            if let json = String(data: data, encoding: .utf8) {
+                print(json)
+            }
         } else {
             print("Logged in.")
             print("Host: \(host)")

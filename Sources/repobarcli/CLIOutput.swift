@@ -203,7 +203,9 @@ func renderJSONData(_ rows: [RepoRow], baseHost: URL) throws -> Data {
 
 func renderJSON(_ rows: [RepoRow], baseHost: URL) throws {
     let data = try renderJSONData(rows, baseHost: baseHost)
-    if let json = String(data: data, encoding: .utf8) { print(json) }
+    if let json = String(data: data, encoding: .utf8) {
+        print(json)
+    }
 }
 
 func padLeft(_ value: String, to width: Int) -> String {

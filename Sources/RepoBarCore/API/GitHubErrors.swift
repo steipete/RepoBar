@@ -20,7 +20,9 @@ public enum GitHubAPIError: Error {
     public var isAuthenticationFailure: Bool {
         switch self {
         case let .badStatus(code, message):
-            if code == 401 { return true }
+            if code == 401 {
+                return true
+            }
             if let message, message.localizedCaseInsensitiveContains("authentication refresh failed") {
                 return true
             }
@@ -31,12 +33,16 @@ public enum GitHubAPIError: Error {
     }
 
     public var rateLimitedUntil: Date? {
-        if case let .rateLimited(until, _) = self { return until }
+        if case let .rateLimited(until, _) = self {
+            return until
+        }
         return nil
     }
 
     public var retryAfter: Date? {
-        if case let .serviceUnavailable(date, _) = self { return date }
+        if case let .serviceUnavailable(date, _) = self {
+            return date
+        }
         return nil
     }
 }
@@ -74,7 +80,9 @@ struct RepoErrorAccumulator {
         guard let candidate else { return }
 
         if let current = rateLimit {
-            if candidate > current { self.rateLimit = candidate }
+            if candidate > current {
+                self.rateLimit = candidate
+            }
         } else {
             self.rateLimit = candidate
         }

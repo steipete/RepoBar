@@ -92,7 +92,9 @@ private struct LocalRepoHeaderRow: View {
     }
 
     private var syncColor: Color {
-        if self.isHighlighted { return MenuHighlightStyle.selectionText }
+        if self.isHighlighted {
+            return MenuHighlightStyle.selectionText
+        }
         let isLightAppearance = NSApp.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .aqua
         switch self.status.syncState {
         case .synced:

@@ -338,7 +338,9 @@ private extension OAuthLoginFlowTests {
         var buffer = [UInt8](repeating: 0, count: bufferSize)
         while stream.hasBytesAvailable {
             let read = stream.read(&buffer, maxLength: buffer.count)
-            if read <= 0 { break }
+            if read <= 0 {
+                break
+            }
             data.append(buffer, count: read)
         }
         return String(data: data, encoding: .utf8)

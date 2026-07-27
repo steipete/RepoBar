@@ -272,7 +272,9 @@ public enum RateLimitStatusFormatter {
         cooldowns
             .filter { $0.retryAfter > now }
             .sorted { lhs, rhs in
-                if lhs.retryAfter != rhs.retryAfter { return lhs.retryAfter < rhs.retryAfter }
+                if lhs.retryAfter != rhs.retryAfter {
+                    return lhs.retryAfter < rhs.retryAfter
+                }
                 return lhs.url < rhs.url
             }
     }
@@ -281,7 +283,9 @@ public enum RateLimitStatusFormatter {
         let grouped = Dictionary(grouping: cooldowns, by: \.endpoint)
         let rows = grouped.keys.sorted().compactMap { endpoint -> String? in
             guard let group = grouped[endpoint]?.sorted(by: { lhs, rhs in
-                if lhs.retryAfter != rhs.retryAfter { return lhs.retryAfter < rhs.retryAfter }
+                if lhs.retryAfter != rhs.retryAfter {
+                    return lhs.retryAfter < rhs.retryAfter
+                }
                 return lhs.url < rhs.url
             }), let first = group.first
             else { return nil }
@@ -357,7 +361,9 @@ public enum RateLimitStatusFormatter {
     private static func blockerRows(_ rows: [RateLimitDisplayRow], alreadyRepresent error: String) -> Bool {
         let cleaned = Self.cleanedBlockerText(error, fallback: "")
         return rows.contains { row in
-            if row.text == error || row.text == cleaned { return true }
+            if row.text == error || row.text == cleaned {
+                return true
+            }
             guard let detail = row.detailText else { return false }
 
             return detail.contains(error) || (cleaned.isEmpty == false && detail.contains(cleaned))
@@ -378,7 +384,9 @@ public enum RateLimitStatusFormatter {
         resources.sorted { lhs, rhs in
             let leftGroup = Self.resourceGroup(for: lhs.key).rawValue
             let rightGroup = Self.resourceGroup(for: rhs.key).rawValue
-            if leftGroup != rightGroup { return leftGroup < rightGroup }
+            if leftGroup != rightGroup {
+                return leftGroup < rightGroup
+            }
             return lhs.key < rhs.key
         }
     }

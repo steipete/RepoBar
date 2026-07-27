@@ -476,7 +476,9 @@ struct AccountSettingsView: View {
         guard !self.enterpriseHost.isEmpty else { return nil }
         guard var components = URLComponents(string: enterpriseHost) else { return nil }
 
-        if components.scheme == nil { components.scheme = "https" }
+        if components.scheme == nil {
+            components.scheme = "https"
+        }
         guard components.scheme?.lowercased() == "https", components.host != nil else { return nil }
 
         components.path = ""
@@ -488,7 +490,9 @@ struct AccountSettingsView: View {
     private func validateToken() async {
         guard case .loggedIn = self.session.account else { return }
 
-        if self.tokenValidation == .checking { return }
+        if self.tokenValidation == .checking {
+            return
+        }
         self.tokenValidation = .checking
         let started = Date()
         await self.logAuth("Auth: token check started")
@@ -515,7 +519,9 @@ struct AccountSettingsView: View {
     private func refreshToken() async {
         guard case .loggedIn = self.session.account else { return }
 
-        if self.tokenValidation == .checking { return }
+        if self.tokenValidation == .checking {
+            return
+        }
         self.tokenValidation = .checking
         let started = Date()
         await self.logAuth("Auth: token refresh started")

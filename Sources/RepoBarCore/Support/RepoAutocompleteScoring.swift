@@ -35,8 +35,12 @@ public enum RepoAutocompleteScoring {
 
     public static func sort(_ scored: [Scored]) -> [Scored] {
         scored.sorted {
-            if $0.score != $1.score { return $0.score > $1.score }
-            if $0.sourceRank != $1.sourceRank { return $0.sourceRank < $1.sourceRank }
+            if $0.score != $1.score {
+                return $0.score > $1.score
+            }
+            if $0.sourceRank != $1.sourceRank {
+                return $0.sourceRank < $1.sourceRank
+            }
             return $0.repo.fullName.localizedCaseInsensitiveCompare($1.repo.fullName) == .orderedAscending
         }
     }
@@ -66,8 +70,12 @@ public enum RepoAutocompleteScoring {
         let fullName = repo.fullName.lowercased()
         let hasSlash = lowerQuery.contains("/")
         if hasSlash {
-            if fullName == lowerQuery { return 1000 }
-            if fullName.hasPrefix(lowerQuery) { return 700 }
+            if fullName == lowerQuery {
+                return 1000
+            }
+            if fullName.hasPrefix(lowerQuery) {
+                return 700
+            }
         }
 
         let parts = lowerQuery.split(separator: "/", omittingEmptySubsequences: false)
@@ -157,9 +165,15 @@ public enum RepoAutocompleteScoring {
         guard let language, !language.isEmpty else { return 0 }
 
         let lower = language.lowercased()
-        if lower == query { return 150 }
-        if lower.hasPrefix(query) { return 100 }
-        if lower.contains(query) { return 60 }
+        if lower == query {
+            return 150
+        }
+        if lower.hasPrefix(query) {
+            return 100
+        }
+        if lower.contains(query) {
+            return 60
+        }
         return 0
     }
 
@@ -167,8 +181,12 @@ public enum RepoAutocompleteScoring {
         guard let description, !description.isEmpty else { return 0 }
 
         let lower = description.lowercased()
-        if lower.contains(query) { return 60 }
-        if query.count <= 3, Self.isSubsequence(query, of: lower) { return 30 }
+        if lower.contains(query) {
+            return 60
+        }
+        if query.count <= 3, Self.isSubsequence(query, of: lower) {
+            return 30
+        }
         return 0
     }
 
@@ -180,10 +198,18 @@ public enum RepoAutocompleteScoring {
         guard !query.isEmpty else { return 0 }
 
         let lowerTarget = target.lowercased()
-        if lowerTarget == query { return weights.exact }
-        if lowerTarget.hasPrefix(query) { return weights.prefix }
-        if lowerTarget.contains(query) { return weights.substring }
-        if query.count <= 3, Self.isSubsequence(query, of: lowerTarget) { return weights.subsequence }
+        if lowerTarget == query {
+            return weights.exact
+        }
+        if lowerTarget.hasPrefix(query) {
+            return weights.prefix
+        }
+        if lowerTarget.contains(query) {
+            return weights.substring
+        }
+        if query.count <= 3, Self.isSubsequence(query, of: lowerTarget) {
+            return weights.subsequence
+        }
         return nil
     }
 

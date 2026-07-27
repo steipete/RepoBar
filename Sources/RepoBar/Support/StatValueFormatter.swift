@@ -2,7 +2,9 @@ import Foundation
 
 enum StatValueFormatter {
     static func compact(_ value: Int) -> String {
-        if value < 1000 { return "\(value)" }
+        if value < 1000 {
+            return "\(value)"
+        }
         if value < 10000 {
             let short = self.oneDecimal(value, divisor: 1000)
             return "\(short)K"

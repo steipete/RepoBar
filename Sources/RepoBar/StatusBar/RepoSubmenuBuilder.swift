@@ -53,9 +53,13 @@ struct RepoSubmenuBuilder {
     ) -> [RepoSubmenuBlock] {
         var blocks: [RepoSubmenuBlock] = []
         for itemID in customization.repoSubmenuOrder {
-            if customization.hiddenRepoSubmenuItems.contains(itemID) { continue }
+            if customization.hiddenRepoSubmenuItems.contains(itemID) {
+                continue
+            }
             let items = self.repoSubmenuItems(for: itemID, repo: repo, isPinned: isPinned)
-            if items.isEmpty { continue }
+            if items.isEmpty {
+                continue
+            }
             blocks.append(RepoSubmenuBlock(group: itemID.group, items: items))
         }
         return blocks

@@ -263,9 +263,15 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
         let signpost = self.signposter.beginInterval("menuWillOpen")
         defer { self.signposter.endInterval("menuWillOpen", signpost) }
         self.prepareMenuAppearance(menu)
-        if self.recentListCoordinator.handleMenuWillOpen(menu) { return }
-        if self.localGitMenuCoordinator.handleMenuWillOpen(menu) { return }
-        if self.changelogMenuCoordinator.handleMenuWillOpen(menu) { return }
+        if self.recentListCoordinator.handleMenuWillOpen(menu) {
+            return
+        }
+        if self.localGitMenuCoordinator.handleMenuWillOpen(menu) {
+            return
+        }
+        if self.changelogMenuCoordinator.handleMenuWillOpen(menu) {
+            return
+        }
         self.prefetchChangelogIfNeeded(for: menu)
         if menu === self.mainMenu {
             self.prepareMainMenuWillOpen(menu)
@@ -609,7 +615,9 @@ private extension StatusBarMenuManager {
     }
 
     func setButtonImage(_ image: NSImage, for button: NSStatusBarButton) {
-        if button.image === image { return }
+        if button.image === image {
+            return
+        }
         button.image = image
     }
 

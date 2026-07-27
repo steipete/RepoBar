@@ -267,10 +267,18 @@ private struct RepoAutocompleteRow: View {
                             .truncationMode(.middle)
 
                         HStack(spacing: 6) {
-                            if self.repo.isFork { Badge(text: "Fork") }
-                            if self.repo.isArchived { Badge(text: "Archived") }
-                            if self.repo.discussionsEnabled == true { Badge(text: "Discussions") }
-                            if let lang = self.repo.language, !lang.isEmpty { Badge(text: lang) }
+                            if self.repo.isFork {
+                                Badge(text: "Fork")
+                            }
+                            if self.repo.isArchived {
+                                Badge(text: "Archived")
+                            }
+                            if self.repo.discussionsEnabled == true {
+                                Badge(text: "Discussions")
+                            }
+                            if let lang = self.repo.language, !lang.isEmpty {
+                                Badge(text: lang)
+                            }
                         }
                     }
 
@@ -361,20 +369,32 @@ private struct RepoAutocompleteRow: View {
     private static func compactAge(since date: Date) -> String {
         let seconds = max(0, Date().timeIntervalSince(date))
         let minutes = Int(seconds / 60)
-        if minutes < 1 { return "now" }
-        if minutes < 60 { return "\(minutes)m" }
+        if minutes < 1 {
+            return "now"
+        }
+        if minutes < 60 {
+            return "\(minutes)m"
+        }
 
         let hours = minutes / 60
-        if hours < 24 { return "\(hours)h" }
+        if hours < 24 {
+            return "\(hours)h"
+        }
 
         let days = hours / 24
-        if days < 7 { return "\(days)d" }
+        if days < 7 {
+            return "\(days)d"
+        }
 
         let weeks = days / 7
-        if weeks < 8 { return "\(weeks)w" }
+        if weeks < 8 {
+            return "\(weeks)w"
+        }
 
         let months = days / 30
-        if months < 24 { return "\(months)mo" }
+        if months < 24 {
+            return "\(months)mo"
+        }
 
         let years = days / 365
         return "\(years)y"

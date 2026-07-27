@@ -5,7 +5,9 @@ public enum PathFormatter {
         guard path.hasPrefix("~") else { return path }
 
         let home = self.userHomeCandidates().first ?? NSString(string: "~").expandingTildeInPath
-        if path == "~" { return home }
+        if path == "~" {
+            return home
+        }
         if path.hasPrefix("~/") {
             return home + path.dropFirst(1)
         }
@@ -14,7 +16,9 @@ public enum PathFormatter {
 
     public static func abbreviateHome(_ path: String) -> String {
         for base in self.userHomeCandidates().sorted(by: { $0.count > $1.count }) {
-            if path == base { return "~" }
+            if path == base {
+                return "~"
+            }
             if path.hasPrefix(base + "/") {
                 return "~" + path.dropFirst(base.count)
             }
@@ -41,7 +45,9 @@ public enum PathFormatter {
         #if os(macOS)
             let user = NSUserName()
             let homeFromUser = NSHomeDirectoryForUser(user)
-            if let homeFromUser, homeFromUser.isEmpty == false { candidates.append(homeFromUser) }
+            if let homeFromUser, homeFromUser.isEmpty == false {
+                candidates.append(homeFromUser)
+            }
             if user.isEmpty == false {
                 candidates.append("/Users/\(user)")
                 candidates.append("/System/Volumes/Data/Users/\(user)")

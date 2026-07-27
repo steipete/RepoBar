@@ -121,7 +121,9 @@ struct DisplaySettingsView: View {
     private func mainMenuVisibility(for item: MainMenuItemID) -> Binding<Bool> {
         Binding(
             get: {
-                if item.isRequired { return true }
+                if item.isRequired {
+                    return true
+                }
                 return !self.session.settings.menuCustomization.hiddenMainMenuItems.contains(item)
             },
             set: { isVisible in

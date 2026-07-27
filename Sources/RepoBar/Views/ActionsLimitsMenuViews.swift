@@ -172,8 +172,12 @@ struct ActionsQueueRowView: View {
     }
 
     private static func tint(for remainingPercent: Double) -> Color {
-        if remainingPercent <= 10 { return Color(nsColor: .systemRed) }
-        if remainingPercent <= 30 { return Color(nsColor: .systemOrange) }
+        if remainingPercent <= 10 {
+            return Color(nsColor: .systemRed)
+        }
+        if remainingPercent <= 30 {
+            return Color(nsColor: .systemOrange)
+        }
         return Color(nsColor: .systemGreen)
     }
 }
@@ -342,8 +346,12 @@ struct ActionsMinutesRowView: View {
     }
 
     private static func tint(for remainingPercent: Double) -> Color {
-        if remainingPercent <= 10 { return Color(nsColor: .systemRed) }
-        if remainingPercent <= 30 { return Color(nsColor: .systemOrange) }
+        if remainingPercent <= 10 {
+            return Color(nsColor: .systemRed)
+        }
+        if remainingPercent <= 30 {
+            return Color(nsColor: .systemOrange)
+        }
         return Color(nsColor: .systemGreen)
     }
 }

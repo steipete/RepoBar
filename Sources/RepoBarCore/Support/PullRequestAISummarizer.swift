@@ -125,7 +125,9 @@ public struct PullRequestAISummarizer: Sendable {
             .joined(separator: " ")
         guard summary.isEmpty == false else { return nil }
 
-        if summary.count <= Self.maximumSummaryCharacters { return summary }
+        if summary.count <= Self.maximumSummaryCharacters {
+            return summary
+        }
 
         let prefix = String(summary.prefix(Self.maximumSummaryCharacters - 3))
             .trimmingCharacters(in: .whitespacesAndNewlines)

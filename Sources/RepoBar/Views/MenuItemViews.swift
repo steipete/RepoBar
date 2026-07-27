@@ -176,7 +176,9 @@ struct RepoMenuCardView: View {
     }
 
     private func localSyncColor(for state: LocalSyncState) -> Color {
-        if self.isHighlighted { return MenuHighlightStyle.selectionText }
+        if self.isHighlighted {
+            return MenuHighlightStyle.selectionText
+        }
         switch state {
         case .synced:
             return self.isLightAppearance

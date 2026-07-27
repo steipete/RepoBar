@@ -58,7 +58,9 @@ extension AppState {
         let pinned = self.session.settings.repoList.pinnedRepositories
         let pinnedIndex = pinned.enumerated().reduce(into: [String: Int]()) { dict, entry in
             let key = self.normalizedFullName(entry.element)
-            if dict[key] == nil { dict[key] = entry.offset }
+            if dict[key] == nil {
+                dict[key] = entry.offset
+            }
         }
         return repos.map { repo in
             if let idx = pinnedIndex[self.normalizedFullName(repo.fullName)] {

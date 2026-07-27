@@ -124,7 +124,9 @@ struct RateLimitsCommand: CommanderRunnableCommand {
         print("GitHub API Status")
         print("Cache DB: \(PathFormatter.displayString(summary.databasePath))")
         for (index, section) in sections.enumerated() {
-            if index > 0 { print("") }
+            if index > 0 {
+                print("")
+            }
             if let title = section.title {
                 print(title)
             }

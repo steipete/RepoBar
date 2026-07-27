@@ -562,7 +562,9 @@ public actor GitHubClient {
 
             return tokens.accessToken
         }
-        if let token = try tokenStore.load()?.accessToken { return token }
+        if let token = try tokenStore.load()?.accessToken {
+            return token
+        }
         throw URLError(.userAuthenticationRequired)
     }
 

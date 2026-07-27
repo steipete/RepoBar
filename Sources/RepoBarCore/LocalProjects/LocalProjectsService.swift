@@ -209,7 +209,9 @@
             let fetchedPaths = Set(processed.filter(\.didFetch).map(\.status.path))
 
             statuses.sort { lhs, rhs in
-                if lhs.displayName != rhs.displayName { return lhs.displayName < rhs.displayName }
+                if lhs.displayName != rhs.displayName {
+                    return lhs.displayName < rhs.displayName
+                }
                 return lhs.path.path < rhs.path.path
             }
 
@@ -251,7 +253,9 @@
 
                 for child in children {
                     let name = child.lastPathComponent
-                    if name.hasPrefix(".") { continue }
+                    if name.hasPrefix(".") {
+                        continue
+                    }
 
                     let values = try? child.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
                     if values?.isSymbolicLink == true {
@@ -414,7 +418,9 @@
             }
         }
 
-        if added.isEmpty, modified.isEmpty, deleted.isEmpty { return nil }
+        if added.isEmpty, modified.isEmpty, deleted.isEmpty {
+            return nil
+        }
         return LocalDirtyCounts(added: added.count, modified: modified.count, deleted: deleted.count)
     }
 

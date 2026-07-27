@@ -18,10 +18,18 @@ public struct UserIdentity: Equatable, Sendable {
     public static func planTier(from name: String?) -> GitHubPlanTier? {
         guard let name = name?.lowercased() else { return nil }
 
-        if name.contains("enterprise") { return .enterprise }
-        if name.contains("team") { return .team }
-        if name.contains("pro") || name.contains("developer") { return .pro }
-        if name.contains("free") { return .free }
+        if name.contains("enterprise") {
+            return .enterprise
+        }
+        if name.contains("team") {
+            return .team
+        }
+        if name.contains("pro") || name.contains("developer") {
+            return .pro
+        }
+        if name.contains("free") {
+            return .free
+        }
         return nil
     }
 }

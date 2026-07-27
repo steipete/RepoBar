@@ -168,7 +168,9 @@ final class HeatmapRasterNSView: NSView {
             "app:\(appearanceKey)"
         ].joined(separator: "|")
 
-        if self.lastAppliedRenderKey == renderKey, self.lastAppliedScale == scale { return }
+        if self.lastAppliedRenderKey == renderKey, self.lastAppliedScale == scale {
+            return
+        }
 
         if let cached = Self.imageCache.object(forKey: renderKey as NSString) {
             self.apply(image: cached, renderKey: renderKey, scale: scale)
@@ -185,10 +187,14 @@ final class HeatmapRasterNSView: NSView {
         )
 
         self.renderTask = Task { [weak self, payload, renderKey, scale, generation] in
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
             let imageTask = Task.detached(priority: .userInitiated) { payload.renderImage() }
             let image = await imageTask.value
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
             guard let self else { return }
             guard self.renderGeneration == generation else { return }
             guard let image else { return }
@@ -215,7 +221,9 @@ final class HeatmapRasterNSView: NSView {
         let totalCells = columns * HeatmapLayout.rows
         if self.cachedColumns == columns, self.cachedBuckets.count == totalCells {
             let hash = Self.bucketHash(for: self.cells, totalCells: totalCells)
-            if hash == self.cachedBucketHash { return (self.cachedBuckets, hash) }
+            if hash == self.cachedBucketHash {
+                return (self.cachedBuckets, hash)
+            }
         }
 
         let (buckets, hash) = Self.buildBuckets(for: self.cells, totalCells: totalCells)
@@ -232,7 +240,9 @@ final class HeatmapRasterNSView: NSView {
         xSpacing: CGFloat,
         xOffset: CGFloat
     ) -> [[CGRect]] {
-        if self.cachedGeometryKey == geometryKey { return self.cachedRectsByBucket }
+        if self.cachedGeometryKey == geometryKey {
+            return self.cachedRectsByBucket
+        }
 
         var rectsByBucket: [[CGRect]] = Array(repeating: [], count: 5)
         rectsByBucket[0].reserveCapacity(buckets.count)
@@ -495,14 +505,18 @@ private struct RenderPayload {
         if self.cornerRadius <= 0 {
             for bucket in 0 ..< min(self.rectsByBucket.count, self.palette.count) {
                 let rects = self.rectsByBucket[bucket]
-                if rects.isEmpty { continue }
+                if rects.isEmpty {
+                    continue
+                }
                 self.setFillColor(self.palette[bucket], on: context)
                 context.fill(rects)
             }
         } else {
             for bucket in 0 ..< min(self.rectsByBucket.count, self.palette.count) {
                 let rects = self.rectsByBucket[bucket]
-                if rects.isEmpty { continue }
+                if rects.isEmpty {
+                    continue
+                }
                 let path = CGMutablePath()
                 for rect in rects {
                     path.addRoundedRect(in: rect, cornerWidth: self.cornerRadius, cornerHeight: self.cornerRadius)

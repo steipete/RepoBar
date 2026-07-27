@@ -6,9 +6,13 @@ extension AppState {
     func loadContributionHeatmapIfNeeded(for username: String) async {
         guard self.session.settings.appearance.showContributionHeader else { return }
 
-        if self.session.contributionUser == username, !self.session.contributionHeatmap.isEmpty { return }
+        if self.session.contributionUser == username, !self.session.contributionHeatmap.isEmpty {
+            return
+        }
         let hasExisting = self.session.contributionUser == username && !self.session.contributionHeatmap.isEmpty
-        if self.session.contributionIsLoading, self.session.contributionUser == username { return }
+        if self.session.contributionIsLoading, self.session.contributionUser == username {
+            return
+        }
         if let cached = ContributionCacheStore.load(), cached.username == username, cached.isValid {
             await MainActor.run {
                 self.session.contributionUser = username

@@ -75,9 +75,15 @@ public struct ActionsUsageInfo: Sendable, Equatable {
 
     private static func osLabel(for sku: String) -> String {
         let upper = sku.uppercased()
-        if upper.contains("MACOS") || upper.contains("MAC_OS") { return "macOS" }
-        if upper.contains("WINDOWS") { return "Windows" }
-        if upper.contains("LINUX") || upper.contains("UBUNTU") { return "Linux" }
+        if upper.contains("MACOS") || upper.contains("MAC_OS") {
+            return "macOS"
+        }
+        if upper.contains("WINDOWS") {
+            return "Windows"
+        }
+        if upper.contains("LINUX") || upper.contains("UBUNTU") {
+            return "Linux"
+        }
         return sku
     }
 }
@@ -317,8 +323,12 @@ public enum ActionsMinuteMultiplier {
 
     public static func multiplier(for os: String) -> Double {
         let lower = os.lowercased()
-        if lower.contains("macos") || lower.contains("mac") { return self.macOS }
-        if lower.contains("windows") || lower.contains("win") { return self.windows }
+        if lower.contains("macos") || lower.contains("mac") {
+            return self.macOS
+        }
+        if lower.contains("windows") || lower.contains("win") {
+            return self.windows
+        }
         return self.linux
     }
 }

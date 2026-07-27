@@ -20,8 +20,12 @@ public struct RepositoryOnlyWith: Sendable, Equatable {
         let hasPRs = repo.stats.openPulls > 0
 
         var ok = false
-        if self.requireIssues { ok = ok || hasIssues }
-        if self.requirePRs { ok = ok || hasPRs }
+        if self.requireIssues {
+            ok = ok || hasIssues
+        }
+        if self.requirePRs {
+            ok = ok || hasPRs
+        }
         return ok
     }
 }

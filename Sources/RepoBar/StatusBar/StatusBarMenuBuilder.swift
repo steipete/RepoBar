@@ -85,9 +85,13 @@ final class StatusBarMenuBuilder {
         let session = self.appState.session
         var blocks: [MainMenuBlock] = []
         for itemID in customization.mainMenuOrder {
-            if customization.hiddenMainMenuItems.contains(itemID), !itemID.isRequired { continue }
+            if customization.hiddenMainMenuItems.contains(itemID), !itemID.isRequired {
+                continue
+            }
             let items = self.mainMenuItems(for: itemID, repos: repos, settings: settings, session: session)
-            if items.isEmpty { continue }
+            if items.isEmpty {
+                continue
+            }
             blocks.append(MainMenuBlock(group: itemID.group, items: items))
         }
         return blocks
@@ -301,7 +305,9 @@ final class StatusBarMenuBuilder {
             }
         }
         let menuWidth = menu.size.width
-        if menuWidth > 0 { return max(menuWidth, Self.menuFixedWidth) }
+        if menuWidth > 0 {
+            return max(menuWidth, Self.menuFixedWidth)
+        }
         return Self.menuFixedWidth
     }
 
@@ -388,12 +394,16 @@ final class StatusBarMenuBuilder {
     }
 
     private func currentUsername() -> String? {
-        if case let .loggedIn(user) = self.appState.session.account { return user.username }
+        if case let .loggedIn(user) = self.appState.session.account {
+            return user.username
+        }
         return nil
     }
 
     private func currentDisplayName() -> String? {
-        if case let .loggedIn(user) = self.appState.session.account { return user.username }
+        if case let .loggedIn(user) = self.appState.session.account {
+            return user.username
+        }
         return nil
     }
 

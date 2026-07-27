@@ -194,8 +194,12 @@ enum GitHubRecentDecoders {
 
     private static func workflowRunTitle(_ run: ActionsRunsResponse.WorkflowRun) -> String {
         let preferred = (run.displayTitle ?? run.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if preferred.isEmpty == false { return preferred }
-        if let runNumber = run.runNumber { return "Run #\(runNumber)" }
+        if preferred.isEmpty == false {
+            return preferred
+        }
+        if let runNumber = run.runNumber {
+            return "Run #\(runNumber)"
+        }
         return "Workflow run"
     }
 
@@ -241,7 +245,9 @@ enum GitHubRecentDecoders {
             .joined(separator: " ")
         guard collapsed.isEmpty == false else { return nil }
 
-        if collapsed.count <= 240 { return collapsed }
+        if collapsed.count <= 240 {
+            return collapsed
+        }
         return "\(collapsed.prefix(237))..."
     }
 

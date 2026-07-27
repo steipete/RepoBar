@@ -430,7 +430,9 @@ private struct ArchiveTableManifest: Decodable {
     let rows: Int
 
     var allFiles: [String] {
-        if let files, files.isEmpty == false { return files }
+        if let files, files.isEmpty == false {
+            return files
+        }
         return self.file.map { [$0] } ?? []
     }
 }

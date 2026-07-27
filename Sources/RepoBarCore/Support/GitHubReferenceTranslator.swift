@@ -842,9 +842,15 @@ extension GitHubReferenceTranslator {
               let firstToken = self.referenceTokens(in: body).first
         else { return false }
 
-        if self.urlQuery(from: firstToken) != nil { return true }
-        if self.compoundBareIssueQueries(from: firstToken).isEmpty == false { return true }
-        if self.compoundRepositoryIssueQueries(from: firstToken).isEmpty == false { return true }
+        if self.urlQuery(from: firstToken) != nil {
+            return true
+        }
+        if self.compoundBareIssueQueries(from: firstToken).isEmpty == false {
+            return true
+        }
+        if self.compoundRepositoryIssueQueries(from: firstToken).isEmpty == false {
+            return true
+        }
         return self.tokenQuery(
             from: firstToken,
             minimumBareDigits: 1,

@@ -28,7 +28,9 @@ struct ReleasesCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let repo = try requireRepoIdentifier(self.repoName)
 
         let context = try await makeAuthenticatedClient()
@@ -79,7 +81,9 @@ struct CICommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let repo = try requireRepoIdentifier(self.repoName)
 
         let context = try await makeAuthenticatedClient()
@@ -130,7 +134,9 @@ struct DiscussionsCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let repo = try requireRepoIdentifier(self.repoName)
 
         let context = try await makeAuthenticatedClient()
@@ -181,7 +187,9 @@ struct TagsCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let repo = try requireRepoIdentifier(self.repoName)
 
         let context = try await makeAuthenticatedClient()
@@ -232,7 +240,9 @@ struct BranchesCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let repo = try requireRepoIdentifier(self.repoName)
 
         let context = try await makeAuthenticatedClient()
@@ -283,7 +293,9 @@ struct ContributorsCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let repo = try requireRepoIdentifier(self.repoName)
 
         let context = try await makeAuthenticatedClient()
@@ -342,7 +354,9 @@ struct CommitsCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let context = try await makeAuthenticatedClient()
 
         if let target, target.contains("/") {
@@ -435,7 +449,9 @@ struct ActivityCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.limit <= 0 { throw ValidationError("--limit must be greater than 0") }
+        if self.limit <= 0 {
+            throw ValidationError("--limit must be greater than 0")
+        }
         let context = try await makeAuthenticatedClient()
 
         if let target, target.contains("/") {

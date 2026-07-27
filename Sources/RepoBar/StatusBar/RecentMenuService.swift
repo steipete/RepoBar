@@ -69,7 +69,9 @@ final class RecentMenuService {
                 cache: self.recentIssuesCache,
                 wrap: RecentMenuItems.issues,
                 unwrap: { boxed in
-                    if case let .issues(items) = boxed { return items }
+                    if case let .issues(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -84,7 +86,9 @@ final class RecentMenuService {
                 cache: self.recentPullRequestsCache,
                 wrap: RecentMenuItems.pullRequests,
                 unwrap: { boxed in
-                    if case let .pullRequests(items) = boxed { return items }
+                    if case let .pullRequests(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -99,7 +103,9 @@ final class RecentMenuService {
                 cache: self.recentReleasesCache,
                 wrap: RecentMenuItems.releases,
                 unwrap: { boxed in
-                    if case let .releases(items) = boxed { return items }
+                    if case let .releases(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -114,7 +120,9 @@ final class RecentMenuService {
                 cache: self.recentWorkflowRunsCache,
                 wrap: RecentMenuItems.workflowRuns,
                 unwrap: { boxed in
-                    if case let .workflowRuns(items) = boxed { return items }
+                    if case let .workflowRuns(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -129,7 +137,9 @@ final class RecentMenuService {
                 cache: self.recentDiscussionsCache,
                 wrap: RecentMenuItems.discussions,
                 unwrap: { boxed in
-                    if case let .discussions(items) = boxed { return items }
+                    if case let .discussions(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -144,7 +154,9 @@ final class RecentMenuService {
                 cache: self.recentTagsCache,
                 wrap: RecentMenuItems.tags,
                 unwrap: { boxed in
-                    if case let .tags(items) = boxed { return items }
+                    if case let .tags(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -159,7 +171,9 @@ final class RecentMenuService {
                 cache: self.recentBranchesCache,
                 wrap: RecentMenuItems.branches,
                 unwrap: { boxed in
-                    if case let .branches(items) = boxed { return items }
+                    if case let .branches(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -174,7 +188,9 @@ final class RecentMenuService {
                 cache: self.recentContributorsCache,
                 wrap: RecentMenuItems.contributors,
                 unwrap: { boxed in
-                    if case let .contributors(items) = boxed { return items }
+                    if case let .contributors(items) = boxed {
+                        return items
+                    }
                     return nil
                 },
                 fetch: { github, owner, name, limit in
@@ -188,7 +204,9 @@ final class RecentMenuService {
 
     func cachedRecentCommitCount(fullName: String) -> Int? {
         let key = self.cacheKey(fullName: fullName)
-        if let total = self.recentCommitCounts[key] { return total }
+        if let total = self.recentCommitCounts[key] {
+            return total
+        }
         return self.recentCommitsCache.stale(for: key)?.count
     }
 
@@ -375,7 +393,9 @@ final class RecentListCache<Item: Sendable> {
     }
 
     func task(for key: String, factory: @escaping @Sendable () async throws -> [Item]) -> Task<[Item], Error> {
-        if let existing = self.inflight[key] { return existing }
+        if let existing = self.inflight[key] {
+            return existing
+        }
         let task = Task { try await factory() }
         self.inflight[key] = task
         return task

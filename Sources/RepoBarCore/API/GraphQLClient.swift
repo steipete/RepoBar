@@ -223,7 +223,9 @@ actor GraphQLClient {
     private func logGraphQLResponse(_ response: HTTPURLResponse, label: String, startedAt: Date) async {
         let durationMs = Int((Date().timeIntervalSince(startedAt) * 1000).rounded())
         let snapshot = RateLimitSnapshot.from(response: response)
-        if let snapshot { self.rateLimit = snapshot }
+        if let snapshot {
+            self.rateLimit = snapshot
+        }
 
         let remaining = snapshot?.remaining.map(String.init) ?? response.value(forHTTPHeaderField: "X-RateLimit-Remaining") ?? "?"
         let limit = snapshot?.limit.map(String.init) ?? response.value(forHTTPHeaderField: "X-RateLimit-Limit") ?? "?"
@@ -371,7 +373,9 @@ struct ContributionDay: Decodable {
         if raw.contains("T") {
             let formatter = ISO8601DateFormatter()
             formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            if let date = formatter.date(from: raw) { return date }
+            if let date = formatter.date(from: raw) {
+                return date
+            }
             formatter.formatOptions = [.withInternetDateTime]
             return formatter.date(from: raw)
         }

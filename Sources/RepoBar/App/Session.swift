@@ -62,7 +62,9 @@ enum AccountState: Equatable {
     case loggedIn(UserIdentity)
 
     var isLoggedIn: Bool {
-        if case .loggedIn = self { return true }
+        if case .loggedIn = self {
+            return true
+        }
         return false
     }
 }

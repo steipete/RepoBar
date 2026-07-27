@@ -341,7 +341,9 @@ struct AdvancedSettingsView: View {
     private var localRepoSummary: String? {
         guard self.session.settings.localProjects.rootPath != nil else { return nil }
 
-        if self.session.localProjectsScanInProgress { return "Scanning…" }
+        if self.session.localProjectsScanInProgress {
+            return "Scanning…"
+        }
         let total = self.session.localDiscoveredRepoCount
         let matched = self.localMatchedRepoCount
         if total == 0 {
@@ -350,7 +352,9 @@ struct AdvancedSettingsView: View {
             }
             return "No repositories found yet."
         }
-        if matched > 0 { return "Found \(total) local repos · \(matched) match GitHub data." }
+        if matched > 0 {
+            return "Found \(total) local repos · \(matched) match GitHub data."
+        }
         return "Found \(total) local repos."
     }
 

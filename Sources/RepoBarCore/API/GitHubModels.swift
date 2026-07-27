@@ -181,7 +181,9 @@ struct EventRepo: Decodable {
     }
 
     var fullName: String? {
-        if let name, name.contains("/") { return name }
+        if let name, name.contains("/") {
+            return name
+        }
         guard let url else { return nil }
 
         let parts = url.path.split(separator: "/")
@@ -465,8 +467,12 @@ extension RepoEvent {
 
     private func issueTarget(number: Int?, title: String?) -> String? {
         var parts: [String] = []
-        if let number { parts.append("#\(number)") }
-        if let title, !title.isEmpty { parts.append(title) }
+        if let number {
+            parts.append("#\(number)")
+        }
+        if let title, !title.isEmpty {
+            parts.append(title)
+        }
         guard parts.isEmpty == false else { return nil }
 
         return parts.joined(separator: ": ")

@@ -86,7 +86,9 @@ private struct MarkdownBlockBuilder {
         }
 
         for child in listItem.children {
-            if child is Paragraph { continue }
+            if child is Paragraph {
+                continue
+            }
             self.appendBlocks(from: child, into: &blocks)
         }
     }

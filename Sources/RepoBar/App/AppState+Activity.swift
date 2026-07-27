@@ -99,7 +99,9 @@ extension AppState {
             }
             var out: [Repository] = []
             for await repo in group {
-                if let repo { out.append(repo) }
+                if let repo {
+                    out.append(repo)
+                }
             }
             return out
         }

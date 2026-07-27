@@ -217,7 +217,9 @@ func parseHost(_ raw: String) throws -> URL {
         throw ValidationError("Invalid host: \(raw)")
     }
 
-    if components.scheme == nil { components.scheme = "https" }
+    if components.scheme == nil {
+        components.scheme = "https"
+    }
     guard let url = components.url else {
         throw ValidationError("Invalid host: \(raw)")
     }

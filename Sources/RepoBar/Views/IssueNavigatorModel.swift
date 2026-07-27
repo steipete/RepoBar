@@ -88,8 +88,12 @@ final class IssueNavigatorModel {
     }
 
     var statusLine: String {
-        if self.isSearching { return "Searching…" }
-        if let errorText { return errorText }
+        if self.isSearching {
+            return "Searching…"
+        }
+        if let errorText {
+            return errorText
+        }
         return self.statusText
     }
 
@@ -405,7 +409,9 @@ final class IssueNavigatorModel {
         return matches
             .filter { seen.insert($0.url).inserted }
             .sorted {
-                if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+                if $0.updatedAt != $1.updatedAt {
+                    return $0.updatedAt > $1.updatedAt
+                }
                 return ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)
             }
     }

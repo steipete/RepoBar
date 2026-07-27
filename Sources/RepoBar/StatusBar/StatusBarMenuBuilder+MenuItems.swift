@@ -323,7 +323,9 @@ extension StatusBarMenuBuilder {
     ) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
         item.target = self.target
-        if let represented { item.representedObject = represented }
+        if let represented {
+            item.representedObject = represented
+        }
         if let systemImage, let image = self.cachedSystemImage(named: systemImage) {
             item.image = image
         }

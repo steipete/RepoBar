@@ -13,7 +13,9 @@ extension NSColor {
         let fg = self.resolvedRGBColor(appearance: appearance)
         let bg = background.resolvedRGBColor(appearance: appearance)
 
-        if fg.contrastRatio(with: bg) >= minRatio { return self }
+        if fg.contrastRatio(with: bg) >= minRatio {
+            return self
+        }
 
         let white = Self.bestMix(foreground: fg, background: bg, target: .white, minRatio: minRatio)
         let black = Self.bestMix(foreground: fg, background: bg, target: .black, minRatio: minRatio)
@@ -21,8 +23,12 @@ extension NSColor {
         if let white, let black {
             return white.mixFraction <= black.mixFraction ? white.color : black.color
         }
-        if let white { return white.color }
-        if let black { return black.color }
+        if let white {
+            return white.color
+        }
+        if let black {
+            return black.color
+        }
 
         let fallbackWhite = fg.blended(with: .white, fraction: 1.0)
         let fallbackBlack = fg.blended(with: .black, fraction: 1.0)
@@ -63,7 +69,9 @@ extension NSColor {
     }
 
     private static func srgbToLinear(_ c: CGFloat) -> CGFloat {
-        if c <= 0.04045 { return c / 12.92 }
+        if c <= 0.04045 {
+            return c / 12.92
+        }
         return pow((c + 0.055) / 1.055, 2.4)
     }
 

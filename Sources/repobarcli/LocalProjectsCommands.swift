@@ -37,8 +37,12 @@ struct LocalProjectsCommand: CommanderRunnableCommand {
     }
 
     mutating func run() async throws {
-        if self.depth < 0 { throw ValidationError("--depth must be >= 0") }
-        if let limit, limit <= 0 { throw ValidationError("--limit must be > 0") }
+        if self.depth < 0 {
+            throw ValidationError("--depth must be >= 0")
+        }
+        if let limit, limit <= 0 {
+            throw ValidationError("--limit must be > 0")
+        }
 
         let settings = cliSettingsStore().load()
         let rootPath = self.root
@@ -74,7 +78,9 @@ struct LocalProjectsCommand: CommanderRunnableCommand {
                 repositories: statuses.map { LocalRepoOutput($0, didSync: syncedPaths.contains($0.path.path)) }
             )
             let data = try encoder.encode(payload)
-            if let json = String(data: data, encoding: .utf8) { print(json) }
+            if let json = String(data: data, encoding: .utf8) {
+                print(json)
+            }
             return
         }
 

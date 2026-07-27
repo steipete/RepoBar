@@ -224,29 +224,28 @@ struct IssueNavigatorView: View {
         }
     }
 
+    @ViewBuilder
     private var previewPane: some View {
-        Group {
-            if let match = self.model.selectedMatch {
-                VStack(spacing: 0) {
-                    self.previewHeader(for: match)
-                    IssueNavigatorBrowserPreview(url: match.url, store: self.model.browserStore)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            } else {
-                VStack(spacing: 12) {
-                    Image(systemName: "rectangle.and.text.magnifyingglass")
-                        .font(.system(size: 36, weight: .regular))
-                        .foregroundStyle(.tertiary)
-                    Text("Pick a result")
-                        .font(.title2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                    Text("Search by title, URL, owner/repo#number, or commit SHA.")
-                        .font(.callout)
-                        .foregroundStyle(.tertiary)
-                }
-                .padding(26)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        if let match = self.model.selectedMatch {
+            VStack(spacing: 0) {
+                self.previewHeader(for: match)
+                IssueNavigatorBrowserPreview(url: match.url, store: self.model.browserStore)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+        } else {
+            VStack(spacing: 12) {
+                Image(systemName: "rectangle.and.text.magnifyingglass")
+                    .font(.system(size: 36, weight: .regular))
+                    .foregroundStyle(.tertiary)
+                Text("Pick a result")
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Text("Search by title, URL, owner/repo#number, or commit SHA.")
+                    .font(.callout)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(26)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 

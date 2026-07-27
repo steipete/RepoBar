@@ -29,8 +29,12 @@ struct LocalRefMenuRowViewModel {
         guard ahead > 0 || behind > 0 else { return "" }
 
         var parts: [String] = []
-        if ahead > 0 { parts.append("↑\(ahead)") }
-        if behind > 0 { parts.append("↓\(behind)") }
+        if ahead > 0 {
+            parts.append("↑\(ahead)")
+        }
+        if behind > 0 {
+            parts.append("↓\(behind)")
+        }
         return parts.joined(separator: " ")
     }
 

@@ -244,7 +244,9 @@ actor GitHubRequestRunner {
                 )
             }
             .sorted { lhs, rhs in
-                if lhs.retryAfter != rhs.retryAfter { return lhs.retryAfter < rhs.retryAfter }
+                if lhs.retryAfter != rhs.retryAfter {
+                    return lhs.retryAfter < rhs.retryAfter
+                }
                 return lhs.url < rhs.url
             }
         return RequestRunnerDiagnostics(
@@ -266,7 +268,9 @@ actor GitHubRequestRunner {
     ) async {
         let durationMs = Int((Date().timeIntervalSince(startedAt) * 1000).rounded())
         let snapshot = RateLimitSnapshot.from(response: response)
-        if let snapshot { self.latestRestRateLimit = snapshot }
+        if let snapshot {
+            self.latestRestRateLimit = snapshot
+        }
 
         let remaining = snapshot?.remaining.map(String.init) ?? response.value(forHTTPHeaderField: "X-RateLimit-Remaining") ?? "?"
         let limit = snapshot?.limit.map(String.init) ?? response.value(forHTTPHeaderField: "X-RateLimit-Limit") ?? "?"

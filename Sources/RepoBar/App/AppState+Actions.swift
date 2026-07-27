@@ -22,13 +22,17 @@ extension AppState {
             repositories: repos,
             monitoredOwners: self.session.settings.monitoredOwners
         )
-        if Task.isCancelled { return }
+        if Task.isCancelled {
+            return
+        }
 
         await self.publishActionsOwnerPlaceholders(owners: owners, planTier: userTier)
 
         var snapshots: [ActionsOrgSnapshot] = []
         for owner in owners {
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
 
             let ownerRepos = repos.filter { $0.owner.lowercased() == owner.name.lowercased() }
             let runners = await Self.fetchRunners(github: github, owner: owner.name, repos: ownerRepos)

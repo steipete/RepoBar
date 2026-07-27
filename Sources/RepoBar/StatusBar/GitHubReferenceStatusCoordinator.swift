@@ -166,7 +166,9 @@ final class GitHubReferenceStatusCoordinator: NSObject, NSMenuDelegate {
     }
 
     private func makeMenuIfNeeded() -> NSMenu {
-        if let menu { return menu }
+        if let menu {
+            return menu
+        }
 
         let menu = NSMenu()
         menu.autoenablesItems = false
@@ -176,7 +178,9 @@ final class GitHubReferenceStatusCoordinator: NSObject, NSMenuDelegate {
     }
 
     private func makeStatusItemIfNeeded() -> NSStatusItem {
-        if let statusItem { return statusItem }
+        if let statusItem {
+            return statusItem
+        }
 
         let item = self.statusBar.statusItem(withLength: Self.hiddenItemLength)
         item.autosaveName = "repobar-github-reference"
@@ -243,11 +247,15 @@ final class GitHubReferenceStatusCoordinator: NSObject, NSMenuDelegate {
             if let browserView = item.view as? GitHubReferenceBrowserMenuItemView {
                 browserView.preload()
                 remaining -= 1
-                if remaining <= 0 { return }
+                if remaining <= 0 {
+                    return
+                }
             }
             if let submenu = item.submenu {
                 self.preloadPreviews(in: submenu, remaining: &remaining)
-                if remaining <= 0 { return }
+                if remaining <= 0 {
+                    return
+                }
             }
         }
     }
@@ -267,8 +275,12 @@ final class GitHubReferenceStatusCoordinator: NSObject, NSMenuDelegate {
     }
 
     private func menuTitle(for matches: [GitHubReferenceMatch]) -> String {
-        if matches.count == 1, let match = matches.first { return self.menuTitle(for: match) }
-        if let repo = self.commonRepository(in: matches) { return "\(matches.count) GitHub references in \(repo)" }
+        if matches.count == 1, let match = matches.first {
+            return self.menuTitle(for: match)
+        }
+        if let repo = self.commonRepository(in: matches) {
+            return "\(matches.count) GitHub references in \(repo)"
+        }
         return "\(matches.count) GitHub references"
     }
 
@@ -295,7 +307,9 @@ final class GitHubReferenceStatusCoordinator: NSObject, NSMenuDelegate {
     }
 
     private func accessibilityDescription(for matches: [GitHubReferenceMatch]) -> String {
-        if matches.count == 1, let match = matches.first { return match.kind.label }
+        if matches.count == 1, let match = matches.first {
+            return match.kind.label
+        }
         return "\(matches.count) GitHub References"
     }
 
@@ -309,7 +323,9 @@ final class GitHubReferenceStatusCoordinator: NSObject, NSMenuDelegate {
 
     private func title(for match: GitHubReferenceMatch) -> String {
         var parts = [self.referenceText(for: match)]
-        if let state = match.state?.label { parts.append(state) }
+        if let state = match.state?.label {
+            parts.append(state)
+        }
         parts.append(Self.truncatedMiddle(match.repositoryFullName, maxCharacters: Self.repositoryTitleLimit))
         let title = Self.truncatedTail(match.title, maxCharacters: Self.summaryTitleLimit)
         return "\(parts.joined(separator: " ")): \(title)"
@@ -341,9 +357,13 @@ final class GitHubReferenceStatusCoordinator: NSObject, NSMenuDelegate {
     private func setButtonTitle(_ title: String?, for button: NSStatusBarButton) {
         let rawValue = title ?? ""
         let value = rawValue.isEmpty || button.image == nil ? rawValue : " \(rawValue)"
-        if button.title != value { button.title = value }
+        if button.title != value {
+            button.title = value
+        }
         let position: NSControl.ImagePosition = value.isEmpty ? .imageOnly : .imageLeft
-        if button.imagePosition != position { button.imagePosition = position }
+        if button.imagePosition != position {
+            button.imagePosition = position
+        }
     }
 
     private func audit(_ context: String) {

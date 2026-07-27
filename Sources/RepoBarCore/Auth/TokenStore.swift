@@ -230,7 +230,9 @@ public struct TokenStore: Sendable {
             // so that we never surface a mangled duplicate of an original ID.
             let sanitizedIndexed = Set(indexed.map { self.sanitizedFileComponent($0) })
             for id in self.scanFileAccountIDs(directory: directory) {
-                if sanitizedIndexed.contains(self.sanitizedFileComponent(id)) { continue }
+                if sanitizedIndexed.contains(self.sanitizedFileComponent(id)) {
+                    continue
+                }
                 found.insert(id)
             }
         case .keychain:
@@ -324,7 +326,9 @@ private extension TokenStore {
             if status == errSecDuplicateItem {
                 status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
             }
-            if status == errSecSuccess { return }
+            if status == errSecSuccess {
+                return
+            }
             lastStatus = status
             let isFinalAttempt = index == accessGroups.count - 1
             if isFinalAttempt || self.shouldRetryWithoutAccessGroup(status: status, accessGroup: group) == false {
@@ -348,10 +352,14 @@ private extension TokenStore {
             var item: CFTypeRef?
             let status = SecItemCopyMatching(query as CFDictionary, &item)
             if status == errSecItemNotFound {
-                if index == accessGroups.count - 1 { return nil }
+                if index == accessGroups.count - 1 {
+                    return nil
+                }
                 continue
             }
-            if status == errSecSuccess, let data = item as? Data { return data }
+            if status == errSecSuccess, let data = item as? Data {
+                return data
+            }
             lastStatus = status
             let isFinalAttempt = index == accessGroups.count - 1
             if isFinalAttempt || self.shouldRetryWithoutAccessGroup(status: status, accessGroup: group) == false {
@@ -563,7 +571,9 @@ private extension TokenStore {
 
             let middle = String(name.dropFirst(servicePrefix.count).dropLast(suffix.count))
             if let decoded = self.decodedFileComponent(middle) {
-                if decoded == "default" || decoded == "client" || decoded == "pat" { continue }
+                if decoded == "default" || decoded == "client" || decoded == "pat" {
+                    continue
+                }
                 for kind in AccountKeyKind.allCases {
                     let trailing = ":\(kind.rawValue)"
                     if decoded.hasSuffix(trailing), decoded.count > trailing.count {
@@ -575,7 +585,9 @@ private extension TokenStore {
             }
 
             // Skip legacy fixed-key entries.
-            if middle == "default" || middle == "client" || middle == "pat" { continue }
+            if middle == "default" || middle == "client" || middle == "pat" {
+                continue
+            }
             for kind in AccountKeyKind.allCases {
                 // The colon separator becomes `-` after sanitization.
                 let trailing = "-\(kind.rawValue)"
@@ -617,7 +629,9 @@ private extension TokenStore {
             for entry in entries {
                 guard let account = entry[accountKey] as? String else { continue }
 
-                if account == "default" || account == "client" || account == "pat" { continue }
+                if account == "default" || account == "client" || account == "pat" {
+                    continue
+                }
                 for kind in AccountKeyKind.allCases {
                     let trailing = ":\(kind.rawValue)"
                     if account.hasSuffix(trailing), account.count > trailing.count {

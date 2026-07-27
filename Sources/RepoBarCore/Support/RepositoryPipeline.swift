@@ -105,14 +105,18 @@ public enum RepositoryPipeline {
         if query.pinPriority, !query.pinned.isEmpty {
             let pinnedIndex = query.pinned.enumerated().reduce(into: [String: Int]()) { dict, entry in
                 let key = entry.element.lowercased()
-                if dict[key] == nil { dict[key] = entry.offset }
+                if dict[key] == nil {
+                    dict[key] = entry.offset
+                }
             }
             sorted = filtered.sorted { lhs, rhs in
                 let leftIndex = pinnedIndex[lhs.fullName.lowercased()]
                 let rightIndex = pinnedIndex[rhs.fullName.lowercased()]
                 switch (leftIndex, rightIndex) {
                 case let (left?, right?):
-                    if left != right { return left < right }
+                    if left != right {
+                        return left < right
+                    }
                 case (.some, .none):
                     return true
                 case (.none, .some):

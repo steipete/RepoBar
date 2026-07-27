@@ -33,7 +33,9 @@ public enum GlobalActivityMerger {
             guard seen.insert(key).inserted else { continue }
 
             results.append(event)
-            if results.count >= limit { break }
+            if results.count >= limit {
+                break
+            }
         }
         return results
     }

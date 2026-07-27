@@ -374,7 +374,9 @@ extension AppState {
             .sorted {
                 let lhsDate = $0.latestActivity?.date ?? $0.pushedAt ?? .distantPast
                 let rhsDate = $1.latestActivity?.date ?? $1.pushedAt ?? .distantPast
-                if lhsDate != rhsDate { return lhsDate > rhsDate }
+                if lhsDate != rhsDate {
+                    return lhsDate > rhsDate
+                }
                 return $0.fullName.localizedCaseInsensitiveCompare($1.fullName) == .orderedAscending
             }
 
@@ -458,7 +460,9 @@ extension AppState {
         return matches
             .filter { seen.insert($0.url).inserted }
             .sorted {
-                if $0.updatedAt != $1.updatedAt { return $0.updatedAt > $1.updatedAt }
+                if $0.updatedAt != $1.updatedAt {
+                    return $0.updatedAt > $1.updatedAt
+                }
                 return ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast)
             }
     }
@@ -477,7 +481,9 @@ extension AppState {
             .sorted {
                 let lhs = $0.latestActivity?.date ?? $0.pushedAt ?? .distantPast
                 let rhs = $1.latestActivity?.date ?? $1.pushedAt ?? .distantPast
-                if lhs != rhs { return lhs > rhs }
+                if lhs != rhs {
+                    return lhs > rhs
+                }
                 return $0.fullName.localizedCaseInsensitiveCompare($1.fullName) == .orderedAscending
             }
 

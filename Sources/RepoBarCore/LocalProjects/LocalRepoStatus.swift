@@ -113,9 +113,15 @@ public struct LocalDirtyCounts: Equatable, Sendable {
 
     public var summary: String {
         var parts: [String] = []
-        if self.added > 0 { parts.append("+\(self.added)") }
-        if self.deleted > 0 { parts.append("-\(self.deleted)") }
-        if self.modified > 0 { parts.append("~\(self.modified)") }
+        if self.added > 0 {
+            parts.append("+\(self.added)")
+        }
+        if self.deleted > 0 {
+            parts.append("-\(self.deleted)")
+        }
+        if self.modified > 0 {
+            parts.append("~\(self.modified)")
+        }
         return parts.joined(separator: " ")
     }
 }
@@ -129,13 +135,23 @@ public enum LocalSyncState: String, Equatable, Sendable {
     case unknown
 
     public static func resolve(isClean: Bool, ahead: Int?, behind: Int?) -> LocalSyncState {
-        if !isClean { return .dirty }
+        if !isClean {
+            return .dirty
+        }
         guard let ahead, let behind else { return .unknown }
 
-        if ahead == 0, behind == 0 { return .synced }
-        if behind > 0, ahead == 0 { return .behind }
-        if ahead > 0, behind == 0 { return .ahead }
-        if ahead > 0, behind > 0 { return .diverged }
+        if ahead == 0, behind == 0 {
+            return .synced
+        }
+        if behind > 0, ahead == 0 {
+            return .behind
+        }
+        if ahead > 0, behind == 0 {
+            return .ahead
+        }
+        if ahead > 0, behind > 0 {
+            return .diverged
+        }
         return .unknown
     }
 
@@ -207,7 +223,9 @@ public struct LocalRepoIndex: Equatable, Sendable {
         if let preferred = self.preferredPathsByFullName[repo.fullName], let status = self.byPath[preferred] {
             return status
         }
-        if let exact = self.byFullName[repo.fullName] { return exact }
+        if let exact = self.byFullName[repo.fullName] {
+            return exact
+        }
         if let match = self.preferredStatus(in: self.byFullNameLowercased, forKey: repo.fullName.lowercased()) {
             return match
         }
@@ -218,12 +236,16 @@ public struct LocalRepoIndex: Equatable, Sendable {
         if let preferred = self.preferredPathsByFullName[fullName], let status = self.byPath[preferred] {
             return status
         }
-        if let exact = self.byFullName[fullName] { return exact }
+        if let exact = self.byFullName[fullName] {
+            return exact
+        }
         if let match = self.preferredStatus(in: self.byFullNameLowercased, forKey: fullName.lowercased()) {
             return match
         }
         let name = fullName.split(separator: "/").last.map(String.init)
-        if let name { return self.uniqueStatus(forName: name) }
+        if let name {
+            return self.uniqueStatus(forName: name)
+        }
         return nil
     }
 
@@ -233,7 +255,9 @@ public struct LocalRepoIndex: Equatable, Sendable {
 
     public func status(containingPath path: String) -> LocalRepoStatus? {
         let normalizedPath = URL(fileURLWithPath: PathFormatter.expandTilde(path)).standardizedFileURL.path
-        if let exact = self.byPath[normalizedPath] { return exact }
+        if let exact = self.byPath[normalizedPath] {
+            return exact
+        }
 
         let matches = self.all.filter { status in
             let repoPath = status.path.standardizedFileURL.path
@@ -247,7 +271,9 @@ public struct LocalRepoIndex: Equatable, Sendable {
     }
 
     private func uniqueStatus(forName name: String) -> LocalRepoStatus? {
-        if let exact = self.uniqueStatus(in: self.byName, forKey: name) { return exact }
+        if let exact = self.uniqueStatus(in: self.byName, forKey: name) {
+            return exact
+        }
         return self.uniqueStatus(in: self.byNameLowercased, forKey: name.lowercased())
     }
 
@@ -268,9 +294,15 @@ public struct LocalRepoIndex: Equatable, Sendable {
     private static func preferredStatus(_ lhs: LocalRepoStatus, _ rhs: LocalRepoStatus) -> LocalRepoStatus {
         let lhsDepth = lhs.path.pathComponents.count
         let rhsDepth = rhs.path.pathComponents.count
-        if lhsDepth != rhsDepth { return lhsDepth < rhsDepth ? lhs : rhs }
-        if lhs.worktreeName == nil, rhs.worktreeName != nil { return lhs }
-        if rhs.worktreeName == nil, lhs.worktreeName != nil { return rhs }
+        if lhsDepth != rhsDepth {
+            return lhsDepth < rhsDepth ? lhs : rhs
+        }
+        if lhs.worktreeName == nil, rhs.worktreeName != nil {
+            return lhs
+        }
+        if rhs.worktreeName == nil, lhs.worktreeName != nil {
+            return rhs
+        }
         return lhs.path.path <= rhs.path.path ? lhs : rhs
     }
 }

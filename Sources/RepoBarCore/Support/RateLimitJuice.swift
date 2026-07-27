@@ -45,9 +45,15 @@ public struct RateLimitJuice: Equatable, Sendable {
     }
 
     public var compactRestText: String? {
-        if self.isRestLimited { return "0" }
-        if let restRemaining { return Self.shortCount(restRemaining) }
-        if let restPercent { return "\(Int(restPercent.rounded()))%" }
+        if self.isRestLimited {
+            return "0"
+        }
+        if let restRemaining {
+            return Self.shortCount(restRemaining)
+        }
+        if let restPercent {
+            return "\(Int(restPercent.rounded()))%"
+        }
         return nil
     }
 

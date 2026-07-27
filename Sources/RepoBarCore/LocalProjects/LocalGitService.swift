@@ -238,7 +238,9 @@
             switch self {
             case let .commandFailed(output, error):
                 let message = error.trimmingCharacters(in: .whitespacesAndNewlines)
-                if message.isEmpty == false { return message }
+                if message.isEmpty == false {
+                    return message
+                }
                 let fallback = output.trimmingCharacters(in: .whitespacesAndNewlines)
                 return fallback.isEmpty ? "Git command failed." : fallback
             }
@@ -377,7 +379,9 @@
             }
         }
 
-        if added.isEmpty, modified.isEmpty, deleted.isEmpty { return nil }
+        if added.isEmpty, modified.isEmpty, deleted.isEmpty {
+            return nil
+        }
         return LocalDirtyCounts(added: added.count, modified: modified.count, deleted: deleted.count)
     }
 #endif

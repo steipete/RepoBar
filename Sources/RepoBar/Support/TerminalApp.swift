@@ -32,7 +32,9 @@ enum TerminalApp: String, CaseIterable {
     private static let logger = RepoBarLogging.logger("terminal")
 
     var isInstalled: Bool {
-        if self == .terminal { return true }
+        if self == .terminal {
+            return true
+        }
         return NSWorkspace.shared.urlForApplication(withBundleIdentifier: self.bundleIdentifier) != nil
     }
 
@@ -49,7 +51,9 @@ enum TerminalApp: String, CaseIterable {
     }
 
     static var defaultPreferred: TerminalApp {
-        if let ghostty = installed.first(where: { $0 == .ghostty }) { return ghostty }
+        if let ghostty = installed.first(where: { $0 == .ghostty }) {
+            return ghostty
+        }
         return .terminal
     }
 

@@ -31,8 +31,12 @@ public extension Repository {
     }
 
     func activityLine(fallbackToPush: Bool) -> String? {
-        if let line = self.activityLine { return line }
-        if fallbackToPush, self.stats.pushedAt != nil { return "push" }
+        if let line = self.activityLine {
+            return line
+        }
+        if fallbackToPush, self.stats.pushedAt != nil {
+            return "push"
+        }
         return nil
     }
 }

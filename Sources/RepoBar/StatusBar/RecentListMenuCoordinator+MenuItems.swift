@@ -194,7 +194,9 @@ extension RecentListMenuCoordinator {
 
         var options = counts.map { RecentIssueLabelOption(name: $0.key, colorHex: $0.value.colorHex, count: $0.value.count) }
         options.sort {
-            if $0.count != $1.count { return $0.count > $1.count }
+            if $0.count != $1.count {
+                return $0.count > $1.count
+            }
             return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
 

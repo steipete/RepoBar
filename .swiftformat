@@ -13,3 +13,4 @@
 --enable blankLinesAfterGuardStatements
 --enable isEmpty
 --enable privateStateVariables
+--disable wrapMultilineStatementBraces

@@ -572,7 +572,9 @@ final class LocalGitMenuCoordinator {
                         capturedError = error
                     }
                 }
-                if let capturedError { throw capturedError }
+                if let capturedError {
+                    throw capturedError
+                }
             }
             await MainActor.run {
                 switch result {

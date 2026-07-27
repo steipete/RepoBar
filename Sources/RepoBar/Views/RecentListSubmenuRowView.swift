@@ -99,12 +99,16 @@ struct RecentListSubmenuRowView: View {
     }
 
     private var hasBadge: Bool {
-        if let badgePrefixText, badgePrefixText.isEmpty == false { return true }
+        if let badgePrefixText, badgePrefixText.isEmpty == false {
+            return true
+        }
         return self.badgeText != nil
     }
 
     private var computedBadgeAccessibilityLabel: String {
-        if let badgeAccessibilityLabel { return badgeAccessibilityLabel }
+        if let badgeAccessibilityLabel {
+            return badgeAccessibilityLabel
+        }
         if let badgePrefixText, badgePrefixText.isEmpty == false, let badgeText {
             return "Badge \(badgePrefixText), \(badgeText)"
         }

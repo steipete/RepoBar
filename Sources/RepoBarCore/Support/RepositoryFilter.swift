@@ -17,11 +17,21 @@ public enum RepositoryFilter {
         let pinnedSet = Set(pinned.map { $0.lowercased() })
 
         return repos.filter { repo in
-            if pinnedSet.contains(repo.fullName.lowercased()) { return true }
-            if includeForks == false, repo.isFork { return false }
-            if includeArchived == false, repo.isArchived { return false }
-            if onlyWith.isActive, onlyWith.matches(repo) == false { return false }
-            if !ownerSet.isEmpty, !ownerSet.contains(repo.owner.lowercased()) { return false }
+            if pinnedSet.contains(repo.fullName.lowercased()) {
+                return true
+            }
+            if includeForks == false, repo.isFork {
+                return false
+            }
+            if includeArchived == false, repo.isArchived {
+                return false
+            }
+            if onlyWith.isActive, onlyWith.matches(repo) == false {
+                return false
+            }
+            if !ownerSet.isEmpty, !ownerSet.contains(repo.owner.lowercased()) {
+                return false
+            }
             return true
         }
     }

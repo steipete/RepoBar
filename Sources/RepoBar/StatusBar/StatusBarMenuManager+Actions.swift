@@ -193,7 +193,9 @@ extension StatusBarMenuManager {
                         capturedError = error
                     }
                 }
-                if let capturedError { throw capturedError }
+                if let capturedError {
+                    throw capturedError
+                }
             }
             await MainActor.run {
                 self.closeCheckoutProgress()

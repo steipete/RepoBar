@@ -226,9 +226,15 @@ public struct GitHubArchiveReader: Sendable {
         guard let object else { return nil }
 
         for key in keys {
-            if let value = object[key] as? Int { return value }
-            if let value = object[key] as? NSNumber { return value.intValue }
-            if let value = object[key] as? String, let int = Int(value) { return int }
+            if let value = object[key] as? Int {
+                return value
+            }
+            if let value = object[key] as? NSNumber {
+                return value.intValue
+            }
+            if let value = object[key] as? String, let int = Int(value) {
+                return int
+            }
         }
         return nil
     }
@@ -236,8 +242,12 @@ public struct GitHubArchiveReader: Sendable {
     private static func bool(_ value: String?) -> Bool? {
         guard let string = self.string(value)?.lowercased() else { return nil }
 
-        if ["1", "true", "yes"].contains(string) { return true }
-        if ["0", "false", "no"].contains(string) { return false }
+        if ["1", "true", "yes"].contains(string) {
+            return true
+        }
+        if ["0", "false", "no"].contains(string) {
+            return false
+        }
         return nil
     }
 
@@ -245,9 +255,15 @@ public struct GitHubArchiveReader: Sendable {
         guard let object else { return nil }
 
         for key in keys {
-            if let value = object[key] as? Bool { return value }
-            if let value = object[key] as? NSNumber { return value.boolValue }
-            if let value = object[key] as? String, let bool = self.bool(value) { return bool }
+            if let value = object[key] as? Bool {
+                return value
+            }
+            if let value = object[key] as? NSNumber {
+                return value.boolValue
+            }
+            if let value = object[key] as? String, let bool = self.bool(value) {
+                return bool
+            }
         }
         return nil
     }

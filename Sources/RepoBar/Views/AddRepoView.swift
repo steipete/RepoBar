@@ -33,8 +33,12 @@ struct AddRepoView: View {
                             if let lang = repo.language, !lang.isEmpty {
                                 Badge(text: lang)
                             }
-                            if repo.isFork { Badge(text: "Fork") }
-                            if repo.isArchived { Badge(text: "Archived") }
+                            if repo.isFork {
+                                Badge(text: "Fork")
+                            }
+                            if repo.isArchived {
+                                Badge(text: "Archived")
+                            }
                         }
                         if let description = repo.description, !description.isEmpty {
                             Text(description)

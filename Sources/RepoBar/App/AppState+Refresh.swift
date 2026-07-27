@@ -13,7 +13,9 @@ extension AppState {
         if hasFreshSnapshot {
             return
         }
-        if self.refreshTask != nil || self.menuRefreshTask != nil { return }
+        if self.refreshTask != nil || self.menuRefreshTask != nil {
+            return
+        }
         self.lastMenuRefreshRequest = now
         self.menuRefreshTask = Task { [weak self] in
             try? await Task.sleep(for: .milliseconds(250))
@@ -49,7 +51,9 @@ extension AppState {
         let localSettings = self.session.settings.localProjects
         self.session.localProjectsScanInProgress = (localSettings.rootPath?.isEmpty == false)
         do {
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                return
+            }
             let now = Date()
             self.updateHeatmapRange(now: now)
             if await self.hasAuthenticationMaterial() == false {
@@ -233,7 +237,9 @@ extension AppState {
         let options = RepositoryDetailOptions(fetchHeatmap: fetchHeatmap)
         var detailed: [Repository] = []
         for batch in repos.chunked(into: limit) {
-            if Task.isCancelled { break }
+            if Task.isCancelled {
+                break
+            }
             let batchResult = await withTaskGroup(of: Repository?.self) { group in
                 for repo in batch {
                     group.addTask { [github, options] in
@@ -242,7 +248,9 @@ extension AppState {
                 }
                 var batchOutput: [Repository] = []
                 for await repo in group {
-                    if let repo { batchOutput.append(repo) }
+                    if let repo {
+                        batchOutput.append(repo)
+                    }
                 }
                 return batchOutput
             }

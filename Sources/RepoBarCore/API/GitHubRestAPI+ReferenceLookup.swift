@@ -570,8 +570,12 @@ private struct WorkflowRunLookupResponse: Decodable {
 
     private var title: String {
         let preferred = (self.displayTitle ?? self.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if preferred.isEmpty == false { return preferred }
-        if let runNumber { return "Run #\(runNumber)" }
+        if preferred.isEmpty == false {
+            return preferred
+        }
+        if let runNumber {
+            return "Run #\(runNumber)"
+        }
         return "Workflow run"
     }
 

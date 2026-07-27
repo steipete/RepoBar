@@ -118,7 +118,9 @@ public struct OAuthLoginFlow {
             throw GitHubAPIError.invalidHost
         }
 
-        if components.scheme == nil { components.scheme = "https" }
+        if components.scheme == nil {
+            components.scheme = "https"
+        }
         guard components.scheme?.lowercased() == "https", components.host != nil else {
             throw GitHubAPIError.invalidHost
         }

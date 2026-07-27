@@ -95,7 +95,9 @@ public final class PATAuthenticator {
 
     /// Loads the stored PAT from Keychain.
     public func loadPAT() -> String? {
-        if self.hasLoadedPAT { return self.cachedPAT }
+        if self.hasLoadedPAT {
+            return self.cachedPAT
+        }
         self.hasLoadedPAT = true
         let pat = try? self.tokenStore.loadPAT()
         self.cachedPAT = pat

@@ -130,7 +130,9 @@ public enum GitHubReleaseNotificationDetector {
                 let wasPromotedToStable = previousRelease?.isPrerelease == true && release.isPrerelease == false
                 guard previousRelease == nil || wasPromotedToStable else { continue }
 
-                if release.isPrerelease, settings.includePrereleases == false { continue }
+                if release.isPrerelease, settings.includePrereleases == false {
+                    continue
+                }
 
                 let isNewAfterBaseline = previousBaseline.map { release.publishedAt > $0 } ?? false
                 guard isNewAfterBaseline || wasPromotedToStable else { continue }

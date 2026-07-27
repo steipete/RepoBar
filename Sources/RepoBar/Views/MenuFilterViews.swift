@@ -16,7 +16,9 @@ struct MenuRepoFiltersView: View {
     private var filterSelection: Binding<MenuRepoSelection> {
         Binding(
             get: {
-                if self.session.account.isLoggedIn { return self.session.menuRepoSelection }
+                if self.session.account.isLoggedIn {
+                    return self.session.menuRepoSelection
+                }
                 return .local
             },
             set: { newValue in
