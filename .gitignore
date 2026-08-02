@@ -64,6 +64,10 @@ fastlane/screenshots/**/*.png
 fastlane/test_output
 Config/Local.xcconfig
 
+# Local environment
+.env
+.env.local
+
 # macOS user cruft
 .DS_Store
 
