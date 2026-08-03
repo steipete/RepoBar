@@ -2,6 +2,8 @@
 
 ## 0.8.8 - Unreleased
 
+- Rewrite the README around installation and first use, with dynamic project badges and tighter links to reference documentation.
+
 ## 0.8.7 - 2026-08-02
 
 - Update Commander to 0.2.4 while preserving declared CLI positional arguments, and update `actions/setup-node` to 6.5.0.

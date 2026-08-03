@@ -1,196 +1,97 @@
-# 🚦 RepoBar
+# RepoBar 🚦 — GitHub without the tab sprawl
 
-RepoBar is a native macOS menu bar app for keeping GitHub work visible without living in a browser. It shows the repositories you care about, their current issue and PR pressure, recent activity, CI state, releases, local checkout status, and rate-limit health in a compact menu.
+[![CI](https://img.shields.io/github/actions/workflow/status/steipete/RepoBar/ci.yml?branch=main&style=flat-square&label=ci)](https://github.com/steipete/RepoBar/actions/workflows/ci.yml)
+[![GitHub release](https://img.shields.io/github/v/release/steipete/RepoBar?style=flat-square)](https://github.com/steipete/RepoBar/releases/latest)
+[![macOS 15+](https://img.shields.io/badge/macOS-15%2B-000000?style=flat-square&logo=apple)](https://repobar.app/)
+[![Swift 6.2](https://img.shields.io/badge/Swift-6.2-F05138?style=flat-square&logo=swift&logoColor=white)](https://www.swift.org/)
+[![License](https://img.shields.io/github/license/steipete/RepoBar?style=flat-square)](LICENSE)
 
-![RepoBar screenshot](docs/assets/repobar.png)
+RepoBar is a native macOS menu bar app for maintainers who track many GitHub repositories. It keeps issue and pull request counts, CI, releases, activity, rate limits, and local checkout state in one menu.
 
-RepoBar is built for people who move between many repositories and need fast answers:
-
-- What changed recently?
-- Which repos have open issues or pull requests?
-- Did CI move?
-- Is my local checkout clean or behind?
-- Am I about to run into GitHub rate limits?
-- Can I inspect issues, PRs, releases, branches, tags, and commits without opening a dozen tabs?
+![RepoBar showing repository status, local Git state, and an issues submenu](docs/assets/repobar.png)
 
 ## Install
 
-Homebrew is the recommended install path:
+Install the Homebrew cask:
 
-```bash
+```sh
 brew install --cask repobar
 ```
 
-Direct downloads are available from the [latest GitHub release](https://github.com/steipete/RepoBar/releases/latest).
+RepoBar requires macOS 15 or newer. A signed app archive is also available from the [latest GitHub release](https://github.com/steipete/RepoBar/releases/latest).
 
-## What It Shows
+## Quick start
 
-RepoBar's main menu is a repository dashboard:
+1. Open RepoBar from Applications. Its traffic-light icon appears in the menu bar.
+2. Select **Sign in to GitHub** and complete the browser login.
+3. Open **Preferences → Repositories** to choose visible, pinned, and hidden repositories.
+4. Select a repository in the menu to inspect its issues, pull requests, releases, CI runs, branches, tags, commits, and activity.
 
-- Repository cards with issue count, PR count, stars, forks, latest activity, and optional heatmaps.
-- A contribution header for the signed-in GitHub account.
-- Filters for all repositories, pinned repositories, local repositories, and work-focused views.
-- A profile submenu with recent GitHub activity.
-- A GitHub API status submenu showing current blockers, live REST/GraphQL state, and persisted REST resource headers.
-- Quick access to Preferences, About, and Quit.
+That is the complete setup for GitHub.com. Local checkout status and archive-backed offline data are optional.
 
-Each repository has a rich submenu:
+## Repository dashboard
 
-- Open the repository in GitHub.
-- Open or checkout the local repo when configured.
-- View local branch, ahead/behind, dirty files, and worktrees.
-- Browse recent issues, pull requests, releases, CI runs, discussions, tags, branches, contributors, commits, and activity.
-- Preview changelog entries from a local `CHANGELOG.md` when available.
-- Pin, unpin, or hide the repository.
+The main menu shows issue and pull request pressure, stars, forks, recent activity, CI state, releases, and contribution heatmaps. Filters narrow the list to pinned repositories, local checkouts, or repositories with active work.
 
-## Repository Browser
+Each repository opens a submenu with recent GitHub activity and, when a local checkout is configured, its branch, upstream, dirty files, ahead/behind state, and worktrees. RepoBar can open the checkout in Finder or a terminal and can fast-forward clean repositories without discarding local changes.
 
-Preferences > Repositories is a real repository browser. It searches repositories RepoBar can access and lets you choose what appears in the menu:
+**Preferences → Repositories** searches the repositories available to the active account. Search covers names, descriptions, languages, and topics; visibility rules remain visible when an account temporarily loses access, which makes permission problems easier to diagnose.
 
-- Search matches repository names, descriptions, languages, and topics.
-- Double-click any non-control area of a repository row to open it on the configured GitHub host.
-- `Visible` keeps the repo available through normal sorting and filtering.
-- `Pinned` keeps the repo near the top.
-- `Hidden` removes it from the menu.
-- Manual rules remain visible even if a token or GitHub App installation no longer returns the repo, which makes access problems easier to diagnose.
+## Authentication and private repositories
 
-RepoBar can see public repositories, user repositories, collaborator repositories, and organization repositories that the current authentication method is allowed to access.
+RepoBar supports GitHub.com and GitHub Enterprise. GitHub.com login uses a GitHub App user token, so access is limited by both the signed-in user and the repositories where the [RepoBar GitHub App](https://github.com/apps/repobar/installations/new) is installed.
 
-## Authentication And Private Repos
+Install the GitHub App on an organization to expose its private repositories. A Personal Access Token with repository and organization read access is available for SAML SSO or repositories outside that installation boundary. GitHub Enterprise uses its configured HTTPS host and OAuth settings.
 
-RepoBar supports GitHub.com and GitHub Enterprise.
+Release builds store credentials in the macOS Keychain. Debug builds use file-backed storage to avoid Keychain prompts; [auth storage](docs/auth-storage.md) documents the exact behavior.
 
-For GitHub.com, RepoBar uses a GitHub App user token and does not request broad classic OAuth repository scopes. Access is bounded by:
+## Local projects
 
-- the signed-in user's GitHub permissions, and
-- where the [RepoBar GitHub App](https://github.com/apps/repobar/installations/new) is installed.
+Choose a projects folder in **Preferences → Advanced → Local Projects** to match GitHub repositories with local checkouts. RepoBar reports branches, worktrees, dirty files, and upstream state; optional auto-sync runs only for clean, non-detached repositories that can fast-forward.
 
-Private organization repositories require the RepoBar GitHub App to be installed on that organization or selected repositories. If an organization requires SAML SSO, or if you need access outside the GitHub App installation boundary, use a Personal Access Token with `repo` and `read:org`.
+See [Local Projects](docs/reposync.md) for scanning, matching, sandbox access, caching, and sync rules.
 
-GitHub Enterprise uses the configured enterprise host and OAuth settings. TLS is required.
+## Caching and archives
 
-Release builds store tokens in the macOS Keychain. Debug builds and SwiftPM CLI/test runs default to file-backed auth storage so local development does not trigger Keychain prompts. See [docs/auth-storage.md](docs/auth-storage.md).
+RepoBar opens from its persistent SQLite cache first and refreshes GitHub data in the background. The GitHub API Status menu shows REST and GraphQL quotas, endpoint cooldowns, and the age of cached samples.
 
-## Local Projects
+Git-backed GitHub archive snapshots can seed the cache when GitHub is rate-limited or unavailable. RepoBar owns the imported database and archive configuration; it does not modify the source archive. See the [cache and archive design](docs/cache.md).
 
-RepoBar can scan a local projects folder such as `~/Projects` and match local checkouts to GitHub repositories.
+The optional clipboard reference monitor recognizes GitHub URLs, issue and pull request references, commit hashes, and workflow-run URLs. It checks the cache first and performs a live lookup only when needed.
 
-Local state appears directly in the menu:
+## Command-line interface
 
-- current branch
-- upstream branch
-- ahead/behind counts
-- dirty file summary
-- worktree state
-- fast-forward sync status
+RepoBar bundles a `repobar` CLI for automation and diagnostics. Install it from **Preferences → Advanced → CLI**, then use `--plain` for terminal tables or `--json` for structured output:
 
-Optional auto-sync fetches and fast-forwards clean repositories on a configurable cadence. It does not force-push, hard-reset, or discard local changes. See [docs/reposync.md](docs/reposync.md).
-
-## Caching, Archives, And Rate Limits
-
-RepoBar is designed to open from local data first and spend GitHub requests carefully.
-
-It stores REST ETags, response bodies, GraphQL responses, recent lists, repository detail data, and rate-limit state in RepoBar-owned storage. First-open menu rows can be seeded from the persistent cache, then refreshed in the background.
-
-GitHub core limits are usually shared by the GitHub user or integration actor, not by each token string. A PAT, another OAuth app, another GitHub App user token, and `gh` CLI requests for the same account can draw from one shared user budget. The `gh` CLI may keep working after other requests are blocked because GitHub grants that app extra allowance, but using `gh` still spends the normal user budget first.
-
-The optional typed GitHub reference monitor is cache-first too: when enabled in Advanced settings, RepoBar watches issue-number patterns and commit-like hashes, looks for matching cached issues, pull requests, or commits in accessible repositories, and falls back to live GitHub lookups on cache misses. The best match appears as a separate menu bar item that opens in your default browser. Global monitoring requires granting RepoBar Accessibility permission in System Settings.
-
-### Sync With Gitcrawl Archives
-
-RepoBar reads GitHub backup archives that follow the [gitcrawl.sh](https://gitcrawl.sh) portable-store format — a Git-backed SQLite snapshot with `manifest.json` plus `tables/<table>/*.jsonl(.gz)` files. Point RepoBar at any compatible snapshot repository and it imports cleanly into its own SQLite cache.
-
-When GitHub is rate-limited, offline, or temporarily unavailable, issue and pull request lists are answered from the imported archive automatically — the menu does not go blank.
-
-RepoBar owns its own cache and archive configuration: it does not read gitcrawl config and does not write to gitcrawl databases. The archive contract is the on-disk snapshot shape, not a runtime dependency.
-
-The current cache and archive behavior is documented in [docs/cache.md](docs/cache.md). The CLI can inspect this state:
-
-```bash
-repobar cache status --plain
-repobar cache status --json
-repobar archives list
-repobar archives status
-```
-
-## CLI
-
-RepoBar ships a `repobar` CLI for automation and debugging. It mirrors the app's GitHub and cache paths closely enough to be useful when diagnosing menu behavior.
-
-Examples:
-
-```bash
-repobar login
-repobar repos --plain
-repobar repos --owner openclaw --sort prs --plain
-repobar repo openclaw/openclaw --plain
-repobar issues openclaw/openclaw --limit 20 --plain
-repobar pulls openclaw/openclaw --limit 20 --plain
-repobar activity steipete --include-repos --limit 10 --plain
+```sh
+repobar repos --sort prs --plain
 repobar rate-limits --plain
-repobar cache status --plain
+repobar cache status --json
 ```
 
-Use `--json` for machine-readable output and `--plain` for output without colors, links, or terminal decoration.
+The [CLI reference](docs/cli.md) covers authentication, repositories, local Git actions, caches, archives, settings, and output formats.
 
-Full reference: [docs/cli.md](docs/cli.md).
+## Documentation
+
+- [Product and technical specification](docs/spec.md)
+- [CLI reference](docs/cli.md)
+- [Cache and archive design](docs/cache.md)
+- [Authentication storage](docs/auth-storage.md)
+- [Local project sync](docs/reposync.md)
+- [Release process](docs/release.md)
 
 ## Development
 
-RepoBar is a SwiftPM-based macOS app wrapped by `pnpm` scripts.
+Development requires macOS, Xcode 26 with Swift 6.2, Node.js 22.12 or newer, and pnpm 10.
 
-Requirements:
-
-- macOS
-- Xcode 26 / Swift 6.2
-- pnpm 10+
-
-Install script dependencies once:
-
-```bash
+```sh
 pnpm install
+pnpm build
+pnpm check
 ```
 
-Common commands:
-
-```bash
-pnpm check     # swiftformat + swiftlint + swift test
-pnpm test      # Swift Testing suite
-pnpm build     # debug Swift build
-pnpm start     # build, package, sign, and launch the app
-pnpm restart   # relaunch the app from this checkout
-pnpm stop      # quit RepoBar
-```
-
-Always launch local builds through `pnpm start` or `pnpm restart`. If the menu does not match the code you just edited, verify the running binary:
-
-```bash
-pgrep -af "RepoBar.app/Contents/MacOS/RepoBar"
-```
-
-## Project Layout
-
-- `Sources/RepoBar/` - macOS app, menu, settings, auth coordination, local project UI.
-- `Sources/RepoBarCore/` - GitHub client, cache/archive readers, models, settings, local Git services.
-- `Sources/repobarcli/` - command-line interface.
-- `Tests/RepoBarTests/` - Swift Testing coverage.
-- `docs/` - design notes and operational docs.
-- `Scripts/` - build, package, signing, testing, and launch wrappers.
-
-Useful docs:
-
-- [docs/spec.md](docs/spec.md) - product and technical spec.
-- [docs/cache.md](docs/cache.md) - persistent cache and archive design.
-- [docs/cli.md](docs/cli.md) - CLI command reference.
-- [docs/auth-storage.md](docs/auth-storage.md) - Keychain vs debug file-backed token storage.
-- [docs/multi-account-auth-plan.md](docs/multi-account-auth-plan.md) - staged design plan for multi-account auth, storage, UI, cache, and CLI support.
-- [docs/reposync.md](docs/reposync.md) - local project scanning and sync behavior.
-- [docs/release.md](docs/release.md) - release checklist.
-
-## Status
-
-RepoBar is early and moving quickly. See the [latest release](https://github.com/steipete/RepoBar/releases/latest) and [changelog](CHANGELOG.md) for current shipped behavior.
+The [repository guide](AGENTS.md) describes the project layout, local app workflow, and focused test commands.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+RepoBar is available under the [MIT License](LICENSE).
