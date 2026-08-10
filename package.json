@@ -2,7 +2,7 @@
   "name": "repobar",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@10.33.2",
+  "packageManager": "pnpm@11.21.0",
   "engines": {
     "node": ">=22.12.0"
   },
@@ -33,7 +33,7 @@
     "commander": "^15.0.0",
     "dotenv-cli": "^11.0.0",
     "ora": "^9.4.1",
-    "tsx": "^4.23.7",
+    "tsx": "^4.23.11",
     "zod": "^4.4.3"
   }
 }

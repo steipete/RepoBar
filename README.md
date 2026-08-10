@@ -82,7 +82,7 @@ The [CLI reference](docs/cli.md) covers authentication, repositories, local Git 
 
 ## Development
 
-Development requires macOS, Xcode 26 with Swift 6.2, Node.js 22.12 or newer, and pnpm 10.
+Development requires macOS, Xcode 26 with Swift 6.2, Node.js 22.12 or newer, and pnpm 11.
 
 ```sh
 pnpm install
