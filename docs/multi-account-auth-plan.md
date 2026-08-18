@@ -43,7 +43,7 @@ The implementation is a sequential bottom-to-top stack:
 9. `multi-account-operations-status` — Actions & Runners, monitored owners, rate limits, contribution/global activity, and worst-health state.
 10. `multi-account-integration-proof` — integration fixtures, accessibility and UI polish, redacted personal plus EMU proof, and final README, docs, CHANGELOG, and issue updates.
 
-Only Layer 1, `multi-account-contracts`, is implemented in this change. Layers 2 through 10 remain deferred, and the new contracts do not change runtime, UI, notification, refresh, or CLI behavior.
+Layers 1 and 2 are implemented. `multi-account-refresh` adds account-scoped repository snapshot loading, bounded selected-account fan-out, cached-first hydration, last-good partial-failure handling, and the active-account compatibility projection. Layers 3 through 10 remain deferred; repository grouping, account-scoped settings writes, CLI scope changes, attention and navigator collectors, notifications, Actions, and other user-visible fan-out are unchanged.
 
 Landed:
 
@@ -55,6 +55,7 @@ Landed:
 - Phase 4 — `HTTPResponseDiskCache` and `RepoBarPersistentCache` accept an `accountID:` parameter and resolve to `~/Library/Application Support/RepoBar/Cache/<account>.sqlite` (legacy path used when `accountID` is `nil`). `GraphQLResponseDiskCache.scoped(accountID:)` follows the same pattern.
 - Phase 5 — `AccountSettingsView` shows an account list (use / visibility / verify / remove) above the legacy single-account form, which is now labelled "Add Account".
 - Phase 6 — CLI gains `repobar accounts list/use/remove`, plus `--account`/`--all` on `logout`, `--account` on `status`, and `--label` on `login`/`import-gh-token`. After successful auth both commands fetch `GET /user`, derive a stable `Account`, and persist tokens under the account-scoped keys in addition to the legacy fast-path entries.
+- Issue #101 Layer 2 — `AppState` resolves the included account/client pairs once, hydrates each scoped repository cache independently, refreshes through a bounded task group, retains per-account last-good state on failures, and rebuilds `Session.accountSessions` / `aggregatedRepositories` in settings order. Existing menu, activity, notification, and Actions surfaces remain projected from the active account.
 
 Deferred:
 

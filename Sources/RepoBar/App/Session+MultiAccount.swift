@@ -4,13 +4,18 @@ import RepoBarCore
 /// Per-account session snapshot. Populated by `AccountManager` and consumed by
 /// `Session` to expose a multi-account view while keeping the existing
 /// single-account fast path source compatible.
-struct AccountSession: Identifiable, Equatable {
+struct AccountSession: Identifiable {
     let id: String
     var account: Account
     var state: AccountState
     var repositories: [Repository]
     var accessibleRepositories: [Repository]
     var rateLimitReset: Date?
+    var diagnostics: DiagnosticsSummary?
+    var cacheSummary: RepoBarCacheSummary?
+    var lastAttemptAt: Date?
+    var lastSuccessfulRefreshAt: Date?
+    var isStale: Bool
     var lastError: String?
 
     init(
@@ -19,6 +24,11 @@ struct AccountSession: Identifiable, Equatable {
         repositories: [Repository] = [],
         accessibleRepositories: [Repository] = [],
         rateLimitReset: Date? = nil,
+        diagnostics: DiagnosticsSummary? = nil,
+        cacheSummary: RepoBarCacheSummary? = nil,
+        lastAttemptAt: Date? = nil,
+        lastSuccessfulRefreshAt: Date? = nil,
+        isStale: Bool = false,
         lastError: String? = nil
     ) {
         self.id = account.id
@@ -27,6 +37,11 @@ struct AccountSession: Identifiable, Equatable {
         self.repositories = repositories
         self.accessibleRepositories = accessibleRepositories
         self.rateLimitReset = rateLimitReset
+        self.diagnostics = diagnostics
+        self.cacheSummary = cacheSummary
+        self.lastAttemptAt = lastAttemptAt
+        self.lastSuccessfulRefreshAt = lastSuccessfulRefreshAt
+        self.isStale = isStale
         self.lastError = lastError
     }
 }

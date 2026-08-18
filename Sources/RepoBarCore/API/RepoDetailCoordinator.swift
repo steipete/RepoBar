@@ -220,9 +220,11 @@ actor RepoDetailCoordinator {
 
     private func cachedRepository(from item: RepoItem, apiHost: URL, now: Date) -> Repository? {
         let cache = self.store.load(apiHost: apiHost, owner: item.owner.login, name: item.name)
-        guard let openPulls = cache.openPulls else { return nil }
-
         let cacheState = self.policy.state(for: cache, now: now)
+        guard let openPulls = cache.openPulls else {
+            return Repository.from(item: item, detailCacheState: cacheState)
+        }
+
         let ciDetails = cache.ciDetails
         let activitySnapshot = Self.cachedActivitySnapshot(
             latest: cache.latestActivity,

@@ -14,6 +14,7 @@ final class AppState {
     let legacyGitHub: GitHubClient
     var github: GitHubClient
     let accountManager: AccountManager
+    let accountRepositorySnapshotLoader: any AccountRepositorySnapshotLoading
     let refreshScheduler = RefreshScheduler()
     let settingsStore: SettingsStore
     let gitHubPullRequestNotificationRunner = GitHubPullRequestNotificationRunner()
@@ -29,7 +30,9 @@ final class AppState {
     private var gitHubReferenceResolutionID = UUID()
     private var lifecycleID = UUID()
     var refreshTaskToken = UUID()
+    var accountRepositoryRefreshGeneration = UUID()
     let hydrateConcurrencyLimit = 4
+    let accountRepositoryRefreshConcurrencyLimit = 3
     var prefetchTask: Task<Void, Never>?
     private let tokenRefreshInterval: TimeInterval = 300
     let menuRefreshDebounceInterval: TimeInterval = 1
@@ -45,13 +48,15 @@ final class AppState {
 
     init(
         settingsStore: SettingsStore = SettingsStore(),
-        accountManager: AccountManager? = nil
+        accountManager: AccountManager? = nil,
+        accountRepositorySnapshotLoader: any AccountRepositorySnapshotLoading = AccountRepositorySnapshotLoader()
     ) {
         let legacyGitHub = GitHubClient()
         self.legacyGitHub = legacyGitHub
         self.github = legacyGitHub
         self.settingsStore = settingsStore
         self.accountManager = accountManager ?? AccountManager()
+        self.accountRepositorySnapshotLoader = accountRepositorySnapshotLoader
         self.session.settings = self.settingsStore.load()
         self.reloadRateLimitCacheSummary()
         RepoBarLogging.bootstrapIfNeeded()

@@ -84,7 +84,15 @@ public enum RepoBarPersistentCache {
     }
 
     public static func summary(limit: Int = 10, fileManager: FileManager = .default) throws -> RepoBarCacheSummary {
-        guard let url = self.standardDatabaseURL(fileManager: fileManager) else {
+        try self.summary(accountID: nil, limit: limit, fileManager: fileManager)
+    }
+
+    public static func summary(
+        accountID: String?,
+        limit: Int = 10,
+        fileManager: FileManager = .default
+    ) throws -> RepoBarCacheSummary {
+        guard let url = self.databaseURL(accountID: accountID, fileManager: fileManager) else {
             throw RepoBarCacheError.missingApplicationSupportDirectory
         }
 

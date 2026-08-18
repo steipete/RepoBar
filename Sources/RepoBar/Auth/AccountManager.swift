@@ -9,19 +9,27 @@ import RepoBarCore
 /// from the account-scoped `TokenStore` APIs (Phase 1).
 @MainActor
 final class AccountManager {
+    struct AccountClientSnapshot {
+        let account: Account
+        let client: GitHubClient
+    }
+
     private(set) var accounts: [Account] = []
     private(set) var activeAccountID: String?
     private var clients: [String: GitHubClient] = [:]
     private let tokenStore: TokenStore
     private let oauthRefresher: OAuthTokenRefresher
+    private let clientFactory: ((Account) -> GitHubClient)?
     private let signposter = OSSignposter(subsystem: "com.steipete.repobar", category: "account-manager")
 
     init(
         tokenStore: TokenStore = .shared,
-        oauthRefresher: OAuthTokenRefresher? = nil
+        oauthRefresher: OAuthTokenRefresher? = nil,
+        clientFactory: ((Account) -> GitHubClient)? = nil
     ) {
         self.tokenStore = tokenStore
         self.oauthRefresher = oauthRefresher ?? OAuthTokenRefresher(tokenStore: tokenStore)
+        self.clientFactory = clientFactory
     }
 
     // MARK: - Bootstrap
@@ -53,6 +61,18 @@ final class AccountManager {
         guard let activeAccountID else { return nil }
 
         return self.accounts.first(where: { $0.id == activeAccountID })
+    }
+
+    func accountClientSnapshots(accountIDs: [String]) -> [AccountClientSnapshot] {
+        let selected = Set(accountIDs)
+        return self.accounts.compactMap { account in
+            guard selected.contains(account.id),
+                  self.hasStoredCredentials(accountID: account.id),
+                  let client = self.clients[account.id]
+            else { return nil }
+
+            return AccountClientSnapshot(account: account, client: client)
+        }
     }
 
     func hasStoredCredentials(accountID: String) -> Bool {
@@ -173,7 +193,7 @@ final class AccountManager {
     // MARK: - Private
 
     private func makeClient(for account: Account) async {
-        let client = GitHubClient(accountID: account.id)
+        let client = self.clientFactory?(account) ?? GitHubClient(accountID: account.id)
         await client.setAPIHost(account.apiHost)
         let accountID = account.id
         let store = self.tokenStore

@@ -55,15 +55,18 @@ extension AppState {
     }
 
     func applyPinnedOrder(to repos: [Repository]) -> [Repository] {
-        let pinned = self.session.settings.repoList.pinnedRepositories
+        Self.applyPinnedOrder(to: repos, pinned: self.session.settings.repoList.pinnedRepositories)
+    }
+
+    nonisolated static func applyPinnedOrder(to repos: [Repository], pinned: [String]) -> [Repository] {
         let pinnedIndex = pinned.enumerated().reduce(into: [String: Int]()) { dict, entry in
-            let key = self.normalizedFullName(entry.element)
+            let key = Self.normalizedFullName(entry.element)
             if dict[key] == nil {
                 dict[key] = entry.offset
             }
         }
         return repos.map { repo in
-            if let idx = pinnedIndex[self.normalizedFullName(repo.fullName)] {
+            if let idx = pinnedIndex[Self.normalizedFullName(repo.fullName)] {
                 return repo.withOrder(idx)
             }
             return repo
@@ -183,8 +186,12 @@ extension AppState {
         }
     }
 
-    private func normalizedFullName(_ value: String) -> String {
+    private nonisolated static func normalizedFullName(_ value: String) -> String {
         value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    }
+
+    private func normalizedFullName(_ value: String) -> String {
+        Self.normalizedFullName(value)
     }
 }
 

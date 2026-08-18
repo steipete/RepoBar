@@ -45,6 +45,19 @@ public actor GitHubClient {
         self.archiveSettingsProvider = archiveSettingsProvider
     }
 
+    init(
+        accountID _: String,
+        archiveSettingsProvider: @Sendable @escaping () -> GitHubArchiveSettings,
+        dataLoader: HTTPDataLoader,
+        responseDiskCache: HTTPResponseDiskCache?,
+        etagCache: ETagCache = ETagCache()
+    ) {
+        self.responseDiskCache = responseDiskCache
+        self.requestRunner = GitHubRequestRunner(etagCache: etagCache, dataLoader: dataLoader)
+        self.graphQL = GraphQLClient(responseCache: nil, dataLoader: dataLoader)
+        self.archiveSettingsProvider = archiveSettingsProvider
+    }
+
     // MARK: - Config
 
     public func setAPIHost(_ host: URL) async {

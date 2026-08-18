@@ -61,20 +61,40 @@ extension AppState {
                 await self.applyLoggedOutState(localSnapshot: localSnapshot, lastError: nil)
                 return
             }
-            await self.applyCachedMenuSnapshotIfAvailable(now: now)
+            let accountRefresh = await self.refreshAccountRepositorySnapshots(now: now)
+            guard accountRefresh.published else { return }
+
+            if let failure = accountRefresh.activeFailure, self.session.settings.consolidateAccounts == false {
+                if failure.authenticationFailure {
+                    await self.handleAuthenticationFailure(failure)
+                    return
+                }
+                throw failure
+            }
+            guard let activeAccountSession = accountRefresh.activeSession else {
+                let localSnapshot = await self.snapshotForLoggedOutState(localSettings: localSettings)
+                await MainActor.run {
+                    self.session.localRepoIndex = localSnapshot.repoIndex
+                    self.session.localDiscoveredRepoCount = localSnapshot.discoveredCount
+                    self.session.localProjectsAccessDenied = localSnapshot.accessDenied
+                    self.session.localProjectsScanInProgress = false
+                }
+                return
+            }
+
             // If we have tokens but no user in session, fetch identity once per launch.
             if case .loggedOut = self.session.account {
                 if let user = try? await self.github.currentUser() {
                     await MainActor.run { self.session.account = .loggedIn(user) }
                 }
             }
-            await self.processGitHubPullRequestNotifications()
-            await self.processGitHubReleaseNotifications()
-            let repos = try await self.fetchActivityRepos()
+            if accountRefresh.activeFailure == nil {
+                await self.processGitHubPullRequestNotifications()
+                await self.processGitHubReleaseNotifications()
+            }
+            let repos = activeAccountSession.accessibleRepositories
             try Task.checkCancellation()
-            await self.updateAccessibleRepositories(repos)
-            let visible = self.applyVisibilityFilters(to: repos)
-            let ordered = self.applyPinnedOrder(to: visible)
+            let ordered = activeAccountSession.repositories
             // The lightweight repository list uses GitHub's open_issues_count, which includes PRs.
             // Only publish the menu snapshot after hydrating real issue/PR counts.
             let matchNames = self.localMatchRepoNamesForLocalProjects(repos: ordered, includePinned: true)
@@ -95,9 +115,21 @@ extension AppState {
             let targets = self.selectMenuTargets(from: ordered)
             let hydrated = await self.hydrateMenuTargets(targets, fetchHeatmap: true)
             try Task.checkCancellation()
-            await self.updateAccessibleRepositories(self.mergeHydrated(hydrated, into: repos))
+            let hydratedAccessible = self.mergeHydrated(hydrated, into: repos)
             let merged = self.mergeHydrated(hydrated, into: ordered)
-            let final = self.applyPinnedOrder(to: merged)
+            let activePinned = self.session.settings.accountRepoLists.pinned(
+                for: activeAccountSession.id,
+                legacy: self.session.settings.repoList.pinnedRepositories
+            )
+            let final = Self.applyPinnedOrder(to: merged, pinned: activePinned)
+            guard self.publishHydratedActiveRepositorySnapshot(
+                accessibleRepositories: hydratedAccessible,
+                repositories: final,
+                accountID: activeAccountSession.id,
+                generation: accountRefresh.generation,
+                now: now
+            ) else { return }
+
             let localSnapshot = await localSnapshotTask.value
             let activityUsername: String? = {
                 guard case let .loggedIn(user) = self.session.account,
@@ -116,8 +148,11 @@ extension AppState {
                     repos: final
                 )
             }
-            await self.updateSession(with: final, now: now)
             let globalActivity = await globalActivityTask.value
+            try self.checkAccountRepositoryRefreshIsCurrent(
+                generation: accountRefresh.generation,
+                accountID: activeAccountSession.id
+            )
             await MainActor.run {
                 self.session.localRepoIndex = localSnapshot.repoIndex
                 self.session.localDiscoveredRepoCount = localSnapshot.discoveredCount
@@ -130,15 +165,34 @@ extension AppState {
                 NotificationCenter.default.post(name: .menuRepositoriesDidChange, object: nil)
             }
             await self.updateMenuDisplayIndex(now: now)
+            try self.checkAccountRepositoryRefreshIsCurrent(
+                generation: accountRefresh.generation,
+                accountID: activeAccountSession.id
+            )
             self.prefetchMenuTargets(from: final, visibleCount: targets.count, token: self.refreshTaskToken)
             await self.refreshRateLimitDisplayState()
+            try self.checkAccountRepositoryRefreshIsCurrent(
+                generation: accountRefresh.generation,
+                accountID: activeAccountSession.id
+            )
             await self.refreshActionsLimitsState()
+            try self.checkAccountRepositoryRefreshIsCurrent(
+                generation: accountRefresh.generation,
+                accountID: activeAccountSession.id
+            )
             let message = await self.github.rateLimitMessage(now: now)
+            try self.checkAccountRepositoryRefreshIsCurrent(
+                generation: accountRefresh.generation,
+                accountID: activeAccountSession.id
+            )
             await MainActor.run {
-                self.session.lastError = message
+                self.session.lastError = message ?? accountRefresh.activeFailure?.message
                 NotificationCenter.default.post(name: .menuDiagnosticsDidChange, object: nil)
             }
         } catch {
+            if error is CancellationError {
+                return
+            }
             if error.isAuthenticationFailure {
                 await self.handleAuthenticationFailure(error)
                 return
@@ -158,6 +212,10 @@ extension AppState {
     }
 
     private func hasAuthenticationMaterial() async -> Bool {
+        if self.session.settings.accounts.isEmpty == false {
+            let selectedIDs = self.selectedAccountIDsForRepositoryRefresh()
+            return self.accountManager.accountClientSnapshots(accountIDs: selectedIDs).isEmpty == false
+        }
         if let accountID = self.session.settings.resolvedActiveAccount()?.id {
             return (try? TokenStore.shared.loadTokens(accountID: accountID)) != nil
                 || (try? TokenStore.shared.loadPAT(accountID: accountID)) != nil
@@ -286,6 +344,8 @@ extension AppState {
             self.session.hasStoredTokens = false
             self.session.accessibleRepositories = []
             self.session.repositories = []
+            self.session.accountSessions = []
+            self.session.aggregatedRepositories = []
             self.session.menuSnapshot = nil
             self.session.menuDisplayIndex = [:]
             self.session.hasLoadedRepositories = false
@@ -309,32 +369,41 @@ extension AppState {
         RepositoryHydration.merge(detailed, into: repos)
     }
 
-    private func applyCachedMenuSnapshotIfAvailable(now: Date) async {
-        guard let repos = try? await self.github.cachedRepositoryList(limit: nil), repos.isEmpty == false else { return }
+    @discardableResult
+    func publishHydratedActiveRepositorySnapshot(
+        accessibleRepositories: [Repository],
+        repositories: [Repository],
+        accountID: String,
+        generation: UUID,
+        now: Date
+    ) -> Bool {
+        guard self.canContinueAccountRepositoryRefresh(generation: generation, accountID: accountID),
+              let accountIndex = self.session.accountSessions.firstIndex(where: { $0.id == accountID })
+        else { return false }
 
-        await self.updateAccessibleRepositories(repos)
-        let visible = self.applyVisibilityFilters(to: repos)
-        let ordered = self.applyPinnedOrder(to: visible)
-        await self.updateSession(with: ordered, now: now)
+        let accessible = RepositoryUniquing.byFullName(accessibleRepositories)
+        self.session.accessibleRepositories = accessible
+        self.session.repositories = repositories
+        self.session.menuSnapshot = MenuSnapshot(repositories: repositories, capturedAt: now)
+        self.session.menuDisplayIndex = self.menuDisplayIndex(for: repositories, now: now)
+        self.session.hasLoadedRepositories = true
+        self.session.rateLimitReset = nil
+        self.session.lastError = nil
+        self.session.accountSessions[accountIndex].accessibleRepositories = accessible
+        self.session.accountSessions[accountIndex].repositories = repositories
+        self.rebuildAggregatedRepositories()
+        NotificationCenter.default.post(name: .menuRepositoriesDidChange, object: nil)
+        return true
     }
 
-    private func updateSession(with repos: [Repository], now: Date) async {
-        let index = self.menuDisplayIndex(for: repos, now: now)
-        await MainActor.run {
-            self.session.repositories = repos
-            self.session.menuSnapshot = MenuSnapshot(repositories: repos, capturedAt: now)
-            self.session.menuDisplayIndex = index
-            self.session.hasLoadedRepositories = true
-            self.session.rateLimitReset = nil
-            self.session.lastError = nil
-            NotificationCenter.default.post(name: .menuRepositoriesDidChange, object: nil)
-        }
+    private func canContinueAccountRepositoryRefresh(generation: UUID, accountID: String) -> Bool {
+        self.canPublishAccountRepositoryRefresh(generation)
+            && self.session.activeAccountID == accountID
     }
 
-    private func updateAccessibleRepositories(_ repos: [Repository]) async {
-        let uniqueRepos = RepositoryUniquing.byFullName(repos)
-        await MainActor.run {
-            self.session.accessibleRepositories = uniqueRepos
+    private func checkAccountRepositoryRefreshIsCurrent(generation: UUID, accountID: String) throws {
+        guard self.canContinueAccountRepositoryRefresh(generation: generation, accountID: accountID) else {
+            throw CancellationError()
         }
     }
 
@@ -347,7 +416,7 @@ extension AppState {
         }
     }
 
-    private func menuDisplayIndex(for repos: [Repository], now: Date) -> [String: RepositoryDisplayModel] {
+    func menuDisplayIndex(for repos: [Repository], now: Date) -> [String: RepositoryDisplayModel] {
         let localIndex = self.session.localRepoIndex
         let models = repos.map { repo in
             RepositoryDisplayModel(repo: repo, localStatus: localIndex.status(for: repo), now: now)
