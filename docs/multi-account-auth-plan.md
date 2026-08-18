@@ -15,6 +15,36 @@ RepoBar's current authentication code is intentionally small and clean, but it i
 
 The 0.6.6 cycle landed the bulk of the plan end-to-end behind a backward-compatible facade. The legacy single-account `TokenStore` keys (`default`, `client`, `pat`) and the `githubHost` / `enterpriseHost` / `loopbackPort` / `authMethod` `UserSettings` fields are still authoritative for installs that have not been re-auth'd; the new account-scoped keys, settings, caches, and clients are populated on first login (or via the legacy migration on bootstrap) without removing those legacy entries.
 
+### Issue #101 consolidated experience
+
+The next programme adds an optional consolidated experience on top of the existing multi-account foundations. Its accepted product contract is:
+
+1. Consolidation is opt-in through one global **Consolidate accounts** toggle that defaults off. Existing `AccountSelection` remains the source of per-account inclusion; no second account-selection list is introduced.
+2. The supported surfaces are the macOS app and bundled CLI. RepoBarCore contracts remain reusable by iOS, but iOS UI is out of scope.
+3. Every existing GitHub-backed read and monitoring surface will become account-aware. New remote GitHub mutations, including assign, label, comment, review, rerun, merge, and administration actions, are out of scope.
+4. Repositories and items visible through multiple accounts remain separate internally and visually, grouped and labelled by account. Repository display limits apply independently to each account.
+5. Existing per-account SQLite caches remain separate, and consolidated state is an in-memory union. The programme will not use SQLite `ATTACH` or add a shared `attention.sqlite` unless later profiling justifies it.
+6. When one account fails, its last-good cached rows remain visible and are marked stale or errored while healthy accounts continue. The menu-bar indicator reports the worst included-account health, while details remain per account.
+7. Notifications remain separate and account-labelled when multiple accounts observe the same pull request or release.
+8. The CLI adds explicit `--all-accounts`, retains `--account` and active-account defaults, and does not implicitly inherit the GUI consolidation toggle.
+9. Issue Navigator content from a non-active account requires a second explicit opt-in before OpenAI summaries are allowed.
+10. **Needs Attention** uses typed configurable rules for category, account, owner/repository filters, state, and priority. It does not expose arbitrary expressions or a nested AND/OR DSL. Its conservative default preset covers review requests, assignments, and failed workflows on pinned repositories.
+
+The implementation is a sequential bottom-to-top stack:
+
+1. `multi-account-contracts` — settings, account-scoped identities, attention-rule contracts, and Codable compatibility.
+2. `multi-account-refresh` — repository snapshot loader, bounded fan-out, last-good partial failures, and active-account compatibility projection.
+3. `multi-account-repo-state` — account-scoped pinned/hidden migration, cache and submenu identities, local host matching, and explicit client resolution.
+4. `multi-account-cli` — shared account scope, `--all-accounts`, stable output envelopes, and account settings/cache operations.
+5. `multi-account-dashboard` — Settings opt-in controls, grouped dashboard/menu, account headers, per-account limits, and account-aware submenus.
+6. `multi-account-attention` — typed rule evaluation, shared collectors, the default preset, normalized `AttentionItem`, and `repobar triage`.
+7. `multi-account-navigator` — Issue Navigator, Needs Attention mode, reference monitor fan-out, scopes/previews, and the AI secondary opt-in.
+8. `multi-account-notifications` — account-namespaced pull request/release polling, baselines, event IDs, labels, and click context.
+9. `multi-account-operations-status` — Actions & Runners, monitored owners, rate limits, contribution/global activity, and worst-health state.
+10. `multi-account-integration-proof` — integration fixtures, accessibility and UI polish, redacted personal plus EMU proof, and final README, docs, CHANGELOG, and issue updates.
+
+Only Layer 1, `multi-account-contracts`, is implemented in this change. Layers 2 through 10 remain deferred, and the new contracts do not change runtime, UI, notification, refresh, or CLI behavior.
+
 Landed:
 
 - Phase 0/1 — `Account`, `AccountSelection`, and `AccountScopedRepositoryLists` live in `RepoBarCore`; `UserSettings` decodes/encodes the new fields with safe defaults and omits them when empty so legacy reads stay clean.

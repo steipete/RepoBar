@@ -29,6 +29,8 @@ public struct UserSettings: Equatable, Codable {
     public var activeAccountID: String?
     public var accountSelection: AccountSelection = .all
     public var accountRepoLists: AccountScopedRepositoryLists = .init()
+    public var consolidateAccounts = false
+    public var attentionRules: [AttentionRule] = []
 
     public init() {}
 
@@ -60,6 +62,8 @@ public struct UserSettings: Equatable, Codable {
         case activeAccountID
         case accountSelection
         case accountRepoLists
+        case consolidateAccounts
+        case attentionRules
     }
 
     public init(from decoder: Decoder) throws {
@@ -112,6 +116,14 @@ public struct UserSettings: Equatable, Codable {
             AccountScopedRepositoryLists.self,
             forKey: .accountRepoLists
         ) ?? AccountScopedRepositoryLists()
+        self.consolidateAccounts = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .consolidateAccounts
+        ) ?? false
+        self.attentionRules = try container.decodeIfPresent(
+            [AttentionRule].self,
+            forKey: .attentionRules
+        ) ?? []
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -152,6 +164,12 @@ public struct UserSettings: Equatable, Codable {
         }
         if self.accountRepoLists.isEmpty == false {
             try container.encode(self.accountRepoLists, forKey: .accountRepoLists)
+        }
+        if self.consolidateAccounts {
+            try container.encode(true, forKey: .consolidateAccounts)
+        }
+        if self.attentionRules.isEmpty == false {
+            try container.encode(self.attentionRules, forKey: .attentionRules)
         }
     }
 
@@ -314,6 +332,7 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
 
     public var enabled = false
     public var model = defaultModel
+    public var allowNonActiveAccountContent = false
 
     public init() {}
 
@@ -327,6 +346,7 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case enabled
         case model
+        case allowNonActiveAccountContent
     }
 
     public init(from decoder: Decoder) throws {
@@ -334,6 +354,19 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
         self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
         let decodedModel = try container.decodeIfPresent(String.self, forKey: .model) ?? Self.defaultModel
         self.model = Self.normalizedModel(decodedModel)
+        self.allowNonActiveAccountContent = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .allowNonActiveAccountContent
+        ) ?? false
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.enabled, forKey: .enabled)
+        try container.encode(self.model, forKey: .model)
+        if self.allowNonActiveAccountContent {
+            try container.encode(true, forKey: .allowNonActiveAccountContent)
+        }
     }
 }
 
