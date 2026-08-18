@@ -117,10 +117,7 @@ extension AppState {
             try Task.checkCancellation()
             let hydratedAccessible = self.mergeHydrated(hydrated, into: repos)
             let merged = self.mergeHydrated(hydrated, into: ordered)
-            let activePinned = self.session.settings.accountRepoLists.pinned(
-                for: activeAccountSession.id,
-                legacy: self.session.settings.repoList.pinnedRepositories
-            )
+            let activePinned = self.session.settings.pinnedRepositories(for: activeAccountSession.id)
             let final = Self.applyPinnedOrder(to: merged, pinned: activePinned)
             guard self.publishHydratedActiveRepositorySnapshot(
                 accessibleRepositories: hydratedAccessible,
@@ -419,7 +416,11 @@ extension AppState {
     func menuDisplayIndex(for repos: [Repository], now: Date) -> [String: RepositoryDisplayModel] {
         let localIndex = self.session.localRepoIndex
         let models = repos.map { repo in
-            RepositoryDisplayModel(repo: repo, localStatus: localIndex.status(for: repo), now: now)
+            RepositoryDisplayModel(
+                repo: repo,
+                localStatus: localIndex.status(for: repo, host: self.session.settings.githubHost),
+                now: now
+            )
         }
         return Dictionary(
             models.map { ($0.title.lowercased(), $0) },
@@ -459,7 +460,10 @@ extension AppState {
                 let models = merged.map { repo in
                     RepositoryDisplayModel(
                         repo: repo,
-                        localStatus: self.session.localRepoIndex.status(for: repo),
+                        localStatus: self.session.localRepoIndex.status(
+                            for: repo,
+                            host: self.session.settings.githubHost
+                        ),
                         now: capturedAt
                     )
                 }

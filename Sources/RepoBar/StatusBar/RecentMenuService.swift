@@ -8,8 +8,8 @@ final class RecentMenuService {
     let cacheTTL: TimeInterval
     let loadTimeout: TimeInterval
 
-    private let github: @MainActor () -> GitHubClient
-    private let cacheNamespace: @MainActor () -> String
+    private let clientResolver: @MainActor (String) throws -> GitHubClient
+    private let activeAccountID: @MainActor () -> String?
     private let recentIssuesCache = RecentListCache<RepoIssueSummary>()
     private let recentPullRequestsCache = RecentListCache<RepoPullRequestSummary>()
     private let recentReleasesCache = RecentListCache<RepoReleaseSummary>()
@@ -19,7 +19,7 @@ final class RecentMenuService {
     private let recentTagsCache = RecentListCache<RepoTagSummary>()
     private let recentBranchesCache = RecentListCache<RepoBranchSummary>()
     private let recentContributorsCache = RecentListCache<RepoContributorSummary>()
-    private var recentCommitCounts: [String: Int] = [:]
+    private var recentCommitCounts: [AccountScopedCacheKey: Int] = [:]
 
     init(
         github: @escaping @MainActor () -> GitHubClient,
@@ -29,8 +29,8 @@ final class RecentMenuService {
         cacheTTL: TimeInterval = AppLimits.RecentLists.cacheTTL,
         loadTimeout: TimeInterval = AppLimits.RecentLists.loadTimeout
     ) {
-        self.github = github
-        self.cacheNamespace = cacheNamespace
+        self.clientResolver = { _ in github() }
+        self.activeAccountID = { cacheNamespace() }
         self.listLimit = listLimit
         self.previewLimit = previewLimit
         self.cacheTTL = cacheTTL
@@ -39,17 +39,53 @@ final class RecentMenuService {
 
     convenience init(appState: AppState) {
         self.init(
-            github: { [appState] in appState.github },
-            cacheNamespace: { [appState] in appState.session.settings.resolvedActiveAccount()?.id ?? "legacy" }
+            clientResolver: { [appState] accountID in
+                try appState.accountManager.resolveClient(for: accountID)
+            },
+            activeAccountID: { [appState] in
+                appState.session.settings.resolvedActiveAccount()?.id
+            }
         )
     }
 
-    func cacheKey(fullName: String) -> String {
-        "\(self.cacheNamespace())|\(fullName)"
+    init(
+        clientResolver: @escaping @MainActor (String) throws -> GitHubClient,
+        activeAccountID: @escaping @MainActor () -> String?,
+        listLimit: Int = AppLimits.RecentLists.limit,
+        previewLimit: Int = AppLimits.RecentLists.previewLimit,
+        cacheTTL: TimeInterval = AppLimits.RecentLists.cacheTTL,
+        loadTimeout: TimeInterval = AppLimits.RecentLists.loadTimeout
+    ) {
+        self.clientResolver = clientResolver
+        self.activeAccountID = activeAccountID
+        self.listLimit = listLimit
+        self.previewLimit = previewLimit
+        self.cacheTTL = cacheTTL
+        self.loadTimeout = loadTimeout
     }
 
-    func cacheContext(fullName: String) -> (key: String, github: GitHubClient) {
-        (self.cacheKey(fullName: fullName), self.github())
+    func cacheKey(accountID: String, fullName: String) -> AccountScopedCacheKey {
+        AccountScopedCacheKey(accountID: accountID, key: fullName)
+    }
+
+    func cacheKey(fullName: String) -> AccountScopedCacheKey? {
+        self.activeAccountID().map { self.cacheKey(accountID: $0, fullName: fullName) }
+    }
+
+    func cacheContext(accountID: String, fullName: String) throws
+        -> (key: AccountScopedCacheKey, github: GitHubClient) {
+        try (
+            self.cacheKey(accountID: accountID, fullName: fullName),
+            self.clientResolver(accountID)
+        )
+    }
+
+    func cacheContext(fullName: String) throws -> (key: AccountScopedCacheKey, github: GitHubClient) {
+        guard let accountID = self.activeAccountID() else {
+            throw AccountManagerError.clientUnavailable("active")
+        }
+
+        return try self.cacheContext(accountID: accountID, fullName: fullName)
     }
 
     func descriptor(for kind: RepoRecentMenuKind) -> RecentMenuDescriptor? {
@@ -203,7 +239,16 @@ final class RecentMenuService {
     }
 
     func cachedRecentCommitCount(fullName: String) -> Int? {
-        let key = self.cacheKey(fullName: fullName)
+        guard let key = self.cacheKey(fullName: fullName) else { return nil }
+
+        return self.cachedRecentCommitCount(key: key)
+    }
+
+    func cachedRecentCommitCount(accountID: String, fullName: String) -> Int? {
+        self.cachedRecentCommitCount(key: self.cacheKey(accountID: accountID, fullName: fullName))
+    }
+
+    private func cachedRecentCommitCount(key: AccountScopedCacheKey) -> Int? {
         if let total = self.recentCommitCounts[key] {
             return total
         }
@@ -211,8 +256,17 @@ final class RecentMenuService {
     }
 
     func cachedCommits(fullName: String, now: Date = Date()) -> [RepoCommitSummary]? {
-        let key = self.cacheKey(fullName: fullName)
-        return self.recentCommitsCache.cached(for: key, now: now, maxAge: self.cacheTTL)
+        guard let key = self.cacheKey(fullName: fullName) else { return nil }
+
+        return self.cachedCommits(key: key, now: now)
+    }
+
+    func cachedCommits(accountID: String, fullName: String, now: Date = Date()) -> [RepoCommitSummary]? {
+        self.cachedCommits(key: self.cacheKey(accountID: accountID, fullName: fullName), now: now)
+    }
+
+    private func cachedCommits(key: AccountScopedCacheKey, now: Date) -> [RepoCommitSummary]? {
+        self.recentCommitsCache.cached(for: key, now: now, maxAge: self.cacheTTL)
             ?? self.recentCommitsCache.stale(for: key)
     }
 
@@ -226,6 +280,57 @@ final class RecentMenuService {
             hasher.combine(commit.authoredAt.timeIntervalSinceReferenceDate)
         }
         return hasher.finalize()
+    }
+
+    func removeCachedState(accountID: String) {
+        self.recentIssuesCache.remove(accountID: accountID)
+        self.recentPullRequestsCache.remove(accountID: accountID)
+        self.recentReleasesCache.remove(accountID: accountID)
+        self.recentWorkflowRunsCache.remove(accountID: accountID)
+        self.recentCommitsCache.remove(accountID: accountID)
+        self.recentDiscussionsCache.remove(accountID: accountID)
+        self.recentTagsCache.remove(accountID: accountID)
+        self.recentBranchesCache.remove(accountID: accountID)
+        self.recentContributorsCache.remove(accountID: accountID)
+        self.recentCommitCounts = self.recentCommitCounts.filter { $0.key.accountID != accountID }
+    }
+
+    func load(
+        accountID: String,
+        fullName: String,
+        kind: RepoRecentMenuKind,
+        limit: Int? = nil
+    ) async throws -> RecentMenuItems {
+        let parts = fullName.split(separator: "/", maxSplits: 1)
+        guard parts.count == 2 else {
+            throw RecentMenuServiceError.invalidRepositoryName(fullName)
+        }
+        guard let descriptor = self.descriptor(for: kind) else {
+            throw RecentMenuServiceError.unsupportedKind
+        }
+
+        let context = try self.cacheContext(accountID: accountID, fullName: fullName)
+        return try await descriptor.load(
+            context.key,
+            String(parts[0]),
+            String(parts[1]),
+            limit ?? self.listLimit,
+            context.github
+        )
+    }
+
+    private enum RecentMenuServiceError: LocalizedError {
+        case invalidRepositoryName(String)
+        case unsupportedKind
+
+        var errorDescription: String? {
+            switch self {
+            case let .invalidRepositoryName(fullName):
+                "Invalid repository name: \(fullName)"
+            case .unsupportedKind:
+                "Unsupported recent-list kind."
+            }
+        }
     }
 
     private func commitDescriptor() -> RecentMenuDescriptor {
@@ -310,10 +415,10 @@ struct RecentMenuDescriptor {
     let headerTitle: String
     let headerIcon: String?
     let emptyTitle: String
-    let cached: (String, Date, TimeInterval) -> RecentMenuItems?
-    let stale: (String) -> RecentMenuItems?
-    let needsRefresh: (String, Date, TimeInterval) -> Bool
-    let load: @MainActor (String, String, String, Int, GitHubClient) async throws -> RecentMenuItems
+    let cached: (AccountScopedCacheKey, Date, TimeInterval) -> RecentMenuItems?
+    let stale: (AccountScopedCacheKey) -> RecentMenuItems?
+    let needsRefresh: (AccountScopedCacheKey, Date, TimeInterval) -> Bool
+    let load: @MainActor (AccountScopedCacheKey, String, String, Int, GitHubClient) async throws -> RecentMenuItems
 }
 
 enum RecentMenuItems {
@@ -363,15 +468,15 @@ final class RecentListCache<Item: Sendable> {
     }
 
     private let maxEntries: Int
-    private var entries: [String: Entry] = [:]
-    private var entryOrder: [String] = []
-    private var inflight: [String: Task<[Item], Error>] = [:]
+    private var entries: [AccountScopedCacheKey: Entry] = [:]
+    private var entryOrder: [AccountScopedCacheKey] = []
+    private var inflight: [AccountScopedCacheKey: Task<[Item], Error>] = [:]
 
     init(maxEntries: Int = AppLimits.RecentLists.cacheEntries) {
         self.maxEntries = max(0, maxEntries)
     }
 
-    func cached(for key: String, now: Date, maxAge: TimeInterval) -> [Item]? {
+    func cached(for key: AccountScopedCacheKey, now: Date, maxAge: TimeInterval) -> [Item]? {
         guard let entry = self.entries[key] else { return nil }
         guard now.timeIntervalSince(entry.fetchedAt) <= maxAge else { return nil }
 
@@ -379,20 +484,23 @@ final class RecentListCache<Item: Sendable> {
         return entry.items
     }
 
-    func stale(for key: String) -> [Item]? {
+    func stale(for key: AccountScopedCacheKey) -> [Item]? {
         guard let entry = self.entries[key] else { return nil }
 
         self.touch(key)
         return entry.items
     }
 
-    func needsRefresh(for key: String, now: Date, maxAge: TimeInterval) -> Bool {
+    func needsRefresh(for key: AccountScopedCacheKey, now: Date, maxAge: TimeInterval) -> Bool {
         guard let entry = self.entries[key] else { return true }
 
         return now.timeIntervalSince(entry.fetchedAt) > maxAge
     }
 
-    func task(for key: String, factory: @escaping @Sendable () async throws -> [Item]) -> Task<[Item], Error> {
+    func task(
+        for key: AccountScopedCacheKey,
+        factory: @escaping @Sendable () async throws -> [Item]
+    ) -> Task<[Item], Error> {
         if let existing = self.inflight[key] {
             return existing
         }
@@ -401,12 +509,16 @@ final class RecentListCache<Item: Sendable> {
         return task
     }
 
-    func clearInflight(for key: String) {
+    func clearInflight(for key: AccountScopedCacheKey) {
         self.inflight[key] = nil
     }
 
     @discardableResult
-    func store(_ items: [Item], for key: String, fetchedAt: Date) -> [String] {
+    func store(
+        _ items: [Item],
+        for key: AccountScopedCacheKey,
+        fetchedAt: Date
+    ) -> [AccountScopedCacheKey] {
         guard self.maxEntries > 0 else { return [] }
 
         self.entries[key] = Entry(fetchedAt: fetchedAt, items: items)
@@ -418,13 +530,24 @@ final class RecentListCache<Item: Sendable> {
         self.entries.count
     }
 
-    private func touch(_ key: String) {
+    func remove(accountID: String) {
+        let keys = self.entries.keys.filter { $0.accountID == accountID }
+        for key in keys {
+            self.entries[key] = nil
+        }
+        self.entryOrder.removeAll { $0.accountID == accountID }
+        let tasks = self.inflight.filter { $0.key.accountID == accountID }.map(\.value)
+        self.inflight = self.inflight.filter { $0.key.accountID != accountID }
+        tasks.forEach { $0.cancel() }
+    }
+
+    private func touch(_ key: AccountScopedCacheKey) {
         self.entryOrder.removeAll { $0 == key }
         self.entryOrder.append(key)
     }
 
-    private func evictIfNeeded() -> [String] {
-        var evicted: [String] = []
+    private func evictIfNeeded() -> [AccountScopedCacheKey] {
+        var evicted: [AccountScopedCacheKey] = []
         while self.entries.count > self.maxEntries, let oldest = self.entryOrder.first {
             self.entryOrder.removeFirst()
             if self.entries.removeValue(forKey: oldest) != nil {

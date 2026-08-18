@@ -17,8 +17,10 @@ extension AppState {
             if let migrated = await self.migrateLegacyAccountIfNeeded() {
                 self.session.settings.accounts = [migrated]
                 self.session.settings.activeAccountID = migrated.id
-                self.persistSettings()
             }
+        }
+        if self.session.settings.migrateLegacyRepositoryListsToActiveAccountIfNeeded() {
+            self.persistSettings()
         }
         await manager.bootstrap(from: self.session.settings)
         await self.syncPrimaryGitHubClientToActiveAccount()
@@ -133,6 +135,9 @@ extension AppState {
     ) async {
         guard user.username.isEmpty == false else { return }
 
+        let previousActiveAccountID = self.session.settings.resolvedActiveAccount()?.id
+        _ = self.session.settings.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+
         let account = Account(
             username: user.username,
             host: host,
@@ -164,7 +169,12 @@ extension AppState {
         } else {
             self.session.settings.accounts.append(account)
         }
-        self.session.settings.activeAccountID = account.id
+        if previousActiveAccountID == nil {
+            self.session.settings.activeAccountID = account.id
+            _ = self.session.settings.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+        } else {
+            self.session.settings.prepareRepositoryListsForActiveAccountChange(to: account.id)
+        }
         self.mirrorActiveAccountIntoSettings(account)
         self.mirrorActiveAccountCredentialsToLegacy(account)
         self.session.activeAccountID = self.accountManager.activeAccountID
@@ -183,7 +193,7 @@ extension AppState {
         guard self.accountManager.setActive(accountID: accountID) else { return }
 
         self.session.activeAccountID = accountID
-        self.session.settings.activeAccountID = accountID
+        self.session.settings.prepareRepositoryListsForActiveAccountChange(to: accountID)
         if let active = self.accountManager.activeAccount() {
             self.mirrorActiveAccountIntoSettings(active)
             self.mirrorActiveAccountCredentialsToLegacy(active)
@@ -197,12 +207,26 @@ extension AppState {
 
     /// Removes an account, clears its tokens, and updates the active selection.
     func removeAccount(_ accountID: String) async {
+        let wasActive = self.session.settings.resolvedActiveAccount()?.id == accountID
+        _ = self.session.settings.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+        let nextActiveAccountID = wasActive
+            ? self.session.settings.accounts.first(where: { $0.id != accountID })?.id
+            : self.session.settings.resolvedActiveAccount()?.id
+        if wasActive, let nextActiveAccountID {
+            self.session.settings.prepareRepositoryListsForActiveAccountChange(to: nextActiveAccountID)
+        }
+
         await self.accountManager.remove(accountID: accountID)
         self.session.settings.accounts.removeAll(where: { $0.id == accountID })
         self.session.accountSessions.removeAll(where: { $0.id == accountID })
-        if self.session.settings.activeAccountID == accountID {
-            self.session.settings.activeAccountID = self.session.settings.accounts.first?.id
-            self.session.activeAccountID = self.session.settings.activeAccountID
+        self.session.settings.removeRepositoryLists(for: accountID)
+        if wasActive {
+            self.session.settings.activeAccountID = nextActiveAccountID
+            self.session.activeAccountID = nextActiveAccountID
+            if nextActiveAccountID == nil {
+                self.session.settings.repoList.pinnedRepositories = []
+                self.session.settings.repoList.hiddenRepositories = []
+            }
         }
         if let active = self.accountManager.activeAccount() {
             self.mirrorActiveAccountIntoSettings(active)
@@ -212,12 +236,8 @@ extension AppState {
         }
         await self.syncPrimaryGitHubClientToActiveAccount()
         await self.refreshSessionIdentityFromActiveClient()
-        // Drop any per-account pinned/hidden lists for the removed account.
-        var lists = self.session.settings.accountRepoLists
-        lists.pinnedByAccount.removeValue(forKey: accountID)
-        lists.hiddenByAccount.removeValue(forKey: accountID)
-        self.session.settings.accountRepoLists = lists
         self.persistSettings()
+        NotificationCenter.default.post(name: .accountRepositoryStateDidRemove, object: accountID)
         self.requestRefresh(cancelInFlight: true)
     }
 

@@ -12,4 +12,5 @@ extension Notification.Name {
     static let issueNavigatorOpen = Notification.Name("issueNavigatorOpen")
     static let issueNavigatorOpenRequested = Notification.Name("issueNavigatorOpenRequested")
     static let notificationBrowserOpenRequested = Notification.Name("notificationBrowserOpenRequested")
+    static let accountRepositoryStateDidRemove = Notification.Name("accountRepositoryStateDidRemove")
 }

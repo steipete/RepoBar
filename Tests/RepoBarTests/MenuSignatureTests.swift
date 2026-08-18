@@ -31,9 +31,11 @@ struct MenuSignatureTests {
             isPinned: false
         )
 
+        let fullNameKey = AccountScopedCacheKey(accountID: "legacy", key: "owner/Repo")
+        let idKey = AccountScopedCacheKey(accountID: "legacy", key: repo.id)
         #expect(builder.repoFullName(for: submenu) == "owner/Repo")
-        #expect(builder.repoSubmenusByFullName["owner/Repo"]?.menu === submenu)
-        #expect(builder.repoSubmenusByFullName[repo.id] == nil)
+        #expect(builder.repoSubmenusByFullName[fullNameKey]?.menu === submenu)
+        #expect(builder.repoSubmenusByFullName[idKey] == nil)
     }
 
     @Test

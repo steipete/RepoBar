@@ -145,6 +145,39 @@ struct VisibilityTests {
         #expect(matchingFullNames.count == 1)
         #expect(keptIssues == 1)
     }
+
+    @MainActor
+    @Test
+    func `account scoped pin hide and reorder remain isolated`() async throws {
+        let defaultsName = "com.steipete.repobar.visibility.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: defaultsName))
+        defer { defaults.removePersistentDomain(forName: defaultsName) }
+        let appState = AppState(settingsStore: SettingsStore(defaults: defaults))
+        let alice = try Account(
+            username: "alice",
+            host: #require(URL(string: "https://github.com")),
+            authMethod: .oauth
+        )
+        let bob = try Account(
+            username: "bob",
+            host: #require(URL(string: "https://github.com")),
+            authMethod: .oauth
+        )
+        appState.session.settings.accounts = [alice, bob]
+        appState.session.settings.activeAccountID = alice.id
+
+        await appState.addPinned("owner/shared", accountID: alice.id)
+        await appState.addPinned("owner/other", accountID: alice.id)
+        await appState.hide("owner/shared", accountID: bob.id)
+        await appState.movePinned("owner/other", direction: -1, accountID: alice.id)
+
+        #expect(appState.session.settings.pinnedRepositories(for: alice.id) == ["owner/other", "owner/shared"])
+        #expect(appState.session.settings.hiddenRepositories(for: alice.id).isEmpty)
+        #expect(appState.session.settings.pinnedRepositories(for: bob.id).isEmpty)
+        #expect(appState.session.settings.hiddenRepositories(for: bob.id) == ["owner/shared"])
+        #expect(appState.session.settings.repoList.pinnedRepositories == ["owner/other", "owner/shared"])
+        #expect(appState.session.settings.repoList.hiddenRepositories.isEmpty)
+    }
 }
 
 private func makeRepository(

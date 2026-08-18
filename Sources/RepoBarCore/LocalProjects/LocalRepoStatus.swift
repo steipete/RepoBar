@@ -4,6 +4,7 @@ public struct LocalRepoStatus: Equatable, Sendable {
     public let path: URL
     public let name: String
     public let fullName: String?
+    public let remoteHost: String?
     public let branch: String
     public let isClean: Bool
     public let aheadCount: Int?
@@ -19,6 +20,7 @@ public struct LocalRepoStatus: Equatable, Sendable {
         path: URL,
         name: String,
         fullName: String?,
+        remoteHost: String? = nil,
         branch: String,
         isClean: Bool,
         aheadCount: Int?,
@@ -33,6 +35,7 @@ public struct LocalRepoStatus: Equatable, Sendable {
         self.path = path
         self.name = name
         self.fullName = fullName
+        self.remoteHost = remoteHost.map(Self.normalizedHost)
         self.branch = branch
         self.isClean = isClean
         self.aheadCount = aheadCount
@@ -82,6 +85,7 @@ public struct LocalRepoStatus: Equatable, Sendable {
             path: self.path,
             name: self.name,
             fullName: self.fullName,
+            remoteHost: self.remoteHost,
             branch: self.branch,
             isClean: self.isClean,
             aheadCount: self.aheadCount,
@@ -93,6 +97,15 @@ public struct LocalRepoStatus: Equatable, Sendable {
             upstreamBranch: self.upstreamBranch,
             lastFetchAt: date
         )
+    }
+
+    private static func normalizedHost(_ host: String) -> String {
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let url = URL(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)") else {
+            return trimmed
+        }
+
+        return Account.hostAuthority(for: url)
     }
 }
 
@@ -220,37 +233,45 @@ public struct LocalRepoIndex: Equatable, Sendable {
     }
 
     public func status(for repo: Repository) -> LocalRepoStatus? {
-        if let preferred = self.preferredPathsByFullName[repo.fullName], let status = self.byPath[preferred] {
-            return status
-        }
-        if let exact = self.byFullName[repo.fullName] {
-            return exact
-        }
-        if let match = self.preferredStatus(in: self.byFullNameLowercased, forKey: repo.fullName.lowercased()) {
-            return match
-        }
-        return self.uniqueStatus(forName: repo.name)
+        self.status(for: repo, host: nil)
+    }
+
+    public func status(for repo: Repository, host: URL?) -> LocalRepoStatus? {
+        self.status(forFullName: repo.fullName, repositoryName: repo.name, host: host)
     }
 
     public func status(forFullName fullName: String) -> LocalRepoStatus? {
+        self.status(forFullName: fullName, repositoryName: fullName.split(separator: "/").last.map(String.init), host: nil)
+    }
+
+    public func status(forFullName fullName: String, host: URL) -> LocalRepoStatus? {
+        self.status(forFullName: fullName, repositoryName: fullName.split(separator: "/").last.map(String.init), host: host)
+    }
+
+    private func status(forFullName fullName: String, repositoryName: String?, host: URL?) -> LocalRepoStatus? {
         if let preferred = self.preferredPathsByFullName[fullName], let status = self.byPath[preferred] {
-            return status
+            if Self.matchesHost(status, host: host) {
+                return status
+            }
         }
-        if let exact = self.byFullName[fullName] {
+        if let exact = self.byFullName[fullName], Self.matchesHost(exact, host: host) {
             return exact
         }
-        if let match = self.preferredStatus(in: self.byFullNameLowercased, forKey: fullName.lowercased()) {
+        if let match = self.preferredStatus(
+            in: self.byFullNameLowercased,
+            forKey: fullName.lowercased(),
+            host: host
+        ) {
             return match
         }
-        let name = fullName.split(separator: "/").last.map(String.init)
-        if let name {
-            return self.uniqueStatus(forName: name)
+        if let repositoryName {
+            return self.uniqueStatus(forName: repositoryName, host: host)
         }
         return nil
     }
 
     public func status(forRepositoryName name: String) -> LocalRepoStatus? {
-        self.uniqueStatus(forName: name)
+        self.uniqueStatus(forName: name, host: nil)
     }
 
     public func status(containingPath path: String) -> LocalRepoStatus? {
@@ -270,25 +291,46 @@ public struct LocalRepoIndex: Equatable, Sendable {
         }
     }
 
-    private func uniqueStatus(forName name: String) -> LocalRepoStatus? {
-        if let exact = self.uniqueStatus(in: self.byName, forKey: name) {
+    private func uniqueStatus(forName name: String, host: URL?) -> LocalRepoStatus? {
+        if let exact = self.uniqueStatus(in: self.byName, forKey: name, host: host) {
             return exact
         }
-        return self.uniqueStatus(in: self.byNameLowercased, forKey: name.lowercased())
+        return self.uniqueStatus(in: self.byNameLowercased, forKey: name.lowercased(), host: host)
     }
 
-    private func uniqueStatus(in index: [String: [LocalRepoStatus]], forKey key: String) -> LocalRepoStatus? {
-        guard let matches = index[key], matches.count == 1 else { return nil }
+    private func uniqueStatus(
+        in index: [String: [LocalRepoStatus]],
+        forKey key: String,
+        host: URL?
+    ) -> LocalRepoStatus? {
+        guard let indexed = index[key] else { return nil }
+
+        let matches = indexed.filter { Self.matchesHost($0, host: host) }
+        guard matches.count == 1 else { return nil }
 
         return matches.first
     }
 
-    private func preferredStatus(in index: [String: [LocalRepoStatus]], forKey key: String) -> LocalRepoStatus? {
-        guard let matches = index[key], matches.isEmpty == false else { return nil }
+    private func preferredStatus(
+        in index: [String: [LocalRepoStatus]],
+        forKey key: String,
+        host: URL?
+    ) -> LocalRepoStatus? {
+        guard let indexed = index[key] else { return nil }
+
+        let matches = indexed.filter { Self.matchesHost($0, host: host) }
+        guard matches.isEmpty == false else { return nil }
 
         return matches.reduce(matches[0]) { current, candidate in
             Self.preferredStatus(current, candidate)
         }
+    }
+
+    private static func matchesHost(_ status: LocalRepoStatus, host: URL?) -> Bool {
+        guard let host else { return true }
+        guard let remoteHost = status.remoteHost else { return true }
+
+        return remoteHost == Self.normalizedHost(host)
     }
 
     private static func preferredStatus(_ lhs: LocalRepoStatus, _ rhs: LocalRepoStatus) -> LocalRepoStatus {
@@ -304,5 +346,18 @@ public struct LocalRepoIndex: Equatable, Sendable {
             return rhs
         }
         return lhs.path.path <= rhs.path.path ? lhs : rhs
+    }
+
+    private static func normalizedHost(_ host: URL) -> String {
+        Account.hostAuthority(for: host)
+    }
+
+    private static func normalizedHost(_ host: String) -> String {
+        let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard let url = URL(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)") else {
+            return trimmed
+        }
+
+        return Account.hostAuthority(for: url)
     }
 }

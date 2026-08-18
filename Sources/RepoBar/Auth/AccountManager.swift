@@ -2,6 +2,20 @@ import Foundation
 import OSLog
 import RepoBarCore
 
+enum AccountManagerError: LocalizedError, Equatable {
+    case unknownAccount(String)
+    case clientUnavailable(String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .unknownAccount(accountID):
+            "Unknown GitHub account: \(accountID)"
+        case let .clientUnavailable(accountID):
+            "GitHub client is unavailable for account: \(accountID)"
+        }
+    }
+}
+
 /// Owns per-account `GitHubClient` instances and their auth state.
 ///
 /// Bootstrapped from `UserSettings.accounts`. Each account gets its own
@@ -48,6 +62,17 @@ final class AccountManager {
     /// Looks up the per-account `GitHubClient`. Returns `nil` when the account is unknown.
     func client(for accountID: String) -> GitHubClient? {
         self.clients[accountID]
+    }
+
+    func resolveClient(for accountID: String) throws -> GitHubClient {
+        guard self.accounts.contains(where: { $0.id == accountID }) else {
+            throw AccountManagerError.unknownAccount(accountID)
+        }
+        guard let client = self.clients[accountID] else {
+            throw AccountManagerError.clientUnavailable(accountID)
+        }
+
+        return client
     }
 
     /// The `GitHubClient` for the currently active account, if any.

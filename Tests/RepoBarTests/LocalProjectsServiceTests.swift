@@ -206,6 +206,51 @@ struct LocalProjectsServiceTests {
     }
 
     @Test
+    func `local repo index rejects same owner and name on a different host`() throws {
+        let status = LocalRepoStatus(
+            path: URL(fileURLWithPath: "/tmp/RepoBar"),
+            name: "RepoBar",
+            fullName: "steipete/RepoBar",
+            remoteHost: "github.com",
+            branch: "main",
+            isClean: true,
+            aheadCount: 0,
+            behindCount: 0,
+            syncState: .synced
+        )
+        let index = LocalRepoIndex(statuses: [status])
+        let repo = makeRepository(name: "RepoBar", owner: "steipete")
+        let github = try #require(URL(string: "https://github.com"))
+        let enterprise = try #require(URL(string: "https://ghe.example.com"))
+
+        #expect(index.status(for: repo, host: github)?.path == status.path)
+        #expect(index.status(for: repo, host: enterprise) == nil)
+    }
+
+    @Test
+    func `same host account rows may share a local checkout`() throws {
+        let status = LocalRepoStatus(
+            path: URL(fileURLWithPath: "/tmp/RepoBar"),
+            name: "RepoBar",
+            fullName: "steipete/RepoBar",
+            remoteHost: "github.com",
+            branch: "main",
+            isClean: true,
+            aheadCount: 0,
+            behindCount: 0,
+            syncState: .synced
+        )
+        let index = LocalRepoIndex(statuses: [status])
+        let host = try #require(URL(string: "https://github.com"))
+
+        let firstAccountMatch = index.status(forFullName: "steipete/RepoBar", host: host)
+        let secondAccountMatch = index.status(forFullName: "steipete/RepoBar", host: host)
+
+        #expect(firstAccountMatch?.path == status.path)
+        #expect(secondAccountMatch?.path == status.path)
+    }
+
+    @Test
     func `local repo index prefers higher hierarchy for duplicate full names`() {
         let worktree = LocalRepoStatus(
             path: URL(fileURLWithPath: "/tmp/Repo/.work/feature"),

@@ -198,6 +198,82 @@ public struct UserSettings: Equatable, Codable {
             return ids.filter { selected.contains($0) }
         }
     }
+
+    public func pinnedRepositories(for accountID: String) -> [String] {
+        if self.accountRepoLists.hasPinnedEntry(for: accountID) {
+            return self.accountRepoLists.pinned(for: accountID)
+        }
+        guard self.resolvedActiveAccount()?.id == accountID else { return [] }
+
+        return self.repoList.pinnedRepositories
+    }
+
+    public func hiddenRepositories(for accountID: String) -> [String] {
+        if self.accountRepoLists.hasHiddenEntry(for: accountID) {
+            return self.accountRepoLists.hidden(for: accountID)
+        }
+        guard self.resolvedActiveAccount()?.id == accountID else { return [] }
+
+        return self.repoList.hiddenRepositories
+    }
+
+    public mutating func migrateLegacyRepositoryListsToActiveAccountIfNeeded() -> Bool {
+        guard let accountID = self.resolvedActiveAccount()?.id else { return false }
+
+        var changed = false
+        if self.accountRepoLists.hasPinnedEntry(for: accountID) == false {
+            self.accountRepoLists.setPinned(self.repoList.pinnedRepositories, for: accountID)
+            changed = true
+        }
+        if self.accountRepoLists.hasHiddenEntry(for: accountID) == false {
+            self.accountRepoLists.setHidden(self.repoList.hiddenRepositories, for: accountID)
+            changed = true
+        }
+        return changed
+    }
+
+    public mutating func prepareRepositoryListsForActiveAccountChange(to accountID: String) {
+        _ = self.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+        if self.accountRepoLists.hasPinnedEntry(for: accountID) == false {
+            self.accountRepoLists.setPinned([], for: accountID)
+        }
+        if self.accountRepoLists.hasHiddenEntry(for: accountID) == false {
+            self.accountRepoLists.setHidden([], for: accountID)
+        }
+        self.activeAccountID = accountID
+        self.mirrorRepositoryListsToLegacy(for: accountID)
+    }
+
+    public mutating func setPinnedRepositories(_ repositories: [String], for accountID: String) {
+        let isActive = self.resolvedActiveAccount()?.id == accountID
+        if isActive {
+            _ = self.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+        }
+        self.accountRepoLists.setPinned(repositories, for: accountID)
+        if isActive {
+            self.repoList.pinnedRepositories = self.accountRepoLists.pinned(for: accountID)
+        }
+    }
+
+    public mutating func setHiddenRepositories(_ repositories: [String], for accountID: String) {
+        let isActive = self.resolvedActiveAccount()?.id == accountID
+        if isActive {
+            _ = self.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+        }
+        self.accountRepoLists.setHidden(repositories, for: accountID)
+        if isActive {
+            self.repoList.hiddenRepositories = self.accountRepoLists.hidden(for: accountID)
+        }
+    }
+
+    public mutating func removeRepositoryLists(for accountID: String) {
+        self.accountRepoLists.remove(accountID: accountID)
+    }
+
+    public mutating func mirrorRepositoryListsToLegacy(for accountID: String) {
+        self.repoList.pinnedRepositories = self.accountRepoLists.pinned(for: accountID)
+        self.repoList.hiddenRepositories = self.accountRepoLists.hidden(for: accountID)
+    }
 }
 
 public struct ActionsSettings: Equatable, Codable {

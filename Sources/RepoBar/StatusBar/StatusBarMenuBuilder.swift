@@ -10,8 +10,8 @@ final class StatusBarMenuBuilder {
     let appState: AppState
     unowned let target: StatusBarMenuManager
     let signposter = OSSignposter(subsystem: "com.steipete.repobar", category: "menu")
-    var repoMenuItemsByID: [String: NSMenuItem] = [:]
-    var repoSubmenusByFullName: [String: RepoSubmenuCacheEntry] = [:]
+    var repoMenuItemsByID: [AccountScopedCacheKey: NSMenuItem] = [:]
+    var repoSubmenusByFullName: [AccountScopedCacheKey: RepoSubmenuCacheEntry] = [:]
     var systemImageCache: [String: NSImage] = [:]
     let menuItemFactory = MenuItemViewFactory()
 
@@ -202,10 +202,11 @@ final class StatusBarMenuBuilder {
                 return [self.viewItem(for: emptyState, enabled: false)]
             }
             var items: [NSMenuItem] = []
-            var usedRepoIDs: Set<String> = []
-            var usedRepoFullNames: Set<String> = []
+            let accountID = settings.resolvedActiveAccount()?.id ?? "legacy"
+            var usedRepoIDs: Set<AccountScopedCacheKey> = []
+            var usedRepoFullNames: Set<AccountScopedCacheKey> = []
             for (index, repo) in uniqueRepos.enumerated() {
-                let isPinned = settings.repoList.pinnedRepositories.contains {
+                let isPinned = self.appState.activePinnedRepositories.contains {
                     $0.trimmingCharacters(in: .whitespacesAndNewlines)
                         .caseInsensitiveCompare(repo.title) == .orderedSame
                 }
@@ -215,8 +216,8 @@ final class StatusBarMenuBuilder {
                 if index < uniqueRepos.count - 1 {
                     items.append(self.repoCardSeparator())
                 }
-                usedRepoIDs.insert(repo.id)
-                usedRepoFullNames.insert(repo.title)
+                usedRepoIDs.insert(AccountScopedCacheKey(accountID: accountID, key: repo.id))
+                usedRepoFullNames.insert(AccountScopedCacheKey(accountID: accountID, key: repo.title))
             }
             self.repoMenuItemsByID = self.repoMenuItemsByID.filter { usedRepoIDs.contains($0.key) }
             self.repoSubmenusByFullName = self.repoSubmenusByFullName.filter { usedRepoFullNames.contains($0.key) }
@@ -321,6 +322,8 @@ final class StatusBarMenuBuilder {
         }
 
         let scope: RepositoryScope = selection.isPinnedScope ? .pinned : .all
+        let pinned = self.appState.activePinnedRepositories
+        let hidden = self.appState.activeHiddenRepositories
         let query = RepositoryQuery(
             scope: scope,
             onlyWith: selection.onlyWith,
@@ -328,8 +331,8 @@ final class StatusBarMenuBuilder {
             includeArchived: settings.repoList.showArchived,
             sortKey: settings.repoList.menuSortKey,
             limit: settings.repoList.displayLimit,
-            pinned: settings.repoList.pinnedRepositories,
-            hidden: Set(settings.repoList.hiddenRepositories),
+            pinned: pinned,
+            hidden: Set(hidden),
             pinPriority: true
         )
         let baseRepos = session.repositories.isEmpty
@@ -341,7 +344,7 @@ final class StatusBarMenuBuilder {
             displayIndex[repo.fullName.lowercased()]
                 ?? RepositoryDisplayModel(
                     repo: repo,
-                    localStatus: session.localRepoIndex.status(for: repo),
+                    localStatus: session.localRepoIndex.status(for: repo, host: settings.githubHost),
                     now: now
                 )
         }

@@ -13,6 +13,7 @@ enum RepoRecentMenuKind: Hashable {
 }
 
 struct RepoRecentMenuContext: Hashable {
+    let accountID: String
     let fullName: String
     let kind: RepoRecentMenuKind
 }

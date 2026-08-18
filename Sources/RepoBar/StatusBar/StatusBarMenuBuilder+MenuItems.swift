@@ -12,6 +12,8 @@ extension StatusBarMenuBuilder {
     }
 
     func repoMenuItem(for repo: RepositoryDisplayModel, isPinned: Bool) -> NSMenuItem {
+        let accountID = self.appState.session.settings.resolvedActiveAccount()?.id ?? "legacy"
+        let cacheKey = AccountScopedCacheKey(accountID: accountID, key: repo.id)
         let card = RepoMenuCardView(
             repo: repo,
             isPinned: isPinned,
@@ -24,7 +26,7 @@ extension StatusBarMenuBuilder {
             }
         )
         let submenu = self.repoSubmenu(for: repo, isPinned: isPinned)
-        if let cached = self.repoMenuItemsByID[repo.id] {
+        if let cached = self.repoMenuItemsByID[cacheKey] {
             // Remove from current menu if attached (prevents crash when reusing cached items)
             cached.menu?.removeItem(cached)
             self.menuItemFactory.updateItem(cached, with: card, highlightable: true, showsSubmenuIndicator: true)
@@ -35,11 +37,13 @@ extension StatusBarMenuBuilder {
             return cached
         }
         let item = self.viewItem(for: card, enabled: true, highlightable: true, submenu: submenu)
-        self.repoMenuItemsByID[repo.id] = item
+        self.repoMenuItemsByID[cacheKey] = item
         return item
     }
 
     func repoSubmenu(for repo: RepositoryDisplayModel, isPinned: Bool) -> NSMenu {
+        let accountID = self.appState.session.settings.resolvedActiveAccount()?.id ?? "legacy"
+        let cacheKey = AccountScopedCacheKey(accountID: accountID, key: repo.title)
         let changelogPresentation = self.target.cachedChangelogPresentation(
             fullName: repo.title,
             releaseTag: repo.source.latestRelease?.tag
@@ -57,24 +61,28 @@ extension StatusBarMenuBuilder {
             changelogHeadline: changelogHeadline,
             isPinned: isPinned
         )
-        if let cached = self.repoSubmenusByFullName[repo.title], cached.signature == signature {
+        if let cached = self.repoSubmenusByFullName[cacheKey], cached.signature == signature {
             return cached.menu
         }
         let menu = self.makeRepoSubmenu(for: repo, isPinned: isPinned)
-        self.repoSubmenusByFullName[repo.title] = RepoSubmenuCacheEntry(menu: menu, signature: signature)
+        self.repoSubmenusByFullName[cacheKey] = RepoSubmenuCacheEntry(menu: menu, signature: signature)
         return menu
     }
 
     func repoFullName(for menu: NSMenu) -> String? {
-        self.repoSubmenusByFullName.first(where: { $0.value.menu === menu })?.key
+        self.repoSubmenusByFullName.first(where: { $0.value.menu === menu })?.key.key
     }
 
     func updateChangelogRow(fullName: String, releaseTag: String?) {
-        guard let cached = self.repoSubmenusByFullName[fullName] else { return }
+        let accountID = self.appState.session.settings.resolvedActiveAccount()?.id ?? "legacy"
+        let cacheKey = AccountScopedCacheKey(accountID: accountID, key: fullName)
+        guard let cached = self.repoSubmenusByFullName[cacheKey] else { return }
         guard let item = cached.menu.items.first(where: {
             guard let identifier = $0.representedObject as? RepoSubmenuRowIdentifier else { return false }
 
-            return identifier.fullName == fullName && identifier.kind == .changelog
+            return identifier.accountID == accountID
+                && identifier.fullName == fullName
+                && identifier.kind == .changelog
         }) else { return }
 
         let presentation = self.target.cachedChangelogPresentation(fullName: fullName, releaseTag: releaseTag)

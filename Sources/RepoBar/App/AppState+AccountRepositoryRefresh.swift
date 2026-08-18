@@ -120,7 +120,7 @@ extension AppState {
 
     private func loadAccountRepositorySnapshots(
         pairs: [AccountManager.AccountClientSnapshot],
-        settings: UserSettings,
+        settings _: UserSettings,
         now: Date,
         cached: Bool
     ) async -> [String: AccountRepositoryLoadResult] {
@@ -135,7 +135,7 @@ extension AppState {
             let batch = Array(pairs[start ..< end])
             let batchResults = await withTaskGroup(of: (String, AccountRepositoryLoadResult).self) { group in
                 for pair in batch {
-                    let request = self.snapshotRequest(pair: pair, settings: settings, now: now)
+                    let request = self.snapshotRequest(pair: pair, now: now)
                     let loader = self.accountRepositorySnapshotLoader
                     group.addTask {
                         do {
@@ -182,26 +182,13 @@ extension AppState {
 
     private func snapshotRequest(
         pair: AccountManager.AccountClientSnapshot,
-        settings: UserSettings,
         now: Date
     ) -> AccountRepositorySnapshotRequest {
         let accountID = pair.account.id
         return AccountRepositorySnapshotRequest(
             account: pair.account,
             client: pair.client,
-            preferences: AccountRepositoryPreferences(
-                pinned: settings.accountRepoLists.pinned(
-                    for: accountID,
-                    legacy: settings.repoList.pinnedRepositories
-                ),
-                hidden: Set(settings.accountRepoLists.hidden(
-                    for: accountID,
-                    legacy: settings.repoList.hiddenRepositories
-                )),
-                includeForks: settings.repoList.showForks,
-                includeArchived: settings.repoList.showArchived,
-                ownerFilter: settings.repoList.ownerFilter
-            ),
+            preferences: self.repositoryPreferences(for: accountID),
             now: now
         )
     }

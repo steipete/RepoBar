@@ -79,6 +79,26 @@ struct AccountManagerTests {
         #expect(try await manager.currentAccessToken(accountID: account.id) == "pat-token")
     }
 
+    @Test
+    func `explicit client resolver returns scoped client and throws for unknown account`() async throws {
+        let (store, account) = try Self.makeStoreAndAccount(authMethod: .pat)
+        defer { store.clear(accountID: account.id) }
+        try store.savePAT("pat-token", accountID: account.id)
+        let manager = AccountManager(tokenStore: store)
+        await manager.bootstrap(from: Self.settings(account: account))
+
+        let resolved = try manager.resolveClient(for: account.id)
+        let expected = try #require(manager.client(for: account.id))
+        #expect(resolved === expected)
+
+        do {
+            _ = try manager.resolveClient(for: "github.com#missing")
+            Issue.record("Expected unknown account error")
+        } catch let AccountManagerError.unknownAccount(accountID) {
+            #expect(accountID == "github.com#missing")
+        }
+    }
+
     private static func makeStoreAndAccount(authMethod: AuthMethod) throws -> (TokenStore, Account) {
         let service = "com.steipete.repobar.account-manager-tests.\(UUID().uuidString)"
         let store = TokenStore(service: service)

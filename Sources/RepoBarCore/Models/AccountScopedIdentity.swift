@@ -77,4 +77,8 @@ public struct AccountScopedCacheKey: Codable, Equatable, Hashable, Sendable {
     public init(accountID: String, key: String) {
         self.init(source: AccountSource(accountID: accountID), key: key)
     }
+
+    public var accountID: String {
+        self.source.accountID
+    }
 }

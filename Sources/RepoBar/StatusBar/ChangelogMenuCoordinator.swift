@@ -9,9 +9,9 @@ final class ChangelogMenuCoordinator {
     private let menuBuilder: StatusBarMenuBuilder
     private let menuItemFactory: MenuItemViewFactory
     private var menus: [ObjectIdentifier: ChangelogMenuEntry] = [:]
-    private var cache: [String: ChangelogCacheEntry] = [:]
-    private var cacheOrder: [String] = []
-    private var inflight: [String: Task<ChangelogFetchResult, Never>] = [:]
+    private var cache: [AccountScopedCacheKey: ChangelogCacheEntry] = [:]
+    private var cacheOrder: [AccountScopedCacheKey] = []
+    private var inflight: [AccountScopedCacheKey: Task<ChangelogFetchResult, Never>] = [:]
 
     init(appState: AppState, menuBuilder: StatusBarMenuBuilder, menuItemFactory: MenuItemViewFactory) {
         self.appState = appState
@@ -19,9 +19,15 @@ final class ChangelogMenuCoordinator {
         self.menuItemFactory = menuItemFactory
     }
 
-    func registerChangelogMenu(_ menu: NSMenu, fullName: String, localStatus: LocalRepoStatus?) {
+    func registerChangelogMenu(
+        _ menu: NSMenu,
+        accountID: String,
+        fullName: String,
+        localStatus: LocalRepoStatus?
+    ) {
         self.menus[ObjectIdentifier(menu)] = ChangelogMenuEntry(
             menu: menu,
+            accountID: accountID,
             fullName: fullName,
             localPath: localStatus?.path
         )
@@ -44,70 +50,88 @@ final class ChangelogMenuCoordinator {
     }
 
     func cachedPresentation(fullName: String, releaseTag: String?) -> ChangelogRowPresentation? {
-        guard var entry = self.cache[fullName],
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else { return nil }
+
+        let cacheKey = AccountScopedCacheKey(accountID: accountID, key: fullName)
+        guard var entry = self.cache[cacheKey],
               let parsed = entry.parsed
         else { return nil }
 
         let key = releaseTag ?? "__none__"
         if let cached = entry.presentationCache[key] {
-            self.touchCache(fullName)
+            self.touchCache(cacheKey)
             return cached
         }
         guard let presentation = ChangelogParser.presentation(parsed: parsed, releaseTag: releaseTag) else { return nil }
 
         entry.presentationCache[key] = presentation
-        self.cache[fullName] = entry
-        self.touchCache(fullName)
+        self.cache[cacheKey] = entry
+        self.touchCache(cacheKey)
         return presentation
     }
 
     func cachedHeadline(fullName: String) -> String? {
-        guard let parsed = self.cache[fullName]?.parsed else { return nil }
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else { return nil }
 
-        self.touchCache(fullName)
+        let cacheKey = AccountScopedCacheKey(accountID: accountID, key: fullName)
+        guard let parsed = self.cache[cacheKey]?.parsed else { return nil }
+
+        self.touchCache(cacheKey)
         return ChangelogParser.headline(parsed: parsed)
     }
 
     func prefetchChangelog(fullName: String, localPath: URL?, releaseTag: String?) {
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else { return }
+
         Task { @MainActor [weak self] in
             guard let self else { return }
 
+            let cacheKey = AccountScopedCacheKey(accountID: accountID, key: fullName)
             let now = Date()
-            if let cached = self.cache[fullName] {
+            if let cached = self.cache[cacheKey] {
                 let isFresh = now.timeIntervalSince(cached.fetchedAt) <= AppLimits.Changelog.cacheTTL
                 if isFresh {
-                    self.touchCache(fullName)
+                    self.touchCache(cacheKey)
                     self.menuBuilder.updateChangelogRow(fullName: fullName, releaseTag: releaseTag)
                     return
                 }
             }
 
-            let fetch = await self.loadChangelog(fullName: fullName, localPath: localPath)
-            self.storeCacheEntry(self.makeCacheEntry(fetch: fetch), for: fullName)
+            let fetch = await self.loadChangelog(
+                accountID: accountID,
+                fullName: fullName,
+                localPath: localPath
+            )
+            self.storeCacheEntry(self.makeCacheEntry(fetch: fetch), for: cacheKey)
             self.menuBuilder.updateChangelogRow(fullName: fullName, releaseTag: releaseTag)
         }
     }
 
     private func refreshChangelogMenu(menu: NSMenu, entry: ChangelogMenuEntry) async {
+        let cacheKey = AccountScopedCacheKey(accountID: entry.accountID, key: entry.fullName)
         let now = Date()
-        if let cached = self.cache[entry.fullName] {
+        if let cached = self.cache[cacheKey] {
             let isFresh = now.timeIntervalSince(cached.fetchedAt) <= AppLimits.Changelog.cacheTTL
             if isFresh {
-                self.touchCache(entry.fullName)
+                self.touchCache(cacheKey)
                 self.applyResult(cached.result, to: menu)
                 self.updateChangelogRow(fullName: entry.fullName)
                 return
             }
         }
 
-        if let cached = self.cache[entry.fullName] {
+        if let cached = self.cache[cacheKey] {
             self.applyResult(cached.result, to: menu)
         } else {
             self.applyLoading(to: menu)
         }
 
-        let fetch = await self.loadChangelog(fullName: entry.fullName, localPath: entry.localPath)
-        self.storeCacheEntry(self.makeCacheEntry(fetch: fetch), for: entry.fullName)
+        let fetch = await self.loadChangelog(
+            accountID: entry.accountID,
+            fullName: entry.fullName,
+            localPath: entry.localPath
+        )
+        self.storeCacheEntry(self.makeCacheEntry(fetch: fetch), for: cacheKey)
         self.applyResult(fetch.result, to: menu)
         self.updateChangelogRow(fullName: entry.fullName)
     }
@@ -138,16 +162,17 @@ final class ChangelogMenuCoordinator {
         menu.update()
     }
 
-    private func loadChangelog(fullName: String, localPath: URL?) async -> ChangelogFetchResult {
-        if let task = self.inflight[fullName] {
+    private func loadChangelog(accountID: String, fullName: String, localPath: URL?) async -> ChangelogFetchResult {
+        let cacheKey = AccountScopedCacheKey(accountID: accountID, key: fullName)
+        if let task = self.inflight[cacheKey] {
             return await task.value
         }
         let task = Task { @MainActor in
-            await self.fetchChangelog(fullName: fullName, localPath: localPath)
+            await self.fetchChangelog(accountID: accountID, fullName: fullName, localPath: localPath)
         }
-        self.inflight[fullName] = task
+        self.inflight[cacheKey] = task
         let result = await task.value
-        self.inflight[fullName] = nil
+        self.inflight[cacheKey] = nil
         return result
     }
 
@@ -159,7 +184,7 @@ final class ChangelogMenuCoordinator {
         self.menuBuilder.updateChangelogRow(fullName: fullName, releaseTag: releaseTag)
     }
 
-    private func fetchChangelog(fullName: String, localPath: URL?) async -> ChangelogFetchResult {
+    private func fetchChangelog(accountID: String, fullName: String, localPath: URL?) async -> ChangelogFetchResult {
         if let localPath, let localResult = self.loadLocalChangelog(root: localPath) {
             return ChangelogFetchResult(result: .content(localResult.content), parsed: localResult.parsed)
         }
@@ -172,12 +197,13 @@ final class ChangelogMenuCoordinator {
         }
 
         do {
-            let items = try await self.appState.github.repoContents(owner: owner, name: name)
+            let github = try self.appState.accountManager.resolveClient(for: accountID)
+            let items = try await github.repoContents(owner: owner, name: name)
             guard let match = self.matchingChangelogItem(in: items) else {
                 return ChangelogFetchResult(result: .missing, parsed: nil)
             }
 
-            let data = try await self.appState.github.repoFileContents(owner: owner, name: name, path: match.path)
+            let data = try await github.repoFileContents(owner: owner, name: name, path: match.path)
             guard let text = String(bytes: data, encoding: .utf8) else {
                 return ChangelogFetchResult(result: .failure("Changelog is not UTF-8"), parsed: nil)
             }
@@ -285,28 +311,39 @@ final class ChangelogMenuCoordinator {
         )
     }
 
-    private func storeCacheEntry(_ entry: ChangelogCacheEntry, for fullName: String) {
-        self.cache[fullName] = entry
-        self.touchCache(fullName)
+    func removeCachedState(accountID: String) {
+        self.cache = self.cache.filter { $0.key.accountID != accountID }
+        self.cacheOrder.removeAll { $0.accountID == accountID }
+        let tasks = self.inflight.filter { $0.key.accountID == accountID }.map(\.value)
+        self.inflight = self.inflight.filter { $0.key.accountID != accountID }
+        tasks.forEach { $0.cancel() }
+        self.menus = self.menus.filter { $0.value.accountID != accountID }
+    }
+
+    private func storeCacheEntry(_ entry: ChangelogCacheEntry, for cacheKey: AccountScopedCacheKey) {
+        self.cache[cacheKey] = entry
+        self.touchCache(cacheKey)
         while self.cache.count > AppLimits.Changelog.cacheEntries, let oldest = self.cacheOrder.first {
             self.cacheOrder.removeFirst()
             self.cache[oldest] = nil
         }
     }
 
-    private func touchCache(_ fullName: String) {
-        self.cacheOrder.removeAll { $0 == fullName }
-        self.cacheOrder.append(fullName)
+    private func touchCache(_ cacheKey: AccountScopedCacheKey) {
+        self.cacheOrder.removeAll { $0 == cacheKey }
+        self.cacheOrder.append(cacheKey)
     }
 }
 
 private final class ChangelogMenuEntry {
     weak var menu: NSMenu?
+    let accountID: String
     let fullName: String
     let localPath: URL?
 
-    init(menu: NSMenu, fullName: String, localPath: URL?) {
+    init(menu: NSMenu, accountID: String, fullName: String, localPath: URL?) {
         self.menu = menu
+        self.accountID = accountID
         self.fullName = fullName
         self.localPath = localPath
     }

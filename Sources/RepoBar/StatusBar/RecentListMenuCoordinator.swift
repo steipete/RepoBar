@@ -85,22 +85,43 @@ final class RecentListMenuCoordinator {
     func prefetchRecentLists(fullNames: Set<String>) {
         guard case .loggedIn = self.appState.session.account else { return }
         guard fullNames.isEmpty == false else { return }
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else {
+            self.logger.error("Skipping recent-list prefetch because no active account is resolved")
+            return
+        }
 
         let kinds = self.menuService.descriptors().keys
         for fullName in fullNames {
             for kind in kinds {
-                self.prefetchRecentList(fullName: fullName, kind: kind)
+                self.prefetchRecentList(accountID: accountID, fullName: fullName, kind: kind)
             }
         }
     }
 
     func prefetchRecentList(fullName: String, kind: RepoRecentMenuKind) {
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else {
+            self.logger.error("Skipping recent-list prefetch because no active account is resolved")
+            return
+        }
+
+        self.prefetchRecentList(accountID: accountID, fullName: fullName, kind: kind)
+    }
+
+    func prefetchRecentList(accountID: String, fullName: String, kind: RepoRecentMenuKind) {
         guard let (owner, name) = self.ownerAndName(from: fullName) else { return }
 
         let now = Date()
         guard let descriptor = self.menuService.descriptor(for: kind) else { return }
 
-        let cacheContext = self.menuService.cacheContext(fullName: fullName)
+        let cacheContext: (key: AccountScopedCacheKey, github: GitHubClient)
+        do {
+            cacheContext = try self.menuService.cacheContext(accountID: accountID, fullName: fullName)
+        } catch {
+            self.logger.error(
+                "Recent-list client resolution failed account=\(accountID) repo=\(fullName) error=\(error.userFacingMessage)"
+            )
+            return
+        }
         let cacheKey = cacheContext.key
         guard descriptor.needsRefresh(cacheKey, now, self.menuService.cacheTTL) else { return }
 
@@ -157,7 +178,22 @@ final class RecentListMenuCoordinator {
             systemImage: descriptor.headerIcon
         )
         let actions = self.actions(for: context.kind, fullName: context.fullName)
-        let cacheContext = self.menuService.cacheContext(fullName: context.fullName)
+        let cacheContext: (key: AccountScopedCacheKey, github: GitHubClient)
+        do {
+            cacheContext = try self.menuService.cacheContext(
+                accountID: context.accountID,
+                fullName: context.fullName
+            )
+        } catch {
+            self.populateRecentListMenu(
+                menu,
+                header: header,
+                actions: actions,
+                content: .message(Self.failureMessage(for: error))
+            )
+            menu.update()
+            return
+        }
         let cacheKey = cacheContext.key
         let cached = descriptor.cached(cacheKey, now, self.menuService.cacheTTL)
         let stale = cached ?? descriptor.stale(cacheKey)
@@ -194,7 +230,7 @@ final class RecentListMenuCoordinator {
             self.logger.info(
                 "Recent list refresh ok kind=\(String(describing: context.kind)) repo=\(context.fullName) count=\(items.count) dur=\(Self.formatDuration(since: startedAt))"
             )
-            let rateLimitExtras = await self.currentRateLimitExtras()
+            let rateLimitExtras = await self.currentRateLimitExtras(github: cacheContext.github)
             self.populateRecentListMenu(
                 menu,
                 header: header,
@@ -284,8 +320,8 @@ final class RecentListMenuCoordinator {
         self.appState.session.lastError = error.userFacingMessage
     }
 
-    private func currentRateLimitExtras() async -> [NSMenuItem] {
-        guard let reset = await self.appState.github.rateLimitReset(now: Date()) else { return [] }
+    private func currentRateLimitExtras(github: GitHubClient) async -> [NSMenuItem] {
+        guard let reset = await github.rateLimitReset(now: Date()) else { return [] }
 
         self.appState.session.rateLimitReset = reset
         return self.rateLimitExtras(

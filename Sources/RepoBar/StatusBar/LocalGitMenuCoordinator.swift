@@ -33,6 +33,7 @@ final class LocalGitMenuCoordinator {
     func registerLocalBranchMenu(_ menu: NSMenu, repoPath: URL, fullName: String, localStatus: LocalRepoStatus) {
         self.localBranchMenus[ObjectIdentifier(menu)] = LocalGitMenuEntry(
             menu: menu,
+            accountID: self.appState.session.settings.resolvedActiveAccount()?.id,
             repoPath: repoPath,
             fullName: fullName,
             localStatus: localStatus,
@@ -43,6 +44,7 @@ final class LocalGitMenuCoordinator {
     func registerCombinedBranchMenu(_ menu: NSMenu, repoPath: URL, fullName: String, localStatus: LocalRepoStatus) {
         self.localBranchMenus[ObjectIdentifier(menu)] = LocalGitMenuEntry(
             menu: menu,
+            accountID: self.appState.session.settings.resolvedActiveAccount()?.id,
             repoPath: repoPath,
             fullName: fullName,
             localStatus: localStatus,
@@ -53,6 +55,7 @@ final class LocalGitMenuCoordinator {
     func registerLocalWorktreeMenu(_ menu: NSMenu, repoPath: URL, fullName: String) {
         self.localWorktreeMenus[ObjectIdentifier(menu)] = LocalGitMenuEntry(
             menu: menu,
+            accountID: self.appState.session.settings.resolvedActiveAccount()?.id,
             repoPath: repoPath,
             fullName: fullName,
             localStatus: nil,
@@ -280,8 +283,36 @@ final class LocalGitMenuCoordinator {
             return
         }
         guard let descriptor = self.recentMenuService.descriptor(for: .branches) else { return }
+        guard let accountID = entry.accountID else {
+            self.populateCombinedBranchMenu(
+                menu: menu,
+                entry: entry,
+                localResult: localResult,
+                remoteState: BranchesRemoteState(
+                    branches: nil,
+                    message: "No active account",
+                    emptyTitle: descriptor.emptyTitle
+                )
+            )
+            return
+        }
 
-        let cacheContext = self.recentMenuService.cacheContext(fullName: fullName)
+        let cacheContext: (key: AccountScopedCacheKey, github: GitHubClient)
+        do {
+            cacheContext = try self.recentMenuService.cacheContext(accountID: accountID, fullName: fullName)
+        } catch {
+            self.populateCombinedBranchMenu(
+                menu: menu,
+                entry: entry,
+                localResult: localResult,
+                remoteState: BranchesRemoteState(
+                    branches: nil,
+                    message: error.userFacingMessage,
+                    emptyTitle: descriptor.emptyTitle
+                )
+            )
+            return
+        }
         let cacheKey = cacheContext.key
 
         let cachedItems = descriptor.cached(cacheKey, now, self.recentMenuService.cacheTTL)
@@ -678,6 +709,7 @@ private enum LocalGitAction {
 
 private struct LocalGitMenuEntry {
     weak var menu: NSMenu?
+    let accountID: String?
     let repoPath: URL
     let fullName: String
     let localStatus: LocalRepoStatus?

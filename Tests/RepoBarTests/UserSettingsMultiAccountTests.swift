@@ -103,4 +103,105 @@ struct UserSettingsMultiAccountTests {
         #expect(json.contains("\"accountSelection\"") == false)
         #expect(json.contains("\"accountRepoLists\"") == false)
     }
+
+    @Test
+    func `legacy repository lists belong only to active account`() throws {
+        let alice = try Self.account("alice")
+        let bob = try Self.account("bob")
+        var settings = UserSettings()
+        settings.accounts = [alice, bob]
+        settings.activeAccountID = alice.id
+        settings.repoList.pinnedRepositories = ["owner/shared"]
+        settings.repoList.hiddenRepositories = ["owner/hidden"]
+
+        #expect(settings.pinnedRepositories(for: alice.id) == ["owner/shared"])
+        #expect(settings.hiddenRepositories(for: alice.id) == ["owner/hidden"])
+        #expect(settings.pinnedRepositories(for: bob.id).isEmpty)
+        #expect(settings.hiddenRepositories(for: bob.id).isEmpty)
+    }
+
+    @Test
+    func `deliberate empty account lists suppress legacy fallback`() throws {
+        let alice = try Self.account("alice")
+        var settings = UserSettings()
+        settings.accounts = [alice]
+        settings.activeAccountID = alice.id
+        settings.repoList.pinnedRepositories = ["owner/legacy"]
+        settings.repoList.hiddenRepositories = ["owner/legacy-hidden"]
+        settings.accountRepoLists.setPinned([], for: alice.id)
+        settings.accountRepoLists.setHidden([], for: alice.id)
+
+        #expect(settings.pinnedRepositories(for: alice.id).isEmpty)
+        #expect(settings.hiddenRepositories(for: alice.id).isEmpty)
+    }
+
+    @Test
+    func `active mutations mirror legacy lists while nonactive mutations do not`() throws {
+        let alice = try Self.account("alice")
+        let bob = try Self.account("bob")
+        var settings = UserSettings()
+        settings.accounts = [alice, bob]
+        settings.activeAccountID = alice.id
+        settings.setPinnedRepositories(["owner/alice"], for: alice.id)
+        settings.setHiddenRepositories(["owner/alice-hidden"], for: alice.id)
+
+        #expect(settings.repoList.pinnedRepositories == ["owner/alice"])
+        #expect(settings.repoList.hiddenRepositories == ["owner/alice-hidden"])
+
+        settings.setPinnedRepositories(["owner/bob"], for: bob.id)
+        settings.setHiddenRepositories(["owner/bob-hidden"], for: bob.id)
+
+        #expect(settings.pinnedRepositories(for: bob.id) == ["owner/bob"])
+        #expect(settings.hiddenRepositories(for: bob.id) == ["owner/bob-hidden"])
+        #expect(settings.repoList.pinnedRepositories == ["owner/alice"])
+        #expect(settings.repoList.hiddenRepositories == ["owner/alice-hidden"])
+    }
+
+    @Test
+    func `switching active account does not copy previous legacy lists`() throws {
+        let alice = try Self.account("alice")
+        let bob = try Self.account("bob")
+        var settings = UserSettings()
+        settings.accounts = [alice, bob]
+        settings.activeAccountID = alice.id
+        settings.repoList.pinnedRepositories = ["owner/alice"]
+        settings.repoList.hiddenRepositories = ["owner/alice-hidden"]
+
+        settings.prepareRepositoryListsForActiveAccountChange(to: bob.id)
+
+        #expect(settings.pinnedRepositories(for: alice.id) == ["owner/alice"])
+        #expect(settings.hiddenRepositories(for: alice.id) == ["owner/alice-hidden"])
+        #expect(settings.pinnedRepositories(for: bob.id).isEmpty)
+        #expect(settings.hiddenRepositories(for: bob.id).isEmpty)
+        #expect(settings.repoList.pinnedRepositories.isEmpty)
+        #expect(settings.repoList.hiddenRepositories.isEmpty)
+    }
+
+    @Test
+    func `removing one account leaves another repository preferences intact`() throws {
+        let alice = try Self.account("alice")
+        let bob = try Self.account("bob")
+        var settings = UserSettings()
+        settings.accounts = [alice, bob]
+        settings.activeAccountID = bob.id
+        settings.setPinnedRepositories(["owner/alice"], for: alice.id)
+        settings.setPinnedRepositories(["owner/bob"], for: bob.id)
+        settings.setHiddenRepositories(["owner/bob-hidden"], for: bob.id)
+
+        settings.removeRepositoryLists(for: alice.id)
+
+        #expect(settings.accountRepoLists.hasPinnedEntry(for: alice.id) == false)
+        #expect(settings.pinnedRepositories(for: bob.id) == ["owner/bob"])
+        #expect(settings.hiddenRepositories(for: bob.id) == ["owner/bob-hidden"])
+        #expect(settings.repoList.pinnedRepositories == ["owner/bob"])
+        #expect(settings.repoList.hiddenRepositories == ["owner/bob-hidden"])
+    }
+
+    private static func account(_ username: String) throws -> Account {
+        try Account(
+            username: username,
+            host: #require(URL(string: "https://github.com")),
+            authMethod: .oauth
+        )
+    }
 }

@@ -98,6 +98,25 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
             name: .issueNavigatorOpenRequested,
             object: nil
         )
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(self.accountRepositoryStateRemoved(_:)),
+            name: .accountRepositoryStateDidRemove,
+            object: nil
+        )
+    }
+
+    @objc private func accountRepositoryStateRemoved(_ notification: Notification) {
+        guard let accountID = notification.object as? String else { return }
+
+        self.recentMenuService.removeCachedState(accountID: accountID)
+        self.changelogMenuCoordinator.removeCachedState(accountID: accountID)
+        self.menuBuilder.repoMenuItemsByID = self.menuBuilder.repoMenuItemsByID.filter {
+            $0.key.accountID != accountID
+        }
+        self.menuBuilder.repoSubmenusByFullName = self.menuBuilder.repoSubmenusByFullName.filter {
+            $0.key.accountID != accountID
+        }
     }
 
     func tearDownStatusItems() {
@@ -294,7 +313,10 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
     private func prefetchChangelogIfNeeded(for menu: NSMenu) {
         guard let fullName = self.menuBuilder.repoFullName(for: menu) else { return }
 
-        let localPath = self.appState.session.localRepoIndex.status(forFullName: fullName)?.path
+        let localPath = self.appState.session.localRepoIndex.status(
+            forFullName: fullName,
+            host: self.appState.session.settings.githubHost
+        )?.path
         let releaseTag = self.appState.session.repositories
             .first(where: { $0.fullName == fullName })?
             .latestRelease?
@@ -420,7 +442,14 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
     }
 
     func registerChangelogMenu(_ menu: NSMenu, fullName: String, localStatus: LocalRepoStatus?) {
-        self.changelogMenuCoordinator.registerChangelogMenu(menu, fullName: fullName, localStatus: localStatus)
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else { return }
+
+        self.changelogMenuCoordinator.registerChangelogMenu(
+            menu,
+            accountID: accountID,
+            fullName: fullName,
+            localStatus: localStatus
+        )
     }
 
     func cachedChangelogPresentation(fullName: String, releaseTag: String?) -> ChangelogRowPresentation? {
@@ -540,7 +569,10 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
         guard let fullName = self.repoFullName(from: sender) else { return nil }
         guard let repo = self.appState.session.repositories.first(where: { $0.fullName == fullName }) else { return nil }
 
-        let local = self.appState.session.localRepoIndex.status(forFullName: fullName)
+        let local = self.appState.session.localRepoIndex.status(
+            forFullName: fullName,
+            host: self.appState.session.settings.githubHost
+        )
         return RepositoryDisplayModel(repo: repo, localStatus: local)
     }
 

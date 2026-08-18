@@ -137,6 +137,7 @@
                     path: repoURL,
                     name: repoName,
                     fullName: fullName,
+                    remoteHost: remote?.host,
                     branch: branch,
                     isClean: isClean,
                     aheadCount: ahead,

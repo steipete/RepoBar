@@ -8,6 +8,7 @@ enum RepoSubmenuRowKind: String, Hashable {
 }
 
 struct RepoSubmenuRowIdentifier: Hashable {
+    let accountID: String
     let fullName: String
     let kind: RepoSubmenuRowKind
 }
@@ -395,6 +396,10 @@ struct RepoSubmenuBuilder {
         localStatus: LocalRepoStatus?,
         presentation: ChangelogRowPresentation?
     ) -> NSMenuItem {
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else {
+            return self.menuBuilder.infoItem("No active account")
+        }
+
         let submenu = NSMenu()
         submenu.autoenablesItems = false
         submenu.delegate = self.target
@@ -412,7 +417,11 @@ struct RepoSubmenuBuilder {
             detailText: detailText
         )
         let item = self.menuBuilder.viewItem(for: row, enabled: true, highlightable: true, submenu: submenu)
-        item.representedObject = RepoSubmenuRowIdentifier(fullName: fullName, kind: .changelog)
+        item.representedObject = RepoSubmenuRowIdentifier(
+            accountID: accountID,
+            fullName: fullName,
+            kind: .changelog
+        )
         return item
     }
 
@@ -457,12 +466,16 @@ struct RepoSubmenuBuilder {
     }
 
     private func recentListSubmenuItem(_ config: RecentListConfig) -> NSMenuItem {
+        guard let accountID = self.appState.session.settings.resolvedActiveAccount()?.id else {
+            return self.menuBuilder.infoItem("No active account")
+        }
+
         let submenu = NSMenu()
         submenu.autoenablesItems = false
         submenu.delegate = self.target
         self.target.registerRecentListMenu(
             submenu,
-            context: RepoRecentMenuContext(fullName: config.fullName, kind: config.kind)
+            context: RepoRecentMenuContext(accountID: accountID, fullName: config.fullName, kind: config.kind)
         )
 
         submenu.addItem(self.menuBuilder.actionItem(

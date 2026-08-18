@@ -43,7 +43,7 @@ The implementation is a sequential bottom-to-top stack:
 9. `multi-account-operations-status` — Actions & Runners, monitored owners, rate limits, contribution/global activity, and worst-health state.
 10. `multi-account-integration-proof` — integration fixtures, accessibility and UI polish, redacted personal plus EMU proof, and final README, docs, CHANGELOG, and issue updates.
 
-Layers 1 and 2 are implemented. `multi-account-refresh` adds account-scoped repository snapshot loading, bounded selected-account fan-out, cached-first hydration, last-good partial-failure handling, and the active-account compatibility projection. Layers 3 through 10 remain deferred; repository grouping, account-scoped settings writes, CLI scope changes, attention and navigator collectors, notifications, Actions, and other user-visible fan-out are unchanged.
+Layers 1 through 3 are implemented. `multi-account-refresh` adds account-scoped repository snapshot loading, bounded selected-account fan-out, cached-first hydration, last-good partial-failure handling, and the active-account compatibility projection. `multi-account-repo-state` makes repository preferences account-scoped, isolates repository caches and submenu identities, resolves clients explicitly, and matches local checkouts by GitHub host. Layers 4 through 10 remain deferred; repository grouping, CLI scope changes, attention and navigator collectors, notifications, Actions, and other user-visible fan-out are unchanged.
 
 Landed:
 
@@ -56,6 +56,7 @@ Landed:
 - Phase 5 — `AccountSettingsView` shows an account list (use / visibility / verify / remove) above the legacy single-account form, which is now labelled "Add Account".
 - Phase 6 — CLI gains `repobar accounts list/use/remove`, plus `--account`/`--all` on `logout`, `--account` on `status`, and `--label` on `login`/`import-gh-token`. After successful auth both commands fetch `GET /user`, derive a stable `Account`, and persist tokens under the account-scoped keys in addition to the legacy fast-path entries.
 - Issue #101 Layer 2 — `AppState` resolves the included account/client pairs once, hydrates each scoped repository cache independently, refreshes through a bounded task group, retains per-account last-good state on failures, and rebuilds `Session.accountSessions` / `aggregatedRepositories` in settings order. Existing menu, activity, notification, and Actions surfaces remain projected from the active account.
+- Issue #101 Layer 3 — pinned and hidden repository lists migrate to explicit account entries without losing deliberate emptiness, active-account mutations retain legacy compatibility mirrors, recent/changelog/display caches use account-scoped repository identities, local checkout matching rejects cross-host collisions, and consolidated request paths resolve the owning account's client explicitly. Existing menu and repository Settings presentation remains active-account-only.
 
 Deferred:
 

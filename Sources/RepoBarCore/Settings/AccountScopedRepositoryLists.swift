@@ -4,8 +4,6 @@ import Foundation
 ///
 /// Entries are stored as `owner/name` to mirror the legacy single-account
 /// `RepoListSettings.pinnedRepositories` / `hiddenRepositories` format.
-/// Legacy values continue to work via `merged(with:legacyAccountID:)` and
-/// `legacyPinned(activeAccountID:)` helpers.
 public struct AccountScopedRepositoryLists: Equatable, Codable, Sendable {
     public var pinnedByAccount: [String: [String]]
     public var hiddenByAccount: [String: [String]]
@@ -30,39 +28,39 @@ public struct AccountScopedRepositoryLists: Equatable, Codable, Sendable {
         self.hiddenByAccount[accountID] ?? []
     }
 
+    public func hasPinnedEntry(for accountID: String) -> Bool {
+        self.pinnedByAccount[accountID] != nil
+    }
+
+    public func hasHiddenEntry(for accountID: String) -> Bool {
+        self.hiddenByAccount[accountID] != nil
+    }
+
     public mutating func setPinned(_ items: [String], for accountID: String) {
-        let cleaned = Self.normalize(items)
-        if cleaned.isEmpty {
-            self.pinnedByAccount.removeValue(forKey: accountID)
-        } else {
-            self.pinnedByAccount[accountID] = cleaned
-        }
+        self.pinnedByAccount[accountID] = Self.normalize(items)
     }
 
     public mutating func setHidden(_ items: [String], for accountID: String) {
-        let cleaned = Self.normalize(items)
-        if cleaned.isEmpty {
-            self.hiddenByAccount.removeValue(forKey: accountID)
-        } else {
-            self.hiddenByAccount[accountID] = cleaned
-        }
+        self.hiddenByAccount[accountID] = Self.normalize(items)
     }
 
-    /// Returns pinned items for `accountID`, falling back to legacy single-list
-    /// entries when no per-account entry exists. Useful while migrating UI to
-    /// multi-account without breaking single-account users.
     public func pinned(for accountID: String, legacy: [String]) -> [String] {
-        if let perAccount = self.pinnedByAccount[accountID], perAccount.isEmpty == false {
+        if let perAccount = self.pinnedByAccount[accountID] {
             return perAccount
         }
         return legacy
     }
 
     public func hidden(for accountID: String, legacy: [String]) -> [String] {
-        if let perAccount = self.hiddenByAccount[accountID], perAccount.isEmpty == false {
+        if let perAccount = self.hiddenByAccount[accountID] {
             return perAccount
         }
         return legacy
+    }
+
+    public mutating func remove(accountID: String) {
+        self.pinnedByAccount.removeValue(forKey: accountID)
+        self.hiddenByAccount.removeValue(forKey: accountID)
     }
 
     private static func normalize(_ items: [String]) -> [String] {
