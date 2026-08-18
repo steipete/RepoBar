@@ -92,6 +92,10 @@ public struct AttentionRule: Codable, Equatable, Hashable, Identifiable, Sendabl
     public var itemStates: [AttentionItemState]
     public var priority: AttentionPriority
 
+    public var isEffectivelyEnabled: Bool {
+        self.enabled && self.category.isKnown
+    }
+
     public init(
         id: AttentionRuleID,
         enabled: Bool = true,
@@ -127,8 +131,7 @@ public struct AttentionRule: Codable, Equatable, Hashable, Identifiable, Sendabl
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.id = try container.decode(AttentionRuleID.self, forKey: .id)
         self.category = try container.decode(AttentionRuleCategory.self, forKey: .category)
-        let decodedEnabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
-        self.enabled = self.category.isKnown ? decodedEnabled : false
+        self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
         self.accountSelection = try container.decodeIfPresent(
             AccountSelection.self,
             forKey: .accountSelection

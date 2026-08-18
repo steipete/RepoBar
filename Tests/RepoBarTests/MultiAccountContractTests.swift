@@ -86,15 +86,22 @@ struct AttentionRuleContractTests {
 
         #expect(rule.category.rawValue == "futureCategory")
         #expect(rule.category.isKnown == false)
-        #expect(rule.enabled == false)
+        #expect(rule.enabled)
+        #expect(rule.isEffectivelyEnabled == false)
         #expect(rule.repositoryFilters == ["example/repo"])
+
+        let encoded = try JSONEncoder().encode(settings)
+        let encodedObject = try #require(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        let encodedRules = try #require(encodedObject["attentionRules"] as? [[String: Any]])
+        #expect(encodedRules.first?["enabled"] as? Bool == true)
 
         let roundTrip = try JSONDecoder().decode(
             UserSettings.self,
-            from: JSONEncoder().encode(settings)
+            from: encoded
         )
         #expect(roundTrip.attentionRules.first?.category.rawValue == "futureCategory")
-        #expect(roundTrip.attentionRules.first?.enabled == false)
+        #expect(roundTrip.attentionRules.first?.enabled == true)
+        #expect(roundTrip.attentionRules.first?.isEffectivelyEnabled == false)
     }
 
     @Test
