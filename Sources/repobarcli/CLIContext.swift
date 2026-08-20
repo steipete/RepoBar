@@ -81,6 +81,16 @@ func mirrorActiveAccountIntoSettings(_ account: Account, settings: inout UserSet
     settings.loopbackPort = account.loopbackPort
 }
 
+func activateCLIAccount(_ account: Account, settings: inout UserSettings) {
+    _ = settings.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+    if let index = settings.accounts.firstIndex(where: { $0.id == account.id }) {
+        settings.accounts[index] = account
+    } else {
+        settings.accounts.append(account)
+    }
+    settings.prepareRepositoryListsForActiveAccountChange(to: account.id)
+}
+
 func mirrorResolvedActiveAccount(settings: inout UserSettings) {
     guard let active = settings.resolvedActiveAccount() else {
         TokenStore.shared.clear()

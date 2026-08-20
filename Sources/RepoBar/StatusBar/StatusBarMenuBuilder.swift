@@ -344,7 +344,7 @@ final class StatusBarMenuBuilder {
             displayIndex[repo.fullName.lowercased()]
                 ?? RepositoryDisplayModel(
                     repo: repo,
-                    localStatus: session.localRepoIndex.status(for: repo, host: settings.githubHost),
+                    localStatus: session.localRepoIndex.status(for: repo, host: settings.resolvedRepositoryHost),
                     now: now
                 )
         }
@@ -363,7 +363,7 @@ final class StatusBarMenuBuilder {
         for localStatus in localRepos {
             guard let fullName = localStatus.fullName?.lowercased(),
                   let existingModel = displayIndex[fullName],
-                  localStatus.matches(host: settings.githubHost)
+                  localStatus.matches(host: settings.resolvedRepositoryHost)
             else {
                 let model = RepositoryDisplayModel(localStatus: localStatus, now: now)
                 models.append(model)

@@ -452,12 +452,7 @@ struct LoginCommand: CommanderRunnableCommand {
         } else {
             settings.enterpriseHost = normalizedHost
         }
-        if let index = settings.accounts.firstIndex(where: { $0.id == account.id }) {
-            settings.accounts[index] = account
-        } else {
-            settings.accounts.append(account)
-        }
-        settings.prepareRepositoryListsForActiveAccountChange(to: account.id)
+        activateCLIAccount(account, settings: &settings)
         store.save(settings)
 
         print("Login succeeded; tokens stored for \(account.id).")
@@ -623,12 +618,7 @@ struct ImportGHTokenCommand: CommanderRunnableCommand {
         } else {
             settings.enterpriseHost = normalizedHost
         }
-        if let index = settings.accounts.firstIndex(where: { $0.id == account.id }) {
-            settings.accounts[index] = account
-        } else {
-            settings.accounts.append(account)
-        }
-        settings.prepareRepositoryListsForActiveAccountChange(to: account.id)
+        activateCLIAccount(account, settings: &settings)
         store.save(settings)
 
         print("Successfully imported gh CLI token for \(account.id).")

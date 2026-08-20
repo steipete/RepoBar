@@ -199,6 +199,10 @@ public struct UserSettings: Equatable, Codable {
         }
     }
 
+    public var resolvedRepositoryHost: URL {
+        self.resolvedActiveAccount()?.host ?? self.enterpriseHost ?? self.githubHost
+    }
+
     public func pinnedRepositories(for accountID: String) -> [String] {
         if self.accountRepoLists.hasPinnedEntry(for: accountID) {
             return self.accountRepoLists.pinned(for: accountID)

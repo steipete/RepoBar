@@ -30,10 +30,7 @@ struct PinCommand: CommanderRunnableCommand {
         let store = cliSettingsStore()
         var settings = store.load()
 
-        settings.repoList.hiddenRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
-        if settings.repoList.pinnedRepositories.contains(where: { $0.equalsCaseInsensitive(normalized) }) == false {
-            settings.repoList.pinnedRepositories.append(normalized)
-        }
+        applyRepoListMutation(.pin, repository: normalized, settings: &settings)
         store.save(settings)
 
         try renderRepoListUpdate(
@@ -73,7 +70,7 @@ struct UnpinCommand: CommanderRunnableCommand {
         let store = cliSettingsStore()
         var settings = store.load()
 
-        settings.repoList.pinnedRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
+        applyRepoListMutation(.unpin, repository: normalized, settings: &settings)
         store.save(settings)
 
         try renderRepoListUpdate(
@@ -113,10 +110,7 @@ struct HideCommand: CommanderRunnableCommand {
         let store = cliSettingsStore()
         var settings = store.load()
 
-        settings.repoList.pinnedRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
-        if settings.repoList.hiddenRepositories.contains(where: { $0.equalsCaseInsensitive(normalized) }) == false {
-            settings.repoList.hiddenRepositories.append(normalized)
-        }
+        applyRepoListMutation(.hide, repository: normalized, settings: &settings)
         store.save(settings)
 
         try renderRepoListUpdate(
@@ -156,7 +150,7 @@ struct ShowCommand: CommanderRunnableCommand {
         let store = cliSettingsStore()
         var settings = store.load()
 
-        settings.repoList.hiddenRepositories.removeAll { $0.equalsCaseInsensitive(normalized) }
+        applyRepoListMutation(.show, repository: normalized, settings: &settings)
         store.save(settings)
 
         try renderRepoListUpdate(

@@ -464,6 +464,66 @@ func normalizeRepoFullName(_ raw: String) throws -> String {
     try parseRepoName(raw).fullName
 }
 
+enum RepoListMutation {
+    case pin
+    case unpin
+    case hide
+    case show
+}
+
+func applyRepoListMutation(
+    _ mutation: RepoListMutation,
+    repository fullName: String,
+    settings: inout UserSettings
+) {
+    guard let accountID = settings.resolvedActiveAccount()?.id else {
+        applyLegacyRepoListMutation(mutation, repository: fullName, settings: &settings)
+        return
+    }
+
+    var pinned = settings.pinnedRepositories(for: accountID)
+    var hidden = settings.hiddenRepositories(for: accountID)
+    applyRepoListMutation(mutation, repository: fullName, pinned: &pinned, hidden: &hidden)
+    settings.setPinnedRepositories(pinned, for: accountID)
+    settings.setHiddenRepositories(hidden, for: accountID)
+}
+
+private func applyLegacyRepoListMutation(
+    _ mutation: RepoListMutation,
+    repository fullName: String,
+    settings: inout UserSettings
+) {
+    var pinned = settings.repoList.pinnedRepositories
+    var hidden = settings.repoList.hiddenRepositories
+    applyRepoListMutation(mutation, repository: fullName, pinned: &pinned, hidden: &hidden)
+    settings.repoList.pinnedRepositories = pinned
+    settings.repoList.hiddenRepositories = hidden
+}
+
+private func applyRepoListMutation(
+    _ mutation: RepoListMutation,
+    repository fullName: String,
+    pinned: inout [String],
+    hidden: inout [String]
+) {
+    switch mutation {
+    case .pin:
+        hidden.removeAll { $0.equalsCaseInsensitive(fullName) }
+        if pinned.contains(where: { $0.equalsCaseInsensitive(fullName) }) == false {
+            pinned.append(fullName)
+        }
+    case .unpin:
+        pinned.removeAll { $0.equalsCaseInsensitive(fullName) }
+    case .hide:
+        pinned.removeAll { $0.equalsCaseInsensitive(fullName) }
+        if hidden.contains(where: { $0.equalsCaseInsensitive(fullName) }) == false {
+            hidden.append(fullName)
+        }
+    case .show:
+        hidden.removeAll { $0.equalsCaseInsensitive(fullName) }
+    }
+}
+
 func renderRepoListUpdate(action: String, repoName: String, settings: UserSettings, output: OutputOptions) throws {
     if output.jsonOutput {
         let payload = RepoListOutput(

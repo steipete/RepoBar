@@ -418,7 +418,7 @@ extension AppState {
         let models = repos.map { repo in
             RepositoryDisplayModel(
                 repo: repo,
-                localStatus: localIndex.status(for: repo, host: self.session.settings.githubHost),
+                localStatus: localIndex.status(for: repo, host: self.session.settings.resolvedRepositoryHost),
                 now: now
             )
         }
@@ -462,7 +462,7 @@ extension AppState {
                         repo: repo,
                         localStatus: self.session.localRepoIndex.status(
                             for: repo,
-                            host: self.session.settings.githubHost
+                            host: self.session.settings.resolvedRepositoryHost
                         ),
                         now: capturedAt
                     )

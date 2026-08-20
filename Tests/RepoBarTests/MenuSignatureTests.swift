@@ -45,6 +45,11 @@ struct MenuSignatureTests {
         let manager = StatusBarMenuManager(appState: appState)
         let builder = StatusBarMenuBuilder(appState: appState, target: manager)
         let repository = Self.repository(id: "remote-node", owner: "owner", name: "Repo")
+        let enterpriseAccount = try Account(
+            username: "alice",
+            host: #require(URL(string: "https://ghe.example.com:8443")),
+            authMethod: .oauth
+        )
         let localStatus = LocalRepoStatus(
             path: URL(fileURLWithPath: "/tmp/Repo"),
             name: "Repo",
@@ -60,7 +65,8 @@ struct MenuSignatureTests {
         appState.session.menuDisplayIndex = [
             repository.fullName.lowercased(): RepositoryDisplayModel(repo: repository)
         ]
-        appState.session.settings.githubHost = try #require(URL(string: "https://ghe.example.com"))
+        appState.session.settings.accounts = [enterpriseAccount]
+        appState.session.settings.activeAccountID = enterpriseAccount.id
 
         let models = builder.localScopeViewModels(
             session: appState.session,
@@ -71,6 +77,47 @@ struct MenuSignatureTests {
         #expect(models.count == 1)
         #expect(models.first?.id == "local:/tmp/Repo")
         #expect(models.first?.localStatus?.remoteHost == "github.com")
+    }
+
+    @MainActor
+    @Test
+    func `local scope substitutes remote model for active Enterprise host with custom port`() throws {
+        let appState = AppState()
+        let manager = StatusBarMenuManager(appState: appState)
+        let builder = StatusBarMenuBuilder(appState: appState, target: manager)
+        let repository = Self.repository(id: "remote-node", owner: "owner", name: "Repo")
+        let enterpriseAccount = try Account(
+            username: "alice",
+            host: #require(URL(string: "https://ghe.example.com:8443")),
+            authMethod: .oauth
+        )
+        let localStatus = LocalRepoStatus(
+            path: URL(fileURLWithPath: "/tmp/Repo"),
+            name: "Repo",
+            fullName: "owner/Repo",
+            remoteHost: "ghe.example.com:8443",
+            branch: "main",
+            isClean: true,
+            aheadCount: 0,
+            behindCount: 0,
+            syncState: .synced
+        )
+        appState.session.localRepoIndex = LocalRepoIndex(statuses: [localStatus])
+        appState.session.menuDisplayIndex = [
+            repository.fullName.lowercased(): RepositoryDisplayModel(repo: repository, localStatus: localStatus)
+        ]
+        appState.session.settings.accounts = [enterpriseAccount]
+        appState.session.settings.activeAccountID = enterpriseAccount.id
+
+        let models = builder.localScopeViewModels(
+            session: appState.session,
+            settings: appState.session.settings,
+            now: Date()
+        )
+
+        #expect(models.count == 1)
+        #expect(models.first?.id == repository.id)
+        #expect(models.first?.localStatus?.remoteHost == "ghe.example.com:8443")
     }
 
     @Test

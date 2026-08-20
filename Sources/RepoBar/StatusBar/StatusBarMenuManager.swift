@@ -315,7 +315,7 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
 
         let localPath = self.appState.session.localRepoIndex.status(
             forFullName: fullName,
-            host: self.appState.session.settings.githubHost
+            host: self.appState.session.settings.resolvedRepositoryHost
         )?.path
         let releaseTag = self.appState.session.repositories
             .first(where: { $0.fullName == fullName })?
@@ -571,7 +571,7 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
 
         let local = self.appState.session.localRepoIndex.status(
             forFullName: fullName,
-            host: self.appState.session.settings.githubHost
+            host: self.appState.session.settings.resolvedRepositoryHost
         )
         return RepositoryDisplayModel(repo: repo, localStatus: local)
     }

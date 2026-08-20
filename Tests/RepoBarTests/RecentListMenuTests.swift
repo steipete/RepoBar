@@ -147,6 +147,39 @@ struct RecentListMenuTests {
 
     @MainActor
     @Test
+    func `coalesced repository requests both return the shared result`() async throws {
+        let gate = RecentResponseGate()
+        let client = await Self.makeRecentListClient(accountID: "alice", responseGate: gate)
+        let service = RecentMenuService(
+            clientResolver: { _ in client },
+            activeAccountID: { "alice" }
+        )
+
+        let first = Task { @MainActor in
+            try await service.load(accountID: "alice", fullName: "owner/repo", kind: .branches)
+        }
+        await gate.waitUntilFirstRequestStarts()
+        let second = Task { @MainActor in
+            try await service.load(accountID: "alice", fullName: "owner/repo", kind: .branches)
+        }
+        await Task.yield()
+        await gate.releaseFirstRequest()
+        let results = try await (first.value, second.value)
+
+        guard case let .branches(firstBranches) = results.0,
+              case let .branches(secondBranches) = results.1
+        else {
+            Issue.record("Expected branch results")
+            return
+        }
+
+        #expect(firstBranches.map(\.name) == ["old-branch"])
+        #expect(secondBranches.map(\.name) == ["old-branch"])
+        #expect(await gate.totalRequestCount() == 1)
+    }
+
+    @MainActor
+    @Test
     func `removed account recent request cannot repopulate cache after readd`() async throws {
         let gate = RecentResponseGate()
         let client = await Self.makeRecentListClient(accountID: "alice", responseGate: gate)
@@ -348,5 +381,9 @@ private actor RecentResponseGate {
     func releaseFirstRequest() {
         self.firstRequestContinuation?.resume()
         self.firstRequestContinuation = nil
+    }
+
+    func totalRequestCount() -> Int {
+        self.requestCount
     }
 }

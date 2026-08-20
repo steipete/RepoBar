@@ -484,10 +484,17 @@ enum RecentMenuItems {
 }
 
 final class RecentListCache<Item: Sendable> {
-    struct Load {
+    final class Load {
         let task: Task<[Item], Error>
         fileprivate let generation: UInt
         fileprivate let token: UUID
+        fileprivate var completedEvictedKeys: [AccountScopedCacheKey]?
+
+        init(task: Task<[Item], Error>, generation: UInt, token: UUID) {
+            self.task = task
+            self.generation = generation
+            self.token = token
+        }
     }
 
     struct Entry {
@@ -545,6 +552,7 @@ final class RecentListCache<Item: Sendable> {
     }
 
     func abandon(_ load: Load, for key: AccountScopedCacheKey) {
+        guard load.completedEvictedKeys == nil else { return }
         guard self.isCurrent(load, for: key) else { return }
 
         self.inflight[key] = nil
@@ -560,10 +568,17 @@ final class RecentListCache<Item: Sendable> {
         for key: AccountScopedCacheKey,
         fetchedAt: Date
     ) -> [AccountScopedCacheKey]? {
+        guard self.isCurrentGeneration(load.generation, for: key) else { return nil }
+
+        if let completedEvictedKeys = load.completedEvictedKeys {
+            return completedEvictedKeys
+        }
         guard self.isCurrent(load, for: key) else { return nil }
 
+        let evictedKeys = self.store(items, for: key, fetchedAt: fetchedAt)
+        load.completedEvictedKeys = evictedKeys
         self.inflight[key] = nil
-        return self.store(items, for: key, fetchedAt: fetchedAt)
+        return evictedKeys
     }
 
     @discardableResult
