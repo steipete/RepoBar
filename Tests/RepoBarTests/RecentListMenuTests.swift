@@ -147,6 +147,49 @@ struct RecentListMenuTests {
 
     @MainActor
     @Test
+    func `removed account recent request cannot repopulate cache after readd`() async throws {
+        let gate = RecentResponseGate()
+        let client = await Self.makeRecentListClient(accountID: "alice", responseGate: gate)
+        let service = RecentMenuService(
+            clientResolver: { _ in client },
+            activeAccountID: { "alice" }
+        )
+        let key = service.cacheKey(accountID: "alice", fullName: "owner/repo")
+
+        let first = Task { @MainActor in
+            try await service.load(accountID: "alice", fullName: "owner/repo", kind: .branches)
+        }
+        await gate.waitUntilFirstRequestStarts()
+        service.removeCachedState(accountID: "alice")
+        await gate.releaseFirstRequest()
+
+        do {
+            _ = try await first.value
+            Issue.record("Expected removed-account request to be discarded")
+        } catch is CancellationError {
+            // Expected: the removed account generation no longer owns this completion.
+        }
+
+        let descriptor = try #require(service.descriptor(for: .branches))
+        #expect(descriptor.stale(key) == nil)
+
+        let second = try await service.load(accountID: "alice", fullName: "owner/repo", kind: .branches)
+        guard case let .branches(branches) = second else {
+            Issue.record("Expected branch results")
+            return
+        }
+
+        #expect(branches.map(\.name) == ["new-branch"])
+        guard case let .branches(cachedBranches) = descriptor.stale(key) else {
+            Issue.record("Expected cached branch results")
+            return
+        }
+
+        #expect(cachedBranches.map(\.name) == ["new-branch"])
+    }
+
+    @MainActor
+    @Test
     func `multi reference menu offers issue navigator action at end`() throws {
         let appState = AppState()
         let manager = StatusBarMenuManager(appState: appState)
@@ -229,6 +272,37 @@ struct RecentListMenuTests {
         }
         return client
     }
+
+    private static func makeRecentListClient(
+        accountID: String,
+        responseGate: RecentResponseGate
+    ) async -> GitHubClient {
+        let dataLoader = HTTPDataLoader { request in
+            let branchName = await responseGate.branchNameForRequest()
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            )!
+            let body = Data(
+                """
+                [{"name":"\(branchName)","commit":{"sha":"\(branchName)-sha"},"protected":false}]
+                """.utf8
+            )
+            return (body, response)
+        }
+        let client = GitHubClient(
+            accountID: accountID,
+            archiveSettingsProvider: { GitHubArchiveSettings() },
+            dataLoader: dataLoader,
+            responseDiskCache: nil
+        )
+        await client.setTokenProvider {
+            OAuthTokens(accessToken: "\(accountID)-token", refreshToken: "", expiresAt: nil)
+        }
+        return client
+    }
 }
 
 private actor RecentRequestLog {
@@ -240,5 +314,39 @@ private actor RecentRequestLog {
 
     func count(for accountID: String) -> Int {
         self.counts[accountID, default: 0]
+    }
+}
+
+private actor RecentResponseGate {
+    private var requestCount = 0
+    private var firstRequestContinuation: CheckedContinuation<Void, Never>?
+    private var startWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func branchNameForRequest() async -> String {
+        self.requestCount += 1
+        let currentRequest = self.requestCount
+        if currentRequest == 1 {
+            let waiters = self.startWaiters
+            self.startWaiters = []
+            waiters.forEach { $0.resume() }
+            await withCheckedContinuation { continuation in
+                self.firstRequestContinuation = continuation
+            }
+            return "old-branch"
+        }
+        return "new-branch"
+    }
+
+    func waitUntilFirstRequestStarts() async {
+        guard self.requestCount == 0 else { return }
+
+        await withCheckedContinuation { continuation in
+            self.startWaiters.append(continuation)
+        }
+    }
+
+    func releaseFirstRequest() {
+        self.firstRequestContinuation?.resume()
+        self.firstRequestContinuation = nil
     }
 }

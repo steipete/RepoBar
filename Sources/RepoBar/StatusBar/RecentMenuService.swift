@@ -349,16 +349,31 @@ final class RecentMenuService {
                 self.recentCommitsCache.needsRefresh(for: key, now: now, maxAge: ttl)
             },
             load: { key, owner, name, limit, github in
-                let task = self.recentCommitsCache.task(for: key) {
+                let load = self.recentCommitsCache.task(for: key) { generation in
                     let list = try await github.recentCommits(owner: owner, name: name, limit: limit)
                     await MainActor.run {
-                        self.recentCommitCounts[key] = list.totalCount ?? list.items.count
+                        if self.recentCommitsCache.isCurrentGeneration(generation, for: key) {
+                            self.recentCommitCounts[key] = list.totalCount ?? list.items.count
+                        }
                     }
                     return list.items
                 }
-                defer { self.recentCommitsCache.clearInflight(for: key) }
-                let items = try await AsyncTimeout.value(within: self.loadTimeout, task: task)
-                let evictedKeys = self.recentCommitsCache.store(items, for: key, fetchedAt: Date())
+                let items: [RepoCommitSummary]
+                do {
+                    items = try await AsyncTimeout.value(within: self.loadTimeout, task: load.task)
+                } catch {
+                    self.recentCommitsCache.abandon(load, for: key)
+                    throw error
+                }
+                guard let evictedKeys = self.recentCommitsCache.complete(
+                    load,
+                    items: items,
+                    for: key,
+                    fetchedAt: Date()
+                ) else {
+                    throw CancellationError()
+                }
+
                 for evictedKey in evictedKeys {
                     self.recentCommitCounts[evictedKey] = nil
                 }
@@ -387,13 +402,20 @@ final class RecentMenuService {
                 config.cache.needsRefresh(for: key, now: now, maxAge: ttl)
             },
             load: { key, owner, name, limit, github in
-                let task = config.cache.task(for: key) {
+                let load = config.cache.task(for: key) { _ in
                     try await fetch(github, owner, name, limit)
                 }
-                defer { config.cache.clearInflight(for: key) }
-                let items = try await AsyncTimeout.value(within: self.loadTimeout, task: task)
-                _ = config.cache.store(items, for: key, fetchedAt: Date())
-                return config.wrap(items)
+                do {
+                    let items = try await AsyncTimeout.value(within: self.loadTimeout, task: load.task)
+                    guard config.cache.complete(load, items: items, for: key, fetchedAt: Date()) != nil else {
+                        throw CancellationError()
+                    }
+
+                    return config.wrap(items)
+                } catch {
+                    config.cache.abandon(load, for: key)
+                    throw error
+                }
             }
         )
     }
@@ -462,6 +484,12 @@ enum RecentMenuItems {
 }
 
 final class RecentListCache<Item: Sendable> {
+    struct Load {
+        let task: Task<[Item], Error>
+        fileprivate let generation: UInt
+        fileprivate let token: UUID
+    }
+
     struct Entry {
         var fetchedAt: Date
         var items: [Item]
@@ -470,7 +498,8 @@ final class RecentListCache<Item: Sendable> {
     private let maxEntries: Int
     private var entries: [AccountScopedCacheKey: Entry] = [:]
     private var entryOrder: [AccountScopedCacheKey] = []
-    private var inflight: [AccountScopedCacheKey: Task<[Item], Error>] = [:]
+    private var inflight: [AccountScopedCacheKey: Load] = [:]
+    private var accountGenerations: [String: UInt] = [:]
 
     init(maxEntries: Int = AppLimits.RecentLists.cacheEntries) {
         self.maxEntries = max(0, maxEntries)
@@ -499,18 +528,42 @@ final class RecentListCache<Item: Sendable> {
 
     func task(
         for key: AccountScopedCacheKey,
-        factory: @escaping @Sendable () async throws -> [Item]
-    ) -> Task<[Item], Error> {
+        factory: @escaping @Sendable (UInt) async throws -> [Item]
+    ) -> Load {
         if let existing = self.inflight[key] {
             return existing
         }
-        let task = Task { try await factory() }
-        self.inflight[key] = task
-        return task
+        let generation = self.accountGenerations[key.accountID, default: 0]
+        let task = Task { try await factory(generation) }
+        let load = Load(
+            task: task,
+            generation: generation,
+            token: UUID()
+        )
+        self.inflight[key] = load
+        return load
     }
 
-    func clearInflight(for key: AccountScopedCacheKey) {
+    func abandon(_ load: Load, for key: AccountScopedCacheKey) {
+        guard self.isCurrent(load, for: key) else { return }
+
         self.inflight[key] = nil
+    }
+
+    func isCurrentGeneration(_ generation: UInt, for key: AccountScopedCacheKey) -> Bool {
+        self.accountGenerations[key.accountID, default: 0] == generation
+    }
+
+    func complete(
+        _ load: Load,
+        items: [Item],
+        for key: AccountScopedCacheKey,
+        fetchedAt: Date
+    ) -> [AccountScopedCacheKey]? {
+        guard self.isCurrent(load, for: key) else { return nil }
+
+        self.inflight[key] = nil
+        return self.store(items, for: key, fetchedAt: fetchedAt)
     }
 
     @discardableResult
@@ -531,14 +584,23 @@ final class RecentListCache<Item: Sendable> {
     }
 
     func remove(accountID: String) {
+        self.accountGenerations[accountID, default: 0] &+= 1
         let keys = self.entries.keys.filter { $0.accountID == accountID }
         for key in keys {
             self.entries[key] = nil
         }
         self.entryOrder.removeAll { $0.accountID == accountID }
-        let tasks = self.inflight.filter { $0.key.accountID == accountID }.map(\.value)
+        let tasks = self.inflight.filter { $0.key.accountID == accountID }.map(\.value.task)
         self.inflight = self.inflight.filter { $0.key.accountID != accountID }
         tasks.forEach { $0.cancel() }
+    }
+
+    private func isCurrent(_ load: Load, for key: AccountScopedCacheKey) -> Bool {
+        guard self.isCurrentGeneration(load.generation, for: key),
+              let current = self.inflight[key]
+        else { return false }
+
+        return current.generation == load.generation && current.token == load.token
     }
 
     private func touch(_ key: AccountScopedCacheKey) {

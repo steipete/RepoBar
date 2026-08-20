@@ -102,7 +102,7 @@ struct AccountsUseCommand: CommanderRunnableCommand {
         var settings = store.load()
         let account = try AccountResolver.resolve(self.target, settings: settings)
         try mirrorAccountCredentialsToLegacy(account)
-        settings.activeAccountID = account.id
+        settings.prepareRepositoryListsForActiveAccountChange(to: account.id)
         mirrorActiveAccountIntoSettings(account, settings: &settings)
         store.save(settings)
         print("Active account set to \(account.id).")
@@ -132,13 +132,14 @@ struct AccountsRemoveCommand: CommanderRunnableCommand {
         var settings = store.load()
         let account = try AccountResolver.resolve(self.target, settings: settings)
         TokenStore.shared.clear(accountID: account.id)
-        settings.accounts.removeAll(where: { $0.id == account.id })
-        if settings.activeAccountID == account.id {
-            settings.activeAccountID = settings.accounts.first?.id
+        let wasActive = settings.resolvedActiveAccount()?.id == account.id
+        if wasActive {
+            let nextAccountID = settings.accounts.first(where: { $0.id != account.id })?.id
+            settings.prepareRepositoryListsForActiveAccountChange(to: nextAccountID)
         }
+        settings.accounts.removeAll(where: { $0.id == account.id })
+        settings.removeRepositoryLists(for: account.id)
         mirrorResolvedActiveAccount(settings: &settings)
-        settings.accountRepoLists.pinnedByAccount.removeValue(forKey: account.id)
-        settings.accountRepoLists.hiddenByAccount.removeValue(forKey: account.id)
         store.save(settings)
         print("Removed account \(account.id).")
     }

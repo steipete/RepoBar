@@ -457,7 +457,7 @@ struct LoginCommand: CommanderRunnableCommand {
         } else {
             settings.accounts.append(account)
         }
-        settings.activeAccountID = account.id
+        settings.prepareRepositoryListsForActiveAccountChange(to: account.id)
         store.save(settings)
 
         print("Login succeeded; tokens stored for \(account.id).")
@@ -497,8 +497,11 @@ struct LogoutCommand: CommanderRunnableCommand {
             for accountID in scopedAccountIDs {
                 TokenStore.shared.clear(accountID: accountID)
             }
+            settings.prepareRepositoryListsForActiveAccountChange(to: nil)
+            for accountID in settings.accounts.map(\.id) {
+                settings.removeRepositoryLists(for: accountID)
+            }
             settings.accounts = []
-            settings.activeAccountID = nil
             store.save(settings)
             print("Logged out of all accounts.")
             return
@@ -512,10 +515,13 @@ struct LogoutCommand: CommanderRunnableCommand {
 
         let resolved = try AccountResolver.resolve(self.account, settings: settings)
         TokenStore.shared.clear(accountID: resolved.id)
-        settings.accounts.removeAll(where: { $0.id == resolved.id })
-        if settings.activeAccountID == resolved.id {
-            settings.activeAccountID = settings.accounts.first?.id
+        let wasActive = settings.resolvedActiveAccount()?.id == resolved.id
+        if wasActive {
+            let nextAccountID = settings.accounts.first(where: { $0.id != resolved.id })?.id
+            settings.prepareRepositoryListsForActiveAccountChange(to: nextAccountID)
         }
+        settings.accounts.removeAll(where: { $0.id == resolved.id })
+        settings.removeRepositoryLists(for: resolved.id)
         mirrorResolvedActiveAccount(settings: &settings)
         store.save(settings)
         print("Logged out of \(resolved.id).")
@@ -622,7 +628,7 @@ struct ImportGHTokenCommand: CommanderRunnableCommand {
         } else {
             settings.accounts.append(account)
         }
-        settings.activeAccountID = account.id
+        settings.prepareRepositoryListsForActiveAccountChange(to: account.id)
         store.save(settings)
 
         print("Successfully imported gh CLI token for \(account.id).")

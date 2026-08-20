@@ -84,9 +84,13 @@ func mirrorActiveAccountIntoSettings(_ account: Account, settings: inout UserSet
 func mirrorResolvedActiveAccount(settings: inout UserSettings) {
     guard let active = settings.resolvedActiveAccount() else {
         TokenStore.shared.clear()
+        settings.repoList.pinnedRepositories = []
+        settings.repoList.hiddenRepositories = []
         return
     }
 
+    _ = settings.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+    settings.mirrorRepositoryListsToLegacy(for: active.id)
     mirrorActiveAccountIntoSettings(active, settings: &settings)
     _ = TokenStore.shared.mirrorAccountCredentialsToLegacy(
         accountID: active.id,

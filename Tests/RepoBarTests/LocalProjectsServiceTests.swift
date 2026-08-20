@@ -54,11 +54,14 @@ struct LocalProjectsServiceTests {
         let repoA = root.appendingPathComponent("repo-a", isDirectory: true)
         let nested = root.appendingPathComponent("group", isDirectory: true)
         let repoB = nested.appendingPathComponent("repo-b", isDirectory: true)
+        let repoC = root.appendingPathComponent("repo-c", isDirectory: true)
         try FileManager.default.createDirectory(at: repoA, withIntermediateDirectories: true)
         try FileManager.default.createDirectory(at: repoB, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: repoC, withIntermediateDirectories: true)
 
         try initializeRepo(at: repoA, origin: "git@github.com:foo/repo-a.git")
         try initializeRepo(at: repoB, origin: "https://github.com/foo/repo-b.git")
+        try initializeRepo(at: repoC, origin: "https://ghe.example.com:8443/foo/repo-c.git")
 
         let snapshot = await LocalProjectsService().snapshot(
             rootPath: root.path,
@@ -67,12 +70,16 @@ struct LocalProjectsServiceTests {
             concurrencyLimit: 1
         )
 
-        #expect(snapshot.statuses.count == 2)
+        #expect(snapshot.statuses.count == 3)
         let names = Set(snapshot.statuses.map(\.displayName))
         #expect(names.contains("foo/repo-a"))
         #expect(names.contains("foo/repo-b"))
+        #expect(names.contains("foo/repo-c"))
         let repoAStatus = snapshot.statuses.first(where: { $0.name == "repo-a" })
         #expect(repoAStatus?.branch == "main")
+        #expect(repoAStatus?.remoteHost == "github.com")
+        #expect(snapshot.statuses.first(where: { $0.name == "repo-b" })?.remoteHost == "github.com")
+        #expect(snapshot.statuses.first(where: { $0.name == "repo-c" })?.remoteHost == "ghe.example.com:8443")
     }
 
     @Test

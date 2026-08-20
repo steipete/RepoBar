@@ -233,7 +233,18 @@ public struct UserSettings: Equatable, Codable {
     }
 
     public mutating func prepareRepositoryListsForActiveAccountChange(to accountID: String) {
+        self.prepareRepositoryListsForActiveAccountChange(to: Optional(accountID))
+    }
+
+    public mutating func prepareRepositoryListsForActiveAccountChange(to accountID: String?) {
         _ = self.migrateLegacyRepositoryListsToActiveAccountIfNeeded()
+        guard let accountID else {
+            self.activeAccountID = nil
+            self.repoList.pinnedRepositories = []
+            self.repoList.hiddenRepositories = []
+            return
+        }
+
         if self.accountRepoLists.hasPinnedEntry(for: accountID) == false {
             self.accountRepoLists.setPinned([], for: accountID)
         }

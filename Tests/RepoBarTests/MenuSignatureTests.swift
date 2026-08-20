@@ -38,6 +38,41 @@ struct MenuSignatureTests {
         #expect(builder.repoSubmenusByFullName[idKey] == nil)
     }
 
+    @MainActor
+    @Test
+    func `local scope does not substitute remote model from another host`() throws {
+        let appState = AppState()
+        let manager = StatusBarMenuManager(appState: appState)
+        let builder = StatusBarMenuBuilder(appState: appState, target: manager)
+        let repository = Self.repository(id: "remote-node", owner: "owner", name: "Repo")
+        let localStatus = LocalRepoStatus(
+            path: URL(fileURLWithPath: "/tmp/Repo"),
+            name: "Repo",
+            fullName: "owner/Repo",
+            remoteHost: "github.com",
+            branch: "main",
+            isClean: true,
+            aheadCount: 0,
+            behindCount: 0,
+            syncState: .synced
+        )
+        appState.session.localRepoIndex = LocalRepoIndex(statuses: [localStatus])
+        appState.session.menuDisplayIndex = [
+            repository.fullName.lowercased(): RepositoryDisplayModel(repo: repository)
+        ]
+        appState.session.settings.githubHost = try #require(URL(string: "https://ghe.example.com"))
+
+        let models = builder.localScopeViewModels(
+            session: appState.session,
+            settings: appState.session.settings,
+            now: Date()
+        )
+
+        #expect(models.count == 1)
+        #expect(models.first?.id == "local:/tmp/Repo")
+        #expect(models.first?.localStatus?.remoteHost == "github.com")
+    }
+
     @Test
     func `repo submenu signature changes with repo counts`() {
         let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
@@ -224,6 +259,24 @@ struct MenuSignatureTests {
                 )
             ],
             rateLimits: []
+        )
+    }
+
+    private static func repository(id: String, owner: String, name: String) -> Repository {
+        Repository(
+            id: id,
+            name: name,
+            owner: owner,
+            sortOrder: nil,
+            error: nil,
+            rateLimitedUntil: nil,
+            ciStatus: .unknown,
+            openIssues: 0,
+            openPulls: 0,
+            latestRelease: nil,
+            latestActivity: nil,
+            traffic: nil,
+            heatmap: []
         )
     }
 }

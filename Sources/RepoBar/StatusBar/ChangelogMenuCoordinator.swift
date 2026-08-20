@@ -8,15 +8,23 @@ final class ChangelogMenuCoordinator {
     private let appState: AppState
     private let menuBuilder: StatusBarMenuBuilder
     private let menuItemFactory: MenuItemViewFactory
+    private let fetchOverride: (@MainActor @Sendable (String, String, URL?) async -> ChangelogFetchResult)?
     private var menus: [ObjectIdentifier: ChangelogMenuEntry] = [:]
     private var cache: [AccountScopedCacheKey: ChangelogCacheEntry] = [:]
     private var cacheOrder: [AccountScopedCacheKey] = []
-    private var inflight: [AccountScopedCacheKey: Task<ChangelogFetchResult, Never>] = [:]
+    private var inflight: [AccountScopedCacheKey: ChangelogInflight] = [:]
+    private var accountGenerations: [String: UInt] = [:]
 
-    init(appState: AppState, menuBuilder: StatusBarMenuBuilder, menuItemFactory: MenuItemViewFactory) {
+    init(
+        appState: AppState,
+        menuBuilder: StatusBarMenuBuilder,
+        menuItemFactory: MenuItemViewFactory,
+        fetchOverride: (@MainActor @Sendable (String, String, URL?) async -> ChangelogFetchResult)? = nil
+    ) {
         self.appState = appState
         self.menuBuilder = menuBuilder
         self.menuItemFactory = menuItemFactory
+        self.fetchOverride = fetchOverride
     }
 
     func registerChangelogMenu(
@@ -97,12 +105,12 @@ final class ChangelogMenuCoordinator {
                 }
             }
 
-            let fetch = await self.loadChangelog(
+            guard await self.loadChangelog(
                 accountID: accountID,
                 fullName: fullName,
                 localPath: localPath
-            )
-            self.storeCacheEntry(self.makeCacheEntry(fetch: fetch), for: cacheKey)
+            ) != nil else { return }
+
             self.menuBuilder.updateChangelogRow(fullName: fullName, releaseTag: releaseTag)
         }
     }
@@ -126,12 +134,12 @@ final class ChangelogMenuCoordinator {
             self.applyLoading(to: menu)
         }
 
-        let fetch = await self.loadChangelog(
+        guard let fetch = await self.loadChangelog(
             accountID: entry.accountID,
             fullName: entry.fullName,
             localPath: entry.localPath
-        )
-        self.storeCacheEntry(self.makeCacheEntry(fetch: fetch), for: cacheKey)
+        ) else { return }
+
         self.applyResult(fetch.result, to: menu)
         self.updateChangelogRow(fullName: entry.fullName)
     }
@@ -162,16 +170,28 @@ final class ChangelogMenuCoordinator {
         menu.update()
     }
 
-    private func loadChangelog(accountID: String, fullName: String, localPath: URL?) async -> ChangelogFetchResult {
+    private func loadChangelog(
+        accountID: String,
+        fullName: String,
+        localPath: URL?
+    ) async -> ChangelogFetchResult? {
         let cacheKey = AccountScopedCacheKey(accountID: accountID, key: fullName)
-        if let task = self.inflight[cacheKey] {
-            return await task.value
+        if let existing = self.inflight[cacheKey] {
+            let result = await existing.task.value
+            guard self.accountGenerations[accountID, default: 0] == existing.generation else { return nil }
+
+            return result
         }
+        let generation = self.accountGenerations[accountID, default: 0]
         let task = Task { @MainActor in
             await self.fetchChangelog(accountID: accountID, fullName: fullName, localPath: localPath)
         }
-        self.inflight[cacheKey] = task
+        let inflight = ChangelogInflight(task: task, generation: generation, token: UUID())
+        self.inflight[cacheKey] = inflight
         let result = await task.value
+        guard self.isCurrent(inflight, for: cacheKey) else { return nil }
+
+        self.storeCacheEntry(self.makeCacheEntry(fetch: result), for: cacheKey)
         self.inflight[cacheKey] = nil
         return result
     }
@@ -185,6 +205,9 @@ final class ChangelogMenuCoordinator {
     }
 
     private func fetchChangelog(accountID: String, fullName: String, localPath: URL?) async -> ChangelogFetchResult {
+        if let fetchOverride {
+            return await fetchOverride(accountID, fullName, localPath)
+        }
         if let localPath, let localResult = self.loadLocalChangelog(root: localPath) {
             return ChangelogFetchResult(result: .content(localResult.content), parsed: localResult.parsed)
         }
@@ -312,9 +335,10 @@ final class ChangelogMenuCoordinator {
     }
 
     func removeCachedState(accountID: String) {
+        self.accountGenerations[accountID, default: 0] &+= 1
         self.cache = self.cache.filter { $0.key.accountID != accountID }
         self.cacheOrder.removeAll { $0.accountID == accountID }
-        let tasks = self.inflight.filter { $0.key.accountID == accountID }.map(\.value)
+        let tasks = self.inflight.filter { $0.key.accountID == accountID }.map(\.value.task)
         self.inflight = self.inflight.filter { $0.key.accountID != accountID }
         tasks.forEach { $0.cancel() }
         self.menus = self.menus.filter { $0.value.accountID != accountID }
@@ -332,6 +356,22 @@ final class ChangelogMenuCoordinator {
     private func touchCache(_ cacheKey: AccountScopedCacheKey) {
         self.cacheOrder.removeAll { $0 == cacheKey }
         self.cacheOrder.append(cacheKey)
+    }
+
+    func loadChangelogForTesting(accountID: String, fullName: String) async -> Bool {
+        await self.loadChangelog(accountID: accountID, fullName: fullName, localPath: nil) != nil
+    }
+
+    func hasCachedStateForTesting(accountID: String, fullName: String) -> Bool {
+        self.cache[AccountScopedCacheKey(accountID: accountID, key: fullName)] != nil
+    }
+
+    private func isCurrent(_ inflight: ChangelogInflight, for key: AccountScopedCacheKey) -> Bool {
+        guard self.accountGenerations[key.accountID, default: 0] == inflight.generation,
+              let current = self.inflight[key]
+        else { return false }
+
+        return current.generation == inflight.generation && current.token == inflight.token
     }
 }
 
@@ -356,7 +396,7 @@ private struct ChangelogCacheEntry {
     var presentationCache: [String: ChangelogRowPresentation]
 }
 
-private struct ChangelogFetchResult {
+struct ChangelogFetchResult {
     let result: ChangelogResult
     let parsed: ChangelogParsed?
 }
@@ -366,9 +406,15 @@ private struct ChangelogLocalResult {
     let parsed: ChangelogParsed
 }
 
-private enum ChangelogResult {
+enum ChangelogResult {
     case signedOut
     case missing
     case failure(String)
     case content(ChangelogContent)
+}
+
+private struct ChangelogInflight {
+    let task: Task<ChangelogFetchResult, Never>
+    let generation: UInt
+    let token: UUID
 }

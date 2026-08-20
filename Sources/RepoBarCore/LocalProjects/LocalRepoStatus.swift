@@ -99,6 +99,12 @@ public struct LocalRepoStatus: Equatable, Sendable {
         )
     }
 
+    public func matches(host: URL) -> Bool {
+        guard let remoteHost else { return true }
+
+        return remoteHost == Account.hostAuthority(for: host)
+    }
+
     private static func normalizedHost(_ host: String) -> String {
         let trimmed = host.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard let url = URL(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)") else {
@@ -328,9 +334,8 @@ public struct LocalRepoIndex: Equatable, Sendable {
 
     private static func matchesHost(_ status: LocalRepoStatus, host: URL?) -> Bool {
         guard let host else { return true }
-        guard let remoteHost = status.remoteHost else { return true }
 
-        return remoteHost == Self.normalizedHost(host)
+        return status.matches(host: host)
     }
 
     private static func preferredStatus(_ lhs: LocalRepoStatus, _ rhs: LocalRepoStatus) -> LocalRepoStatus {

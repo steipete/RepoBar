@@ -338,16 +338,14 @@
         }
 
         private static func parseURL(_ value: String) -> GitRemote? {
-            guard let url = URL(string: value),
-                  let host = url.host
-            else { return nil }
+            guard let url = URL(string: value), url.host != nil else { return nil }
 
             let parts = url.path.split(separator: "/").map(String.init)
             guard parts.count >= 2 else { return nil }
 
             let owner = parts[parts.count - 2]
             let name = self.stripGitSuffix(parts.last ?? "")
-            return GitRemote(host: host, owner: owner, name: name)
+            return GitRemote(host: Account.hostAuthority(for: url), owner: owner, name: name)
         }
 
         private static func parseScp(_ value: String) -> GitRemote? {

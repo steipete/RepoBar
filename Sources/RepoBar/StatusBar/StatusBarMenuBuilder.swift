@@ -350,7 +350,7 @@ final class StatusBarMenuBuilder {
         }
     }
 
-    private func localScopeViewModels(
+    func localScopeViewModels(
         session: Session,
         settings: UserSettings,
         now: Date
@@ -362,7 +362,8 @@ final class StatusBarMenuBuilder {
         var models: [RepositoryDisplayModel] = []
         for localStatus in localRepos {
             guard let fullName = localStatus.fullName?.lowercased(),
-                  let existingModel = displayIndex[fullName]
+                  let existingModel = displayIndex[fullName],
+                  localStatus.matches(host: settings.githubHost)
             else {
                 let model = RepositoryDisplayModel(localStatus: localStatus, now: now)
                 models.append(model)
