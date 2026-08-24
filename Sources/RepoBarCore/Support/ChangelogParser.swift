@@ -65,25 +65,32 @@ public enum ChangelogParser {
     public static func presentation(parsed: ChangelogParsed, releaseTag: String?) -> ChangelogRowPresentation? {
         guard parsed.sections.isEmpty == false else { return nil }
 
-        if let unreleased = parsed.sections.first(where: \.isUnreleased) {
-            if unreleased.entryCount > 0 {
-                return ChangelogRowPresentation(
-                    title: "Changelog • Unreleased",
-                    badgeText: "\(unreleased.entryCount)",
-                    detailText: nil
-                )
-            }
+        if let unreleased = parsed.sections.first(where: \.isUnreleased), unreleased.entryCount > 0 {
             return ChangelogRowPresentation(
-                title: "Changelog",
-                badgeText: nil,
-                detailText: "Up to date"
+                title: "Changelog • Unreleased",
+                badgeText: "\(unreleased.entryCount)",
+                detailText: nil
             )
         }
 
-        guard let releaseTag, let releaseVersion = self.normalizedVersion(from: releaseTag) else { return nil }
+        // An empty Unreleased heading does not mean there is nothing new. Dated sections
+        // between it and the tracked release can still hold unseen entries, so fall through
+        // to the release comparison instead of reporting "Up to date" here.
+        let hasUnreleased = parsed.sections.contains(where: \.isUnreleased)
+        let upToDate = ChangelogRowPresentation(
+            title: "Changelog",
+            badgeText: nil,
+            detailText: "Up to date"
+        )
+
+        guard let releaseTag, let releaseVersion = self.normalizedVersion(from: releaseTag) else {
+            return hasUnreleased ? upToDate : nil
+        }
         guard let matchIndex = parsed.sections.firstIndex(where: {
             self.sectionMatchesVersion($0, releaseVersion: releaseVersion)
-        }) else { return nil }
+        }) else {
+            return hasUnreleased ? upToDate : nil
+        }
 
         let count = parsed.sections.prefix(matchIndex).reduce(0) { $0 + $1.entryCount }
         if count > 0 {
@@ -95,11 +102,7 @@ public enum ChangelogParser {
             )
         }
 
-        return ChangelogRowPresentation(
-            title: "Changelog",
-            badgeText: nil,
-            detailText: "Up to date"
-        )
+        return upToDate
     }
 
     private static func headingTitle(from line: String) -> String? {

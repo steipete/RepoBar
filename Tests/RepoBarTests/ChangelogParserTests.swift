@@ -38,6 +38,43 @@ struct ChangelogParserTests {
     }
 
     @Test
+    func `Empty unreleased still counts entries in newer dated sections`() {
+        let markdown = """
+        # Changelog
+
+        ## 0.8.9 - Unreleased
+
+        ## 0.8.8 - 2026-08-20
+        - Rewrite README
+        - Update Sparkle
+
+        ## 0.8.7 - 2026-08-02
+        - Update Commander
+        """
+        let parsed = ChangelogParser.parse(markdown: markdown)
+        let presentation = ChangelogParser.presentation(parsed: parsed, releaseTag: "0.8.7")
+        #expect(presentation?.title == "Changelog • Since 0.8.7")
+        #expect(presentation?.badgeText == "2")
+        #expect(presentation?.detailText == nil)
+    }
+
+    @Test
+    func `Empty unreleased maps to up-to-date without a release tag`() {
+        let markdown = """
+        # Changelog
+
+        ## Unreleased
+
+        ## 1.0.0
+        - Old
+        """
+        let parsed = ChangelogParser.parse(markdown: markdown)
+        let presentation = ChangelogParser.presentation(parsed: parsed, releaseTag: nil)
+        #expect(presentation?.badgeText == nil)
+        #expect(presentation?.detailText == "Up to date")
+    }
+
+    @Test
     func `Fuzzy version matching counts entries since release`() {
         let markdown = """
         # Changelog
