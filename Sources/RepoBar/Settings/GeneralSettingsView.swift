@@ -76,7 +76,7 @@ struct GeneralSettingsView: View {
                         }
                     }
                 } header: {
-                    Text("Display")
+                    Text("Heatmap")
                 } footer: {
                     Text("Repository heatmaps show recent commit activity for each repository.")
                 }
