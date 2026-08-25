@@ -39,7 +39,7 @@ struct ChangelogCommand: CommanderRunnableCommand {
     }
 
     mutating func bind(_ values: ParsedValues) throws {
-        self.releaseTag = try values.decodeOption("release")
+        self.releaseTag = try values.decodeOption("releaseTag")
         self.output.bind(values)
 
         if values.positional.count > 1 {
