@@ -41,7 +41,7 @@ struct CLIEndToEndTests {
 
     @Test
     @MainActor
-    func `changelog command counts entries since the release tag`() async throws {
+    func test_changelogCommandCountsEntriesSinceReleaseTag() async throws {
         // The existing --release test's non-empty Unreleased section never reads the tag,
         // so that test passed while --release was ignored.
         let url = try fixtureURL("ChangelogEmptyUnreleasedSample")

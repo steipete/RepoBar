@@ -38,7 +38,7 @@ struct ChangelogParserTests {
     }
 
     @Test
-    func `Empty unreleased still counts entries in newer dated sections`() {
+    func test_emptyUnreleasedStillCountsEntriesInNewerDatedSections() {
         let markdown = """
         # Changelog
 
@@ -59,7 +59,7 @@ struct ChangelogParserTests {
     }
 
     @Test
-    func `Empty unreleased maps to up-to-date without a release tag`() {
+    func test_emptyUnreleasedMapsToUpToDateWithoutReleaseTag() {
         let markdown = """
         # Changelog
 
