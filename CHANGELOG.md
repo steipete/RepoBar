@@ -2,6 +2,7 @@
 
 ## 0.8.8 - Unreleased
 
+- Update AppAuth to 3.0.0, refresh Apollo, Kingfisher, Sparkle, and Octokit dependencies, and update pnpm and the Node.js setup action.
 - Rewrite the README around installation and first use, with dynamic project badges and tighter links to reference documentation.
 - Update Sparkle, swift-log, Swiftdansi, Octokit request tooling, and tsx to their latest compatible releases.
 
