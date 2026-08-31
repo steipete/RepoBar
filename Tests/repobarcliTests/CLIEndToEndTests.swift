@@ -41,6 +41,26 @@ struct CLIEndToEndTests {
 
     @Test
     @MainActor
+    func `changelog command counts entries since release tag`() async throws {
+        // The existing --release test's non-empty Unreleased section never reads the tag,
+        // so that test passed while --release was ignored.
+        let url = try fixtureURL("ChangelogEmptyUnreleasedSample")
+        let output = try await runCLI([
+            "changelog",
+            url.path,
+            "--release",
+            "0.8.7",
+            "--json"
+        ])
+        let data = try #require(output.data(using: .utf8))
+        let decoded = try JSONDecoder().decode(ChangelogOutput.self, from: data)
+        #expect(decoded.presentation?.title == "Changelog • Since 0.8.7")
+        #expect(decoded.presentation?.badgeText == "2")
+        #expect(decoded.presentation?.detailText == nil)
+    }
+
+    @Test
+    @MainActor
     func `changelog command defaults to repo changelog`() async throws {
         let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
