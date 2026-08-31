@@ -85,9 +85,9 @@ struct RepoCommand: CommanderRunnableCommand {
     }
 
     mutating func bind(_ values: ParsedValues) throws {
-        self.includeTraffic = values.flag("traffic")
-        self.includeHeatmap = values.flag("heatmap")
-        self.includeRelease = values.flag("release")
+        self.includeTraffic = values.flag("includeTraffic")
+        self.includeHeatmap = values.flag("includeHeatmap")
+        self.includeRelease = values.flag("includeRelease")
         self.output.bind(values)
 
         if values.positional.count > 1 {

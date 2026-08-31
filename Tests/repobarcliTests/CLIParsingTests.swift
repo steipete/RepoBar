@@ -51,4 +51,65 @@ struct CLIParsingTests {
             _ = try parseRepoName("steipete/RepoBar/issues/1")
         }
     }
+
+    @Test
+    @MainActor
+    func `local reset yes flag binds assume yes`() throws {
+        let defaultCommand = try parseCommand(LocalResetCommand.self, arguments: ["local-reset"])
+        let flaggedCommand = try parseCommand(LocalResetCommand.self, arguments: ["local-reset", "--yes"])
+
+        #expect(defaultCommand.assumeYes == false)
+        #expect(flaggedCommand.assumeYes)
+    }
+
+    @Test
+    @MainActor
+    func `checkout open flag binds open after`() throws {
+        let defaultCommand = try parseCommand(CheckoutCommand.self, arguments: ["checkout"])
+        let flaggedCommand = try parseCommand(CheckoutCommand.self, arguments: ["checkout", "--open"])
+
+        #expect(defaultCommand.openAfter == false)
+        #expect(flaggedCommand.openAfter)
+    }
+
+    @Test
+    @MainActor
+    func `repo traffic flag binds include traffic`() throws {
+        let defaultCommand = try parseCommand(RepoCommand.self, arguments: ["repo"])
+        let flaggedCommand = try parseCommand(RepoCommand.self, arguments: ["repo", "--traffic"])
+
+        #expect(defaultCommand.includeTraffic == false)
+        #expect(flaggedCommand.includeTraffic)
+    }
+
+    @Test
+    @MainActor
+    func `repo heatmap flag binds include heatmap`() throws {
+        let defaultCommand = try parseCommand(RepoCommand.self, arguments: ["repo"])
+        let flaggedCommand = try parseCommand(RepoCommand.self, arguments: ["repo", "--heatmap"])
+
+        #expect(defaultCommand.includeHeatmap == false)
+        #expect(flaggedCommand.includeHeatmap)
+    }
+
+    @Test
+    @MainActor
+    func `repo release flag binds include release`() throws {
+        let defaultCommand = try parseCommand(RepoCommand.self, arguments: ["repo"])
+        let flaggedCommand = try parseCommand(RepoCommand.self, arguments: ["repo", "--release"])
+
+        #expect(defaultCommand.includeRelease == false)
+        #expect(flaggedCommand.includeRelease)
+    }
+}
+
+@MainActor
+private func parseCommand<T: CommanderRunnableCommand>(
+    _: T.Type,
+    arguments: [String]
+) throws -> T {
+    let argv = CLIArgumentNormalizer.normalize(["repobar"] + arguments)
+    let program = Program(descriptors: [RepoBarRoot.descriptor()])
+    let invocation = try program.resolve(argv: argv)
+    return try #require(RepoBarCLI.makeCommand(from: invocation) as? T)
 }

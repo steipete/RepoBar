@@ -117,7 +117,7 @@ struct LocalResetCommand: CommanderRunnableCommand {
 
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
-        self.assumeYes = values.flag("yes")
+        self.assumeYes = values.flag("assumeYes")
         if values.positional.count > 1 {
             throw ValidationError("Only one repository or path can be specified")
         }
@@ -329,7 +329,7 @@ struct CheckoutCommand: CommanderRunnableCommand {
         self.output.bind(values)
         self.root = try values.decodeOption("root")
         self.destination = try values.decodeOption("destination")
-        self.openAfter = values.flag("open")
+        self.openAfter = values.flag("openAfter")
         if values.positional.count > 1 {
             throw ValidationError("Only one repository can be specified")
         }
