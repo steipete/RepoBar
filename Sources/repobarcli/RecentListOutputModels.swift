@@ -43,6 +43,7 @@ struct ReleaseAssetOutput: Encodable {
 
 struct WorkflowRunOutput: Encodable {
     let name: String
+    let workflowName: String?
     let url: URL
     let updatedAt: Date
     let status: CIStatus
@@ -55,6 +56,7 @@ struct WorkflowRunOutput: Encodable {
 
     init(_ run: RepoWorkflowRunSummary) {
         self.name = run.name
+        self.workflowName = run.workflowName
         self.url = run.url
         self.updatedAt = run.updatedAt
         self.status = run.status

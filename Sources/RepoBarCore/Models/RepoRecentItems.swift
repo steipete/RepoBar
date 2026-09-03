@@ -158,6 +158,7 @@ public struct RepoReleaseSummary: Sendable, Hashable {
 
 public struct RepoWorkflowRunSummary: Sendable, Hashable {
     public let name: String
+    public let workflowName: String?
     public let url: URL
     public let updatedAt: Date
     public let status: CIStatus
@@ -170,6 +171,7 @@ public struct RepoWorkflowRunSummary: Sendable, Hashable {
 
     public init(
         name: String,
+        workflowName: String? = nil,
         url: URL,
         updatedAt: Date,
         status: CIStatus,
@@ -181,6 +183,7 @@ public struct RepoWorkflowRunSummary: Sendable, Hashable {
         runNumber: Int?
     ) {
         self.name = name
+        self.workflowName = workflowName
         self.url = url
         self.updatedAt = updatedAt
         self.status = status

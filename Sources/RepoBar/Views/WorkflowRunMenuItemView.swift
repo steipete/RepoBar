@@ -20,6 +20,13 @@ struct WorkflowRunMenuItemView: View {
                     .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                     .lineLimit(2)
 
+                if let workflowName = self.summary.workflowName, workflowName.isEmpty == false {
+                    Text(workflowName)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
+                        .lineLimit(1)
+                }
+
                 HStack(spacing: 6) {
                     if let branch = self.summary.branch, branch.isEmpty == false {
                         Text(branch)

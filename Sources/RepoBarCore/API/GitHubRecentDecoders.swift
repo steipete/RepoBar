@@ -117,6 +117,7 @@ enum GitHubRecentDecoders {
             let updatedAt = run.updatedAt ?? run.createdAt ?? Date.distantPast
             return RepoWorkflowRunSummary(
                 name: title,
+                workflowName: self.workflowName(run, title: title),
                 url: url,
                 updatedAt: updatedAt,
                 status: GitHubStatusMapper.ciStatus(fromStatus: run.status, conclusion: run.conclusion),
@@ -190,6 +191,14 @@ enum GitHubRecentDecoders {
                 contributions: $0.contributions ?? 0
             )
         }
+    }
+
+    /// Returns the workflow name when it adds information beyond the run title.
+    /// GitHub's `name` is the workflow (e.g. "Deploy") while `display_title` is the commit/PR title.
+    private static func workflowName(_ run: ActionsRunsResponse.WorkflowRun, title: String) -> String? {
+        let name = (run.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard name.isEmpty == false, name != title else { return nil }
+        return name
     }
 
     private static func workflowRunTitle(_ run: ActionsRunsResponse.WorkflowRun) -> String {

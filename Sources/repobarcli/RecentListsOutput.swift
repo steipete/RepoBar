@@ -52,10 +52,15 @@ func workflowRunsTableLines(
     guard runs.isEmpty == false else { return ["No workflow runs."] }
 
     let rows = runs.map { run in
-        RepoRecentRow(
+        let name = if let workflowName = run.workflowName, workflowName.isEmpty == false {
+            "\(workflowName) · \(run.name)"
+        } else {
+            run.name
+        }
+        return RepoRecentRow(
             updatedLabel: RelativeFormatter.string(from: run.updatedAt, relativeTo: now),
             primaryLabel: ciStatusLabel(run.status, conclusion: run.conclusion),
-            secondaryLabel: truncate(run.name.singleLine, max: 80),
+            secondaryLabel: truncate(name.singleLine, max: 80),
             tertiaryLabel: run.branch ?? "-",
             url: run.url
         )

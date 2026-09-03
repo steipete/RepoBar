@@ -159,4 +159,49 @@ struct RecentRepoItemsDecodingTests {
         #expect(items.first?.assetCount == 2)
         #expect(items.first?.downloadCount == 15)
     }
+
+    @Test
+    func `actions endpoint exposes workflow name alongside run title`() throws {
+        let json = """
+        {
+          "total_count": 2,
+          "workflow_runs": [
+            {
+              "id": 1,
+              "name": "Deploy",
+              "display_title": "feat(dns): cut over fleet prod to Gateway API LB",
+              "run_number": 100,
+              "event": "push",
+              "head_branch": "main",
+              "status": "completed",
+              "conclusion": "success",
+              "html_url": "https://github.com/acme/widget/actions/runs/1",
+              "updated_at": "2025-12-28T10:00:00Z",
+              "actor": { "login": "alice", "avatar_url": "https://avatars.githubusercontent.com/u/1?v=4" }
+            },
+            {
+              "id": 2,
+              "name": "CI",
+              "display_title": "CI",
+              "run_number": 101,
+              "event": "push",
+              "head_branch": "main",
+              "status": "completed",
+              "conclusion": "success",
+              "html_url": "https://github.com/acme/widget/actions/runs/2",
+              "updated_at": "2025-12-28T11:00:00Z"
+            }
+          ]
+        }
+        """
+
+        let items = try GitHubClient.decodeRecentWorkflowRuns(from: Data(json.utf8))
+        #expect(items.count == 2)
+        #expect(items[0].name == "feat(dns): cut over fleet prod to Gateway API LB")
+        #expect(items[0].workflowName == "Deploy")
+        #expect(items[0].runNumber == 100)
+        // Workflow name is omitted when it merely repeats the run title.
+        #expect(items[1].name == "CI")
+        #expect(items[1].workflowName == nil)
+    }
 }

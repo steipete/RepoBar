@@ -58,6 +58,7 @@ struct RepoRecentItemsInitializerTests {
 
         let run = RepoWorkflowRunSummary(
             name: "CI",
+            workflowName: "Deploy",
             url: url,
             updatedAt: now,
             status: .passing,
@@ -70,6 +71,7 @@ struct RepoRecentItemsInitializerTests {
         )
         #expect(run.status == .passing)
         #expect(run.runNumber == 7)
+        #expect(run.workflowName == "Deploy")
 
         let discussion = RepoDiscussionSummary(
             title: "Discuss",
