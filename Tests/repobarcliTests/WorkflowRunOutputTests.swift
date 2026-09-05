@@ -39,8 +39,8 @@ struct WorkflowRunOutputTests {
             updatedAt: now,
             status: .passing,
             conclusion: "success",
-            event: "push",
             branch: "main",
+            event: "push",
             actorLogin: "alice",
             actorAvatarURL: nil,
             runNumber: 1

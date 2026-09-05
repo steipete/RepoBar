@@ -198,6 +198,7 @@ enum GitHubRecentDecoders {
     private static func workflowName(_ run: ActionsRunsResponse.WorkflowRun, title: String) -> String? {
         let name = (run.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         guard name.isEmpty == false, name != title else { return nil }
+
         return name
     }
 
