@@ -2,6 +2,7 @@
 
 ## 0.8.8 - Unreleased
 
+- Distinguish CI runs for the same commit by showing workflow names in the menu and CLI output (thanks @jiimaho). (#115)
 - Honor `repobar changelog --release` and count newer dated entries when the Unreleased section is empty (thanks @devYRPauli). (#109)
 - Update AppAuth to 3.0.0, refresh Apollo, Kingfisher, Sparkle, and Octokit dependencies, and update pnpm and the Node.js setup action.
 - Rewrite the README around installation and first use, with dynamic project badges and tighter links to reference documentation.

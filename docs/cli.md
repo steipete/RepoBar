@@ -55,6 +55,7 @@ The file store lives under `~/Library/Application Support/RepoBar/DebugAuth`. Se
   - Flags: `--limit`.
 - `ci <owner/name>`: workflow runs / CI runs.
   - Flags: `--limit`.
+  - The table shows `workflow · run title` when the workflow name differs from the run title. JSON includes an optional `workflowName` field in that case and omits it otherwise.
 - `discussions <owner/name>`: recent discussions.
   - Flags: `--limit`.
 - `tags <owner/name>`: recent tags.
