@@ -2,11 +2,10 @@
 
 ## 0.8.8 - Unreleased
 
-- Update pnpm to 11.25.0 and Octokit request tooling to 10.0.16.
 - Honor `repobar changelog --release` and count newer dated entries when the Unreleased section is empty (thanks @devYRPauli). (#109)
-- Update AppAuth to 3.0.0, refresh Apollo, Kingfisher, Sparkle, and Octokit dependencies, and update pnpm and the Node.js setup action.
+- Honor `local-reset --yes`, `checkout --open`, and `repo --traffic`, `--heatmap`, and `--release`, which were silently ignored (thanks @devYRPauli). (#113)
 - Rewrite the README around installation and first use, with dynamic project badges and tighter links to reference documentation.
-- Update Sparkle, swift-log, Swiftdansi, Octokit request tooling, and tsx to their latest compatible releases.
+- Update AppAuth to 3.0.0 and refresh Apollo, Kingfisher, Sparkle, swift-log, Swiftdansi, GraphQL, Octokit, tsx, pnpm, and the Node.js setup action.
 
 ## 0.8.7 - 2026-08-02
 
