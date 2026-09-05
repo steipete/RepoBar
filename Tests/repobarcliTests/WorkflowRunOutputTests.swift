@@ -1,6 +1,6 @@
 import Foundation
 @testable import repobarcli
-import RepoBarCore
+@testable import RepoBarCore
 import Testing
 
 struct WorkflowRunOutputTests {
