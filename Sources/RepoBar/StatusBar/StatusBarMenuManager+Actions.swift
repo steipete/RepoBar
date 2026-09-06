@@ -156,8 +156,8 @@ extension StatusBarMenuManager {
         let settings = self.appState.session.settings.localProjects
         guard let rootPath = settings.rootPath, rootPath.isEmpty == false else {
             let alert = NSAlert()
-            alert.messageText = "Set a local projects folder"
-            alert.informativeText = "Choose a Local Projects folder in Settings to enable checkout."
+            alert.messageText = AppLocalizer().string("Set a local projects folder")
+            alert.informativeText = AppLocalizer().string("Choose a Local Projects folder in Settings to enable checkout.")
             alert.addButton(withTitle: "Open Settings")
             alert.addButton(withTitle: "Cancel")
             if alert.runModal() == .alertFirstButtonReturn {

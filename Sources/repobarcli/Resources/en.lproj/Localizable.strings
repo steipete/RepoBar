@@ -1,0 +1,21 @@
+"cli.description" = "List repositories by activity, issues, pull requests, and stars";
+"cli.options" = "Options";
+"cli.usage" = "Usage";
+
+"yes" = "yes";
+"no" = "no";
+"unknown" = "unknown";
+"ready" = "ready";
+"not ready" = "not ready";
+"valid" = "valid";
+"invalid" = "invalid";
+"enabled" = "enabled";
+"disabled" = "disabled";
+"No pinned repositories to show." = "No pinned repositories to show.";
+"No hidden repositories to show." = "No hidden repositories to show.";
+"No repositories found." = "No repositories found.";
+"No GitHub archives configured." = "No GitHub archives configured.";
+"Logged out." = "Logged out.";
+"Logged in." = "Logged in.";
+"Traffic: unavailable" = "Traffic: unavailable";
+"Release: none" = "Release: none";

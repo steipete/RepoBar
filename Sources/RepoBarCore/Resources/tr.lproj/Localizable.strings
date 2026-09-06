@@ -1,0 +1,10 @@
+"error.noInternet" = "İnternet bağlantısı yok.";
+"error.timeout" = "İstek zaman aşımına uğradı.";
+"error.rateLimited" = "Hız sınırına ulaşıldı; kısa süre sonra yeniden deneyin.";
+"error.unexpectedResponse" = "GitHub beklenmeyen bir yanıt döndürdü.";
+"error.authenticationRequired" = "Kimlik doğrulaması gerekli. Lütfen yeniden giriş yapın.";
+"error.untrustedCertificate" = "Kurumsal sunucu sertifikasına güvenilmiyor.";
+"relative.future.seconds" = "%lld sn. sonra";
+"relative.past.seconds" = "%lld sn. önce";
+"relative.future.minutes" = "%lld dk. sonra";
+"relative.past.minutes" = "%lld dk. önce";

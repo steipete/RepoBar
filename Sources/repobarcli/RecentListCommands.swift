@@ -23,14 +23,14 @@ struct ReleasesCommand: CommanderRunnableCommand {
         self.limit = try values.decodeOption("limit") ?? 20
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repo = try requireRepoIdentifier(self.repoName)
 
@@ -48,10 +48,10 @@ struct ReleasesCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Releases: \(repo.fullName)")
+            cliPrint("Releases: \(repo.fullName)")
         }
         for line in releasesTableLines(releases, useColor: self.output.useColor, includeURL: self.output.plain == false, now: Date()) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -77,14 +77,14 @@ struct CICommand: CommanderRunnableCommand {
         self.limit = try values.decodeOption("limit") ?? 20
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repo = try requireRepoIdentifier(self.repoName)
 
@@ -102,10 +102,10 @@ struct CICommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("CI Runs: \(repo.fullName)")
+            cliPrint("CI Runs: \(repo.fullName)")
         }
         for line in workflowRunsTableLines(runs, useColor: self.output.useColor, includeURL: self.output.plain == false, now: Date()) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -131,14 +131,14 @@ struct DiscussionsCommand: CommanderRunnableCommand {
         self.limit = try values.decodeOption("limit") ?? 20
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repo = try requireRepoIdentifier(self.repoName)
 
@@ -156,10 +156,10 @@ struct DiscussionsCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Discussions: \(repo.fullName)")
+            cliPrint("Discussions: \(repo.fullName)")
         }
         for line in discussionsTableLines(discussions, useColor: self.output.useColor, includeURL: self.output.plain == false, now: Date()) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -185,14 +185,14 @@ struct TagsCommand: CommanderRunnableCommand {
         self.limit = try values.decodeOption("limit") ?? 20
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repo = try requireRepoIdentifier(self.repoName)
 
@@ -210,10 +210,10 @@ struct TagsCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Tags: \(repo.fullName)")
+            cliPrint("Tags: \(repo.fullName)")
         }
         for line in tagsTableLines(tags, useColor: self.output.useColor, includeURL: self.output.plain == false) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -239,14 +239,14 @@ struct BranchesCommand: CommanderRunnableCommand {
         self.limit = try values.decodeOption("limit") ?? 20
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repo = try requireRepoIdentifier(self.repoName)
 
@@ -264,10 +264,10 @@ struct BranchesCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Branches: \(repo.fullName)")
+            cliPrint("Branches: \(repo.fullName)")
         }
         for line in branchesTableLines(branches, useColor: self.output.useColor, includeURL: self.output.plain == false) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -293,14 +293,14 @@ struct ContributorsCommand: CommanderRunnableCommand {
         self.limit = try values.decodeOption("limit") ?? 20
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repo = try requireRepoIdentifier(self.repoName)
 
@@ -318,10 +318,10 @@ struct ContributorsCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Contributors: \(repo.fullName)")
+            cliPrint("Contributors: \(repo.fullName)")
         }
         for line in contributorsTableLines(contributors, useColor: self.output.useColor, includeURL: self.output.plain == false) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -355,14 +355,14 @@ struct CommitsCommand: CommanderRunnableCommand {
         self.scope = try values.decodeOption("scope")
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or login can be specified")
+            throw ValidationError(cliText("Only one repository or login can be specified"))
         }
         self.target = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let context = try await makeAuthenticatedClient()
 
@@ -382,10 +382,10 @@ struct CommitsCommand: CommanderRunnableCommand {
             }
 
             if self.output.plain == false, self.output.useColor {
-                print("Commits: \(repo.fullName)")
+                cliPrint("Commits: \(repo.fullName)")
             }
             for line in commitsTableLines(commits.items, useColor: self.output.useColor, includeURL: self.output.plain == false, now: Date()) {
-                print(line)
+                Swift.print(line)
             }
             return
         }
@@ -410,10 +410,10 @@ struct CommitsCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Commits: \(login)")
+            cliPrint("Commits: \(login)")
         }
         for line in globalCommitsTableLines(commits, useColor: self.output.useColor, includeURL: self.output.plain == false, now: Date()) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -451,20 +451,20 @@ struct ActivityCommand: CommanderRunnableCommand {
         self.includeRepos = values.flag("includeRepos")
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or login can be specified")
+            throw ValidationError(cliText("Only one repository or login can be specified"))
         }
         self.target = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let context = try await makeAuthenticatedClient()
 
         if let target, target.contains("/") {
             if self.includeRepos {
-                throw ValidationError("--include-repos is only available for global activity")
+                throw ValidationError(cliText("--include-repos is only available for global activity"))
             }
             let repoID = try parseRepoName(target)
             let repo = try await context.client.fullRepository(owner: repoID.owner, name: repoID.name)
@@ -481,10 +481,10 @@ struct ActivityCommand: CommanderRunnableCommand {
             }
 
             if self.output.plain == false, self.output.useColor {
-                print("Activity: \(repoID.fullName)")
+                cliPrint("Activity: \(repoID.fullName)")
             }
             for line in activityTableLines(events, useColor: self.output.useColor, includeURL: self.output.plain == false, now: Date()) {
-                print(line)
+                Swift.print(line)
             }
             return
         }
@@ -522,7 +522,7 @@ struct ActivityCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Activity: \(login)")
+            cliPrint("Activity: \(login)")
         }
         let host = context.host
         for line in globalActivityTableLines(
@@ -532,7 +532,7 @@ struct ActivityCommand: CommanderRunnableCommand {
             now: Date(),
             repoHost: host
         ) {
-            print(line)
+            Swift.print(line)
         }
     }
 }

@@ -50,10 +50,10 @@ struct ContributionsCommand: CommanderRunnableCommand {
             )
             try printJSON(output)
         } else {
-            print("User: \(resolvedLogin)")
-            print("Days: \(cells.count)")
-            print("Total contributions: \(total)")
-            print("Max in a day: \(maxCount)")
+            cliPrint("User: \(resolvedLogin)")
+            cliPrint("Days: \(cells.count)")
+            cliPrint("Total contributions: \(total)")
+            cliPrint("Max in a day: \(maxCount)")
         }
     }
 }
@@ -91,7 +91,7 @@ struct RepoCommand: CommanderRunnableCommand {
         self.output.bind(values)
 
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
@@ -122,43 +122,43 @@ struct RepoCommand: CommanderRunnableCommand {
         }
 
         let ciSuffix = repo.ciRunCount.map { " (\($0))" } ?? ""
-        print("Repository: \(repo.fullName)")
-        print("CI: \(repo.ciStatus.description)\(ciSuffix)")
-        print("Issues: \(repo.stats.openIssues)")
-        print("PRs: \(repo.stats.openPulls)")
+        cliPrint("Repository: \(repo.fullName)")
+        cliPrint("CI: \(repo.ciStatus.description)\(ciSuffix)")
+        cliPrint("Issues: \(repo.stats.openIssues)")
+        cliPrint("PRs: \(repo.stats.openPulls)")
 
         if self.includeRelease {
             if let release = repo.latestRelease {
                 let dateText = RelativeFormatter.string(from: release.publishedAt, relativeTo: Date())
-                print("Release: \(release.name) (\(dateText))")
+                cliPrint("Release: \(release.name) (\(dateText))")
             } else {
-                print("Release: none")
+                cliPrint("Release: none")
             }
         }
 
         if self.includeTraffic {
             if let traffic = repo.traffic {
-                print("Traffic: \(traffic.uniqueVisitors) visitors, \(traffic.uniqueCloners) cloners")
+                cliPrint("Traffic: \(traffic.uniqueVisitors) visitors, \(traffic.uniqueCloners) cloners")
             } else {
-                print("Traffic: unavailable")
+                cliPrint("Traffic: unavailable")
             }
         }
 
         if self.includeHeatmap {
             let maxCount = repo.heatmap.map(\.count).max() ?? 0
-            print("Heatmap days: \(repo.heatmap.count), max \(maxCount)")
+            cliPrint("Heatmap days: \(repo.heatmap.count), max \(maxCount)")
         }
 
         if let activity = repo.latestActivity {
             let when = RelativeFormatter.string(from: activity.date, relativeTo: Date())
-            print("Activity: \(activity.title.singleLine) (\(when))")
+            cliPrint("Activity: \(activity.title.singleLine) (\(when))")
         }
 
         if let error = repo.error {
-            print("Error: \(error)")
+            cliPrint("Error: \(error)")
         }
         if let limit = repo.rateLimitedUntil {
-            print("Rate limited until \(RelativeFormatter.string(from: limit, relativeTo: Date()))")
+            cliPrint("Rate limited until \(RelativeFormatter.string(from: limit, relativeTo: Date()))")
         }
     }
 }
@@ -188,14 +188,14 @@ struct IssuesCommand: CommanderRunnableCommand {
         self.output.bind(values)
 
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repoID = try requireRepoIdentifier(self.repoName)
 
@@ -221,7 +221,7 @@ struct IssuesCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Issues: \(repoID.fullName)")
+            cliPrint("Issues: \(repoID.fullName)")
         }
         let lines = issuesTableLines(
             issues,
@@ -230,7 +230,7 @@ struct IssuesCommand: CommanderRunnableCommand {
             now: Date()
         )
         for line in lines {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -260,14 +260,14 @@ struct PullsCommand: CommanderRunnableCommand {
         self.output.bind(values)
 
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
 
     mutating func run() async throws {
         if self.limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         let repoID = try requireRepoIdentifier(self.repoName)
 
@@ -294,7 +294,7 @@ struct PullsCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Pull Requests: \(repoID.fullName)")
+            cliPrint("Pull Requests: \(repoID.fullName)")
         }
         let lines = pullsTableLines(
             pulls,
@@ -303,7 +303,7 @@ struct PullsCommand: CommanderRunnableCommand {
             now: Date()
         )
         for line in lines {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -335,7 +335,7 @@ struct RefreshCommand: CommanderRunnableCommand {
             if self.output.jsonOutput {
                 try printJSON(RefreshOutput(count: 0, repositories: []))
             } else {
-                print("No pinned repositories to refresh.")
+                cliPrint("No pinned repositories to refresh.")
             }
             return
         }
@@ -345,12 +345,12 @@ struct RefreshCommand: CommanderRunnableCommand {
         if self.output.jsonOutput {
             try printJSON(RefreshOutput(count: results.count, repositories: results))
         } else {
-            print("Refreshed \(results.count) repositories:")
+            cliPrint("Refreshed \(results.count) repositories:")
             for result in results {
                 if let error = result.error {
-                    print("- \(result.fullName): \(error)")
+                    cliPrint("- \(result.fullName): \(error)")
                 } else {
-                    print("- \(result.fullName)")
+                    cliPrint("- \(result.fullName)")
                 }
             }
         }

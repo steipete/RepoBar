@@ -37,7 +37,7 @@ final class IssueNavigatorWindowController: NSObject, NSWindowDelegate {
             let hosting = NSHostingController(rootView: rootView)
             let window = NSWindow(contentViewController: hosting)
             window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
-            window.title = "Issue Navigator"
+            window.title = AppLocalizer().string("Issue Navigator")
             window.isReleasedWhenClosed = false
             window.titlebarAppearsTransparent = true
             window.toolbarStyle = .unified

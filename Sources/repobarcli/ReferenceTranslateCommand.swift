@@ -26,7 +26,7 @@ struct ReferenceTranslateCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         guard let text, text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else {
-            throw ValidationError("Missing reference text")
+            throw ValidationError(cliText("Missing reference text"))
         }
 
         let repositoryFullName = await GitHubReferenceLocalContext.repositoryFullName(in: text)
@@ -40,37 +40,37 @@ struct ReferenceTranslateCommand: CommanderRunnableCommand {
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(result)
             if let json = String(data: data, encoding: .utf8) {
-                print(json)
+                Swift.print(json)
             }
             return
         }
 
         guard result.matched else {
-            print("No GitHub reference")
+            cliPrint("No GitHub reference")
             return
         }
 
-        print("query: \(result.query ?? "-")")
-        print("display: \(result.displayText ?? "-")")
+        cliPrint("query: \(result.query ?? "-")")
+        cliPrint("display: \(result.displayText ?? "-")")
         if let repositoryFullName = result.repositoryFullName {
-            print("repo: \(repositoryFullName)")
+            cliPrint("repo: \(repositoryFullName)")
         }
         if let repositoryName = result.repositoryName {
-            print("repo-name: \(repositoryName)")
+            cliPrint("repo-name: \(repositoryName)")
         }
         if let number = result.number {
-            print("number: \(number)")
+            cliPrint("number: \(number)")
         }
         if let hash = result.hash {
-            print("hash: \(hash)")
+            cliPrint("hash: \(hash)")
         }
         if let runID = result.runID {
-            print("run: \(runID)")
+            cliPrint("run: \(runID)")
         }
         if result.matches.count > 1 {
-            print("matches: \(result.matches.count)")
+            cliPrint("matches: \(result.matches.count)")
             for match in result.matches {
-                print("- \(match.displayText)")
+                cliPrint("- \(match.displayText)")
             }
         }
     }

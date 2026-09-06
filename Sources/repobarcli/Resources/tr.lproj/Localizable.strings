@@ -1,0 +1,21 @@
+"cli.description" = "Depoları etkinlik, sorunlar, çekme istekleri ve yıldızlara göre listeleyin";
+"cli.options" = "Seçenekler";
+"cli.usage" = "Kullanım";
+
+"yes" = "evet";
+"no" = "hayır";
+"unknown" = "bilinmiyor";
+"ready" = "hazır";
+"not ready" = "hazır değil";
+"valid" = "geçerli";
+"invalid" = "geçersiz";
+"enabled" = "etkin";
+"disabled" = "devre dışı";
+"No pinned repositories to show." = "Gösterilecek sabitlenmiş depo yok.";
+"No hidden repositories to show." = "Gösterilecek gizli depo yok.";
+"No repositories found." = "Depo bulunamadı.";
+"No GitHub archives configured." = "Yapılandırılmış GitHub arşivi yok.";
+"Logged out." = "Çıkış yapıldı.";
+"Logged in." = "Giriş yapıldı.";
+"Traffic: unavailable" = "Trafik: kullanılamıyor";
+"Release: none" = "Sürüm: yok";

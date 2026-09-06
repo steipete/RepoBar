@@ -38,10 +38,10 @@ struct LocalProjectsCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         if self.depth < 0 {
-            throw ValidationError("--depth must be >= 0")
+            throw ValidationError(cliText("--depth must be >= 0"))
         }
         if let limit, limit <= 0 {
-            throw ValidationError("--limit must be > 0")
+            throw ValidationError(cliText("--limit must be > 0"))
         }
 
         let settings = cliSettingsStore().load()
@@ -51,7 +51,7 @@ struct LocalProjectsCommand: CommanderRunnableCommand {
         let resolvedRoot = PathFormatter.expandTilde(rootPath)
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: resolvedRoot, isDirectory: &isDirectory), isDirectory.boolValue else {
-            throw ValidationError("Local projects root does not exist: \(PathFormatter.displayString(resolvedRoot))")
+            throw ValidationError(cliText("Local projects root does not exist: \(PathFormatter.displayString(resolvedRoot))"))
         }
 
         let service = LocalProjectsService()
@@ -79,21 +79,21 @@ struct LocalProjectsCommand: CommanderRunnableCommand {
             )
             let data = try encoder.encode(payload)
             if let json = String(data: data, encoding: .utf8) {
-                print(json)
+                Swift.print(json)
             }
             return
         }
 
-        print("Local projects")
-        print("Root: \(displayRoot)")
-        print("Resolved: \(resolvedRoot)")
-        print("Depth: \(self.depth)")
+        cliPrint("Local projects")
+        cliPrint("Root: \(displayRoot)")
+        cliPrint("Resolved: \(resolvedRoot)")
+        cliPrint("Depth: \(self.depth)")
         if self.sync {
-            print("Synced: \(snapshot.syncedStatuses.count)")
+            cliPrint("Synced: \(snapshot.syncedStatuses.count)")
         }
-        print("Discovered: \(snapshot.discoveredRepoCount)")
+        cliPrint("Discovered: \(snapshot.discoveredRepoCount)")
         if statuses.isEmpty {
-            print("No repositories found.")
+            cliPrint("No repositories found.")
             return
         }
 
@@ -103,7 +103,7 @@ struct LocalProjectsCommand: CommanderRunnableCommand {
             showSync: self.sync,
             syncedPaths: syncedPaths
         ) {
-            print(line)
+            Swift.print(line)
         }
     }
 }

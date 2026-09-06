@@ -19,7 +19,7 @@ struct LocalSyncCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or path can be specified")
+            throw ValidationError(cliText("Only one repository or path can be specified"))
         }
         self.target = values.positional.first
     }
@@ -45,10 +45,10 @@ struct LocalSyncCommand: CommanderRunnableCommand {
         }
 
         let display = resolved.displayName
-        print("Synced \(display)")
-        print("Fetch: \(result.didFetch ? "yes" : "no")")
-        print("Pull: \(result.didPull ? "yes" : "no")")
-        print("Push: \(result.didPush ? "yes" : "no")")
+        cliPrint("Synced \(display)")
+        cliPrint("Fetch: \(result.didFetch ? "yes" : "no")")
+        cliPrint("Pull: \(result.didPull ? "yes" : "no")")
+        cliPrint("Push: \(result.didPush ? "yes" : "no")")
     }
 }
 
@@ -69,7 +69,7 @@ struct LocalRebaseCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or path can be specified")
+            throw ValidationError(cliText("Only one repository or path can be specified"))
         }
         self.target = values.positional.first
     }
@@ -94,7 +94,7 @@ struct LocalRebaseCommand: CommanderRunnableCommand {
             return
         }
 
-        print("Rebased \(resolved.displayName)")
+        cliPrint("Rebased \(resolved.displayName)")
     }
 }
 
@@ -119,7 +119,7 @@ struct LocalResetCommand: CommanderRunnableCommand {
         self.output.bind(values)
         self.assumeYes = values.flag("assumeYes")
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or path can be specified")
+            throw ValidationError(cliText("Only one repository or path can be specified"))
         }
         self.target = values.positional.first
     }
@@ -149,7 +149,7 @@ struct LocalResetCommand: CommanderRunnableCommand {
             return
         }
 
-        print("Reset \(resolved.displayName)")
+        cliPrint("Reset \(resolved.displayName)")
     }
 }
 
@@ -170,7 +170,7 @@ struct LocalBranchesCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or path can be specified")
+            throw ValidationError(cliText("Only one repository or path can be specified"))
         }
         self.target = values.positional.first
     }
@@ -193,10 +193,10 @@ struct LocalBranchesCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Branches: \(resolved.displayName)")
+            cliPrint("Branches: \(resolved.displayName)")
         }
         for line in localBranchesTableLines(snapshot, useColor: self.output.useColor, now: Date()) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -218,7 +218,7 @@ struct WorktreesCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or path can be specified")
+            throw ValidationError(cliText("Only one repository or path can be specified"))
         }
         self.target = values.positional.first
     }
@@ -240,10 +240,10 @@ struct WorktreesCommand: CommanderRunnableCommand {
         }
 
         if self.output.plain == false, self.output.useColor {
-            print("Worktrees: \(resolved.displayName)")
+            cliPrint("Worktrees: \(resolved.displayName)")
         }
         for line in localWorktreesTableLines(worktrees, useColor: self.output.useColor, now: Date()) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -261,7 +261,7 @@ struct OpenFinderCommand: CommanderRunnableCommand {
 
     mutating func bind(_ values: ParsedValues) throws {
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or path can be specified")
+            throw ValidationError(cliText("Only one repository or path can be specified"))
         }
         self.target = values.positional.first
     }
@@ -271,7 +271,7 @@ struct OpenFinderCommand: CommanderRunnableCommand {
         let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         try openPath(resolved.path.path)
-        print("Opened Finder at \(resolved.displayName)")
+        cliPrint("Opened Finder at \(resolved.displayName)")
     }
 }
 
@@ -288,7 +288,7 @@ struct OpenTerminalCommand: CommanderRunnableCommand {
 
     mutating func bind(_ values: ParsedValues) throws {
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository or path can be specified")
+            throw ValidationError(cliText("Only one repository or path can be specified"))
         }
         self.target = values.positional.first
     }
@@ -298,7 +298,7 @@ struct OpenTerminalCommand: CommanderRunnableCommand {
         let settings = cliSettingsStore().load()
         let resolved = try await resolveLocalRepoTarget(target, settings: settings)
         try openTerminal(at: resolved.path, settings: settings)
-        print("Opened terminal at \(resolved.displayName)")
+        cliPrint("Opened terminal at \(resolved.displayName)")
     }
 }
 
@@ -331,7 +331,7 @@ struct CheckoutCommand: CommanderRunnableCommand {
         self.destination = try values.decodeOption("destination")
         self.openAfter = values.flag("openAfter")
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
@@ -344,7 +344,7 @@ struct CheckoutCommand: CommanderRunnableCommand {
 
         let rootPath = self.destination == nil ? (self.root ?? settings.localProjects.rootPath) : nil
         if self.destination == nil, rootPath?.isEmpty ?? true {
-            throw ValidationError("Set a Local Projects root in Settings or pass --root")
+            throw ValidationError(cliText("Set a Local Projects root in Settings or pass --root"))
         }
 
         let destinationURL: URL
@@ -357,7 +357,7 @@ struct CheckoutCommand: CommanderRunnableCommand {
         }
 
         if FileManager.default.fileExists(atPath: destinationURL.path) {
-            throw ValidationError("Destination already exists: \(PathFormatter.displayString(destinationURL.path))")
+            throw ValidationError(cliText("Destination already exists: \(PathFormatter.displayString(destinationURL.path))"))
         }
 
         var remoteURL = host.appendingPathComponent(repo.fullName)
@@ -382,6 +382,6 @@ struct CheckoutCommand: CommanderRunnableCommand {
             return
         }
 
-        print("Checked out \(repo.fullName) → \(PathFormatter.displayString(destinationURL.path))")
+        cliPrint("Checked out \(repo.fullName) → \(PathFormatter.displayString(destinationURL.path))")
     }
 }

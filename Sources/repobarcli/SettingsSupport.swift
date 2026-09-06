@@ -139,7 +139,7 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         return flag ? "on" : "off"
     case .menuSort:
         guard let sort = RepositorySortKey(argument: value) else {
-            throw ValidationError("Invalid menu-sort value: \(value)")
+            throw ValidationError(cliText("Invalid menu-sort value: \(value)"))
         }
 
         settings.repoList.menuSortKey = sort
@@ -163,7 +163,7 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         return flag ? "on" : "off"
     case .actionsPlanTier:
         guard let tier = GitHubPlanTier(argument: value) else {
-            throw ValidationError("Invalid actions-plan-tier value: \(value)")
+            throw ValidationError(cliText("Invalid actions-plan-tier value: \(value)"))
         }
 
         settings.actions.planTier = tier
@@ -210,7 +210,7 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         return flag ? "on" : "off"
     case .cardDensity:
         guard let density = CardDensity(rawValue: value.lowercased()) else {
-            throw ValidationError("Invalid card-density value: \(value)")
+            throw ValidationError(cliText("Invalid card-density value: \(value)"))
         }
 
         settings.appearance.cardDensity = density
@@ -222,20 +222,20 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         case "system": tone = .system
         case "github", "github-green", "githubgreen", "green": tone = .githubGreen
         default:
-            throw ValidationError("Invalid accent-tone value: \(value)")
+            throw ValidationError(cliText("Invalid accent-tone value: \(value)"))
         }
         settings.appearance.accentTone = tone
         return tone.rawValue
     case .activityScope:
         guard let scope = GlobalActivityScope(argument: value) else {
-            throw ValidationError("Invalid activity-scope value: \(value)")
+            throw ValidationError(cliText("Invalid activity-scope value: \(value)"))
         }
 
         settings.appearance.activityScope = scope
         return scope.rawValue
     case .heatmapDisplay:
         guard let display = HeatmapDisplay(rawValue: value.lowercased()) else {
-            throw ValidationError("Invalid heatmap-display value: \(value)")
+            throw ValidationError(cliText("Invalid heatmap-display value: \(value)"))
         }
 
         settings.heatmap.display = display
@@ -267,7 +267,7 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
         case "tab": mode = .tab
         case "new-window", "newwindow", "window": mode = .newWindow
         default:
-            throw ValidationError("Invalid local-ghostty-mode value: \(value)")
+            throw ValidationError(cliText("Invalid local-ghostty-mode value: \(value)"))
         }
         settings.localProjects.ghosttyOpenMode = mode
         return mode.rawValue
@@ -374,7 +374,7 @@ func parseBool(_ raw: String) throws -> Bool {
     case "0", "false", "no", "n", "off":
         return false
     default:
-        throw ValidationError("Invalid boolean value: \(raw)")
+        throw ValidationError(cliText("Invalid boolean value: \(raw)"))
     }
 }
 
@@ -385,7 +385,7 @@ func parsePullRequestNotificationClickAction(_ raw: String) throws -> GitHubPull
     case "issue-navigator", "navigator", "issue", "issues", "open-issue-navigator", "openissuenavigator":
         return .openIssueNavigator
     default:
-        throw ValidationError("Invalid pull-request-notification-click value: \(raw)")
+        throw ValidationError(cliText("Invalid pull-request-notification-click value: \(raw)"))
     }
 }
 
@@ -400,7 +400,7 @@ func parseOwnerList(_ raw: String) -> [String] {
 
 func parsePositiveInt(_ raw: String, label: String) throws -> Int {
     guard let value = Int(raw), value > 0 else {
-        throw ValidationError("Invalid \(label) value: \(raw)")
+        throw ValidationError(cliText("Invalid \(label) value: \(raw)"))
     }
 
     return value
@@ -417,7 +417,7 @@ func parseRefreshInterval(_ raw: String) throws -> RefreshInterval {
     case "15", "15m", "fifteen", "fifteen-minute", "fifteenminute":
         return .fifteenMinutes
     default:
-        throw ValidationError("Invalid refresh-interval value: \(raw)")
+        throw ValidationError(cliText("Invalid refresh-interval value: \(raw)"))
     }
 }
 
@@ -432,7 +432,7 @@ func parseLocalFetchInterval(_ raw: String) throws -> LocalProjectsRefreshInterv
     case "15", "15m", "fifteen", "fifteen-minute", "fifteenminute":
         return .fifteenMinutes
     default:
-        throw ValidationError("Invalid local-fetch-interval value: \(raw)")
+        throw ValidationError(cliText("Invalid local-fetch-interval value: \(raw)"))
     }
 }
 
@@ -447,7 +447,7 @@ func parseHeatmapSpan(_ raw: String) throws -> HeatmapSpan {
     case "12", "12m", "twelve", "twelve-month", "twelvemonth", "year", "1y":
         return .twelveMonths
     default:
-        throw ValidationError("Invalid heatmap-span value: \(raw)")
+        throw ValidationError(cliText("Invalid heatmap-span value: \(raw)"))
     }
 }
 
@@ -475,7 +475,7 @@ func renderRepoListUpdate(action: String, repoName: String, settings: UserSettin
         try printJSON(payload)
         return
     }
-    print("\(action) \(repoName)")
+    cliPrint("\(action) \(repoName)")
 }
 
 struct RepoListOutput: Encodable {

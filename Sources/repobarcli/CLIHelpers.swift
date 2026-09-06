@@ -36,7 +36,7 @@ extension ParsedValues {
     func decodeOption<T: ExpressibleFromArgument>(_ label: String) throws -> T? {
         guard let raw = options[label]?.last else { return nil }
         guard let value = T(argument: raw) else {
-            throw ValidationError("Invalid value for --\(label): \(raw)")
+            throw ValidationError(cliText("Invalid value for --\(label): \(raw)"))
         }
 
         return value
@@ -174,9 +174,9 @@ extension String {
 
 func printError(_ message: String) {
     if Ansi.supportsColor {
-        print(Ansi.red.wrap("Error: \(message)"))
+        cliPrint(Ansi.red.wrap("Error: \(message)"))
     } else {
-        print("Error: \(message)")
+        cliPrint("Error: \(message)")
     }
 }
 
@@ -186,7 +186,7 @@ func printJSON(_ output: some Encodable) throws {
     encoder.dateEncodingStrategy = .iso8601
     let data = try encoder.encode(output)
     if let json = String(data: data, encoding: .utf8) {
-        print(json)
+        Swift.print(json)
     }
 }
 
@@ -214,14 +214,14 @@ func openPath(_ path: String, application: String? = nil) throws {
 
 func parseHost(_ raw: String) throws -> URL {
     guard var components = URLComponents(string: raw) else {
-        throw ValidationError("Invalid host: \(raw)")
+        throw ValidationError(cliText("Invalid host: \(raw)"))
     }
 
     if components.scheme == nil {
         components.scheme = "https"
     }
     guard let url = components.url else {
-        throw ValidationError("Invalid host: \(raw)")
+        throw ValidationError(cliText("Invalid host: \(raw)"))
     }
 
     return url

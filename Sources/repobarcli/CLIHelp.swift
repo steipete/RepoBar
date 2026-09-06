@@ -789,5 +789,30 @@ func printHelp(_ target: HelpTarget) {
           repobar status [--json]
         """
     }
-    print(text)
+    cliPrint(localizedHelp(text))
+}
+
+private func localizedHelp(_ text: String) -> String {
+    guard CLILocalizer().locale.language.languageCode?.identifier == "tr" else {
+        return text
+    }
+
+    return text
+        .replacingOccurrences(of: "Usage:", with: "Kullanım:")
+        .replacingOccurrences(of: "Options:", with: "Seçenekler:")
+        .replacingOccurrences(of: "Prerequisites:", with: "Ön koşullar:")
+        .replacingOccurrences(
+            of: "repobar - list repositories by activity, issues, PRs, stars",
+            with: "repobar - depoları etkinlik, sorunlar, PR'ler ve yıldızlara göre listele"
+        )
+        .replacingOccurrences(of: " - show ", with: " - göster: ")
+        .replacingOccurrences(of: " - add ", with: " - ekle: ")
+        .replacingOccurrences(of: " - remove ", with: " - kaldır: ")
+        .replacingOccurrences(of: " - enable ", with: " - etkinleştir: ")
+        .replacingOccurrences(of: " - disable ", with: " - devre dışı bırak: ")
+        .replacingOccurrences(of: " - clear ", with: " - temizle: ")
+        .replacingOccurrences(of: "Show help", with: "Yardımı göster")
+        .replacingOccurrences(of: "Disable color output", with: "Renkli çıktıyı devre dışı bırak")
+        .replacingOccurrences(of: "Output JSON instead of formatted text", with: "Biçimlendirilmiş metin yerine JSON çıktısı ver")
+        .replacingOccurrences(of: "Plain output (no links, no colors)", with: "Düz çıktı (bağlantı ve renk yok)")
 }

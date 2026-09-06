@@ -19,7 +19,7 @@ struct PinCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
@@ -62,7 +62,7 @@ struct UnpinCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
@@ -102,7 +102,7 @@ struct HideCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
@@ -145,7 +145,7 @@ struct ShowCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 1 {
-            throw ValidationError("Only one repository can be specified")
+            throw ValidationError(cliText("Only one repository can be specified"))
         }
         self.repoName = values.positional.first
     }
@@ -192,7 +192,7 @@ struct SettingsShowCommand: CommanderRunnableCommand {
         }
 
         for line in settingsSummaryLines(settings: settings) {
-            print(line)
+            Swift.print(line)
         }
     }
 }
@@ -217,7 +217,7 @@ struct SettingsSetCommand: CommanderRunnableCommand {
     mutating func bind(_ values: ParsedValues) throws {
         self.output.bind(values)
         if values.positional.count > 2 {
-            throw ValidationError("Expected a setting key and value")
+            throw ValidationError(cliText("Expected a setting key and value"))
         }
         self.key = values.positional.first
         self.value = values.positional.dropFirst().first
@@ -225,13 +225,13 @@ struct SettingsSetCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         guard let key, key.isEmpty == false else {
-            throw ValidationError("Missing settings key")
+            throw ValidationError(cliText("Missing settings key"))
         }
         guard let value, value.isEmpty == false else {
-            throw ValidationError("Missing settings value")
+            throw ValidationError(cliText("Missing settings value"))
         }
         guard let settingKey = SettingsKey(argument: key) else {
-            throw ValidationError("Unknown settings key: \(key)")
+            throw ValidationError(cliText("Unknown settings key: \(key)"))
         }
 
         let store = cliSettingsStore()
@@ -244,6 +244,6 @@ struct SettingsSetCommand: CommanderRunnableCommand {
             return
         }
 
-        print("Updated \(settingKey.rawValue): \(summary)")
+        cliPrint("Updated \(settingKey.rawValue): \(summary)")
     }
 }

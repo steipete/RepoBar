@@ -5,6 +5,11 @@ import Testing
 
 struct CLIOutputTests {
     @Test
+    func `unmatched percent output remains literal`() {
+        #expect(cliText("Repository is 100% complete", locale: Locale(identifier: "tr_TR")) == "Repository is 100% complete")
+    }
+
+    @Test
     func `repo label uses name when UR ls disabled`() throws {
         let url = try #require(URL(string: "https://github.com/steipete/RepoBar"))
         let label = formatRepoLabel(

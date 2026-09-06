@@ -1,0 +1,10 @@
+"error.noInternet" = "No internet connection.";
+"error.timeout" = "Request timed out.";
+"error.rateLimited" = "Rate limited; retry soon.";
+"error.unexpectedResponse" = "GitHub returned an unexpected response.";
+"error.authenticationRequired" = "Authentication required. Please sign in again.";
+"error.untrustedCertificate" = "Enterprise host certificate is not trusted.";
+"relative.future.seconds" = "in %lld sec.";
+"relative.past.seconds" = "%lld sec. ago";
+"relative.future.minutes" = "in %lld min.";
+"relative.past.minutes" = "%lld min. ago";

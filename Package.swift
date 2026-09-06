@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "RepoBar",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v15),
         .iOS(.v26),
@@ -34,6 +35,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Markdown", package: "swift-markdown"),
             ],
+            resources: [.process("Resources")],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
             ]),
@@ -49,6 +51,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
             ],
             exclude: ["Resources/Info.plist"],
+            resources: [.process("Resources/Localizations")],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
                 .unsafeFlags([
@@ -64,6 +67,7 @@ let package = Package(
                 "RepoBarCore",
             ],
             path: "Sources/repobarcli",
+            resources: [.process("Resources")],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
             ]),

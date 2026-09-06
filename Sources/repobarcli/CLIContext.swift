@@ -100,7 +100,7 @@ func makeRepoURL(baseHost: URL, owner: String, name: String) -> URL {
 
 func requireRepoName(_ name: String?) throws -> String {
     guard let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), name.isEmpty == false else {
-        throw ValidationError("Missing repository name (owner/name)")
+        throw ValidationError(cliText("Missing repository name (owner/name)"))
     }
 
     return name
@@ -113,7 +113,7 @@ func requireRepoIdentifier(_ name: String?) throws -> RepoIdentifier {
 func parseRepoName(_ value: String) throws -> RepoIdentifier {
     let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
     guard trimmed.isEmpty == false else {
-        throw ValidationError("Repository must be in owner/name format")
+        throw ValidationError(cliText("Repository must be in owner/name format"))
     }
 
     if let remoteParts = repoPartsFromRemote(trimmed) {
@@ -122,7 +122,7 @@ func parseRepoName(_ value: String) throws -> RepoIdentifier {
 
     let parts = trimmed.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
     guard parts.count == 2 else {
-        throw ValidationError("Repository must be in owner/name format")
+        throw ValidationError(cliText("Repository must be in owner/name format"))
     }
 
     return try RepoIdentifier(validatingOwner: parts[0], name: parts[1])
@@ -157,10 +157,10 @@ private extension RepoIdentifier {
         }
 
         guard owner.isEmpty == false, name.isEmpty == false else {
-            throw ValidationError("Repository must be in owner/name format")
+            throw ValidationError(cliText("Repository must be in owner/name format"))
         }
         guard owner.contains("/") == false, name.contains("/") == false else {
-            throw ValidationError("Repository must be in owner/name format")
+            throw ValidationError(cliText("Repository must be in owner/name format"))
         }
 
         self.init(owner: owner, name: name)

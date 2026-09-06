@@ -101,7 +101,7 @@ struct LocalRepoResolution {
 
 func requireLocalTarget(_ target: String?) throws -> String {
     guard let target, target.isEmpty == false else {
-        throw ValidationError("Missing repository name or path")
+        throw ValidationError(cliText("Missing repository name or path"))
     }
 
     return target
@@ -114,14 +114,14 @@ func resolveLocalRepoTarget(_ target: String, settings: UserSettings) async thro
         let url = URL(fileURLWithPath: expanded, isDirectory: isDirectory.boolValue)
         let snapshot = await LocalProjectsService().snapshot(repoRoots: [url], autoSyncEnabled: false)
         guard let status = snapshot.statuses.first else {
-            throw ValidationError("No git repository found at \(PathFormatter.displayString(expanded))")
+            throw ValidationError(cliText("No git repository found at \(PathFormatter.displayString(expanded))"))
         }
 
         return LocalRepoResolution(path: status.path, status: status)
     }
 
     guard let rootPath = settings.localProjects.rootPath, rootPath.isEmpty == false else {
-        throw ValidationError("Local Projects root not set. Provide a path or set it in Settings.")
+        throw ValidationError(cliText("Local Projects root not set. Provide a path or set it in Settings."))
     }
 
     let snapshot = await LocalProjectsService().snapshot(
@@ -147,9 +147,9 @@ func resolveLocalRepoTarget(_ target: String, settings: UserSettings) async thro
             let options = matches.compactMap { $0.fullName ?? $0.displayName }
                 .sorted()
                 .joined(separator: ", ")
-            throw ValidationError("Multiple local repositories matched \(target): \(options). Use full owner/name or a path.")
+            throw ValidationError(cliText("Multiple local repositories matched \(target): \(options). Use full owner/name or a path."))
         }
-        throw ValidationError("No local repository matched \(target)")
+        throw ValidationError(cliText("No local repository matched \(target)"))
     }
 
     let matches = index.byNameLowercased[target.lowercased()] ?? []
@@ -160,20 +160,20 @@ func resolveLocalRepoTarget(_ target: String, settings: UserSettings) async thro
         let options = matches.compactMap { $0.fullName ?? $0.displayName }
             .sorted()
             .joined(separator: ", ")
-        throw ValidationError("Multiple local repositories matched \(target): \(options). Use full owner/name or a path.")
+        throw ValidationError(cliText("Multiple local repositories matched \(target): \(options). Use full owner/name or a path."))
     }
-    throw ValidationError("No local repository matched \(target)")
+    throw ValidationError(cliText("No local repository matched \(target)"))
 }
 
 func confirmHardReset(path: String) throws {
     guard isatty(fileno(stdin)) != 0 else {
-        throw ValidationError("Refusing to hard reset in non-interactive mode without --yes")
+        throw ValidationError(cliText("Refusing to hard reset in non-interactive mode without --yes"))
     }
 
-    print("Hard reset \(path) to upstream. This is destructive.")
-    print("Type 'reset' to continue: ", terminator: "")
+    cliPrint("Hard reset \(path) to upstream. This is destructive.")
+    cliPrint("Type 'reset' to continue: ", terminator: "")
     guard let response = readLine(), response.lowercased() == "reset" else {
-        throw ValidationError("Reset cancelled")
+        throw ValidationError(cliText("Reset cancelled"))
     }
 }
 

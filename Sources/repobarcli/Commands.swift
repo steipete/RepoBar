@@ -139,26 +139,26 @@ struct ReposCommand: CommanderRunnableCommand {
         self.ownerFilter = RepoOwnerFilter.parse(rawOwners)
         self.mine = values.flag("mine")
         if self.ownerFilter == nil, rawOwners.isEmpty == false {
-            throw ValidationError("--owner must include at least one login")
+            throw ValidationError(cliText("--owner must include at least one login"))
         }
     }
 
     mutating func run() async throws {
         if let limit, limit <= 0 {
-            throw ValidationError("--limit must be greater than 0")
+            throw ValidationError(cliText("--limit must be greater than 0"))
         }
         if self.age <= 0 {
-            throw ValidationError("--age must be greater than 0")
+            throw ValidationError(cliText("--age must be greater than 0"))
         }
         if self.pinnedOnly, let scope, scope != .pinned {
-            throw ValidationError("--pinned-only cannot be combined with --scope \(scope.rawValue)")
+            throw ValidationError(cliText("--pinned-only cannot be combined with --scope \(scope.rawValue)"))
         }
         if self.filter != nil, self.onlyWith != nil {
-            throw ValidationError("--filter cannot be combined with --only-with")
+            throw ValidationError(cliText("--filter cannot be combined with --only-with"))
         }
 
         if self.output.jsonOutput == false, self.output.useColor {
-            print("RepoBar CLI")
+            cliPrint("RepoBar CLI")
         }
 
         let context = try await makeAuthenticatedClient()
@@ -202,7 +202,7 @@ struct ReposCommand: CommanderRunnableCommand {
                 if self.output.jsonOutput {
                     try renderJSON([], baseHost: baseHost)
                 } else {
-                    print("No pinned repositories to show.")
+                    cliPrint("No pinned repositories to show.")
                 }
                 return
             }
@@ -223,7 +223,7 @@ struct ReposCommand: CommanderRunnableCommand {
                 if self.output.jsonOutput {
                     try renderJSON([], baseHost: baseHost)
                 } else {
-                    print("No hidden repositories to show.")
+                    cliPrint("No hidden repositories to show.")
                 }
                 return
             }
@@ -389,7 +389,7 @@ struct LoginCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         if let loopbackPort, loopbackPort <= 0 || loopbackPort >= 65536 {
-            throw ValidationError("--loopback-port must be between 1 and 65535")
+            throw ValidationError(cliText("--loopback-port must be between 1 and 65535"))
         }
 
         let store = cliSettingsStore()
@@ -460,7 +460,7 @@ struct LoginCommand: CommanderRunnableCommand {
         settings.activeAccountID = account.id
         store.save(settings)
 
-        print("Login succeeded; tokens stored for \(account.id).")
+        cliPrint("Login succeeded; tokens stored for \(account.id).")
     }
 }
 
@@ -500,13 +500,13 @@ struct LogoutCommand: CommanderRunnableCommand {
             settings.accounts = []
             settings.activeAccountID = nil
             store.save(settings)
-            print("Logged out of all accounts.")
+            cliPrint("Logged out of all accounts.")
             return
         }
 
         if settings.accounts.isEmpty {
             TokenStore.shared.clear()
-            print("Logged out.")
+            cliPrint("Logged out.")
             return
         }
 
@@ -518,7 +518,7 @@ struct LogoutCommand: CommanderRunnableCommand {
         }
         mirrorResolvedActiveAccount(settings: &settings)
         store.save(settings)
-        print("Logged out of \(resolved.id).")
+        cliPrint("Logged out of \(resolved.id).")
     }
 }
 
@@ -554,7 +554,7 @@ struct ImportGHTokenCommand: CommanderRunnableCommand {
         }
         let normalizedHost = try OAuthLoginFlow.normalizeHost(rawHost)
         guard let ghHostname = normalizedHost.host, ghHostname.isEmpty == false else {
-            throw ValidationError("Invalid host: \(rawHost.absoluteString)")
+            throw ValidationError(cliText("Invalid host: \(rawHost.absoluteString)"))
         }
 
         // Get token from gh CLI
@@ -569,18 +569,18 @@ struct ImportGHTokenCommand: CommanderRunnableCommand {
             try process.run()
             process.waitUntilExit()
         } catch {
-            throw ValidationError("Failed to run 'gh auth token'. Is GitHub CLI installed?")
+            throw ValidationError(cliText("Failed to run 'gh auth token'. Is GitHub CLI installed?"))
         }
 
         guard process.terminationStatus == 0 else {
-            throw ValidationError("'gh auth token' failed. Please run 'gh auth login' first.")
+            throw ValidationError(cliText("'gh auth token' failed. Please run 'gh auth login' first."))
         }
 
         let data = pipe.fileHandleForReading.readDataToEndOfFile()
         guard let tokenString = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
               !tokenString.isEmpty
         else {
-            throw ValidationError("No token returned from gh CLI. Please run 'gh auth login' first.")
+            throw ValidationError(cliText("No token returned from gh CLI. Please run 'gh auth login' first."))
         }
 
         // gh tokens don't expire, so leave expiry unset and skip refresh.
@@ -625,9 +625,9 @@ struct ImportGHTokenCommand: CommanderRunnableCommand {
         settings.activeAccountID = account.id
         store.save(settings)
 
-        print("Successfully imported gh CLI token for \(account.id).")
-        print("Token expires: unknown")
-        print("\nNote: Re-run this command if your gh token changes or if you re-authenticate with 'gh auth login'.")
+        cliPrint("Successfully imported gh CLI token for \(account.id).")
+        cliPrint("Token expires: unknown")
+        cliPrint("\nNote: Re-run this command if your gh token changes or if you re-authenticate with 'gh auth login'.")
     }
 }
 
@@ -674,32 +674,33 @@ struct StatusCommand: CommanderRunnableCommand {
             let expiresAt = tokens?.expiresAt
             let expired = expiresAt.map { $0 <= now }
             let expiresIn = expiresAt.map { RelativeFormatter.string(from: $0, relativeTo: now) }
+            let machineExpiresIn = expiresAt.map { RelativeFormatter.machineString(from: $0, relativeTo: now) }
             let authenticated = tokens != nil || pat != nil
             if self.output.jsonOutput {
                 let output = StatusOutput(
                     authenticated: authenticated,
                     host: resolved.host.absoluteString,
                     expiresAt: expiresAt,
-                    expiresIn: expiresIn,
+                    expiresIn: machineExpiresIn,
                     expired: expired
                 )
                 let encoder = JSONEncoder()
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
                 let data = try encoder.encode(output)
                 if let json = String(data: data, encoding: .utf8) {
-                    print(json)
+                    Swift.print(json)
                 }
             } else if authenticated == false {
-                print("Logged out (\(resolved.id)).")
+                cliPrint("Logged out (\(resolved.id)).")
             } else {
-                print("Logged in as \(resolved.id).")
-                print("Host: \(resolved.host.absoluteString)")
+                cliPrint("Logged in as \(resolved.id).")
+                cliPrint("Host: \(resolved.host.absoluteString)")
                 if let expiresAt {
                     let state = expired == true ? "expired" : "expires"
                     let label = expiresIn ?? expiresAt.formatted()
-                    print("\(state.capitalized): \(label)")
+                    cliPrint("\(state.capitalized): \(label)")
                 } else {
-                    print("Expires: unknown")
+                    cliPrint("Expires: unknown")
                 }
             }
             return
@@ -722,10 +723,10 @@ struct StatusCommand: CommanderRunnableCommand {
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
                 let data = try encoder.encode(output)
                 if let json = String(data: data, encoding: .utf8) {
-                    print(json)
+                    Swift.print(json)
                 }
             } else {
-                print("Logged out.")
+                cliPrint("Logged out.")
             }
             return
         }
@@ -736,30 +737,31 @@ struct StatusCommand: CommanderRunnableCommand {
         let expiresAt = tokens.expiresAt
         let expired = expiresAt.map { $0 <= now }
         let expiresIn = expiresAt.map { RelativeFormatter.string(from: $0, relativeTo: now) }
+        let machineExpiresIn = expiresAt.map { RelativeFormatter.machineString(from: $0, relativeTo: now) }
 
         if self.output.jsonOutput {
             let output = StatusOutput(
                 authenticated: true,
                 host: host,
                 expiresAt: expiresAt,
-                expiresIn: expiresIn,
+                expiresIn: machineExpiresIn,
                 expired: expired
             )
             let encoder = JSONEncoder()
             encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
             let data = try encoder.encode(output)
             if let json = String(data: data, encoding: .utf8) {
-                print(json)
+                Swift.print(json)
             }
         } else {
-            print("Logged in.")
-            print("Host: \(host)")
+            cliPrint("Logged in.")
+            cliPrint("Host: \(host)")
             if let expiresAt {
                 let state = expired == true ? "expired" : "expires"
                 let label = expiresIn ?? expiresAt.formatted()
-                print("\(state.capitalized): \(label)")
+                cliPrint("\(state.capitalized): \(label)")
             } else {
-                print("Expires: unknown")
+                cliPrint("Expires: unknown")
             }
         }
     }

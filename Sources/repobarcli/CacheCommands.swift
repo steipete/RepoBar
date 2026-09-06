@@ -23,7 +23,7 @@ struct CacheStatusCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         if self.limit < 0 {
-            throw ValidationError("--limit must be >= 0")
+            throw ValidationError(cliText("--limit must be >= 0"))
         }
 
         let summary = try RepoBarPersistentCache.summary(limit: self.limit)
@@ -32,17 +32,17 @@ struct CacheStatusCommand: CommanderRunnableCommand {
             return
         }
 
-        print("Cache DB: \(PathFormatter.displayString(summary.databasePath))")
-        print("Exists: \(summary.exists ? "yes" : "no")")
-        print("API responses: \(summary.apiResponseCount)")
-        print("GraphQL responses: \(summary.graphQLResponseCount)")
-        print("Rate limits: \(summary.rateLimitCount)")
+        cliPrint("Cache DB: \(PathFormatter.displayString(summary.databasePath))")
+        cliPrint("Exists: \(summary.exists ? "yes" : "no")")
+        cliPrint("API responses: \(summary.apiResponseCount)")
+        cliPrint("GraphQL responses: \(summary.graphQLResponseCount)")
+        cliPrint("Rate limits: \(summary.rateLimitCount)")
         if summary.latestResponses.isEmpty == false {
-            print("Recent responses:")
+            cliPrint("Recent responses:")
             for response in summary.latestResponses {
                 let status = response.statusCode.map(String.init) ?? "-"
                 let etag = response.hasETag ? "etag" : "no-etag"
-                print("  \(status) \(etag) \(response.url)")
+                cliPrint("  \(status) \(etag) \(response.url)")
             }
         }
     }
@@ -70,7 +70,7 @@ struct CacheClearCommand: CommanderRunnableCommand {
             return
         }
 
-        print("Cleared cache: \(PathFormatter.displayString(summary.databasePath))")
+        cliPrint("Cleared cache: \(PathFormatter.displayString(summary.databasePath))")
     }
 }
 
@@ -95,7 +95,7 @@ struct RateLimitsCommand: CommanderRunnableCommand {
 
     mutating func run() async throws {
         if self.limit < 0 {
-            throw ValidationError("--limit must be >= 0")
+            throw ValidationError(cliText("--limit must be >= 0"))
         }
 
         let summary = try RepoBarPersistentCache.summary(limit: self.limit)
@@ -121,17 +121,17 @@ struct RateLimitsCommand: CommanderRunnableCommand {
             return
         }
 
-        print("GitHub API Status")
-        print("Cache DB: \(PathFormatter.displayString(summary.databasePath))")
+        cliPrint("GitHub API Status")
+        cliPrint("Cache DB: \(PathFormatter.displayString(summary.databasePath))")
         for (index, section) in sections.enumerated() {
             if index > 0 {
-                print("")
+                cliPrint("")
             }
             if let title = section.title {
-                print(title)
+                Swift.print(title)
             }
             for row in section.rows {
-                print("  \(row)")
+                cliPrint("  \(row)")
             }
         }
     }

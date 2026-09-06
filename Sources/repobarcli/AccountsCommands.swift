@@ -19,15 +19,15 @@ enum AccountResolver {
             if let shorthand = Self.matchShorthand(input, in: settings.accounts) {
                 return shorthand
             }
-            throw ValidationError("Unknown account: \(input). Run `repobar accounts list` to see configured accounts.")
+            throw ValidationError(cliText("Unknown account: \(input). Run `repobar accounts list` to see configured accounts."))
         }
         if let active = settings.resolvedActiveAccount() {
             return active
         }
         if settings.accounts.isEmpty {
-            throw ValidationError("No accounts configured. Run `repobar login` first.")
+            throw ValidationError(cliText("No accounts configured. Run `repobar login` first."))
         }
-        throw ValidationError("Multiple accounts configured. Pass --account <id> or run `repobar accounts use <id>`.")
+        throw ValidationError(cliText("Multiple accounts configured. Pass --account <id> or run `repobar accounts use <id>`."))
     }
 
     static func matchShorthand(_ input: String, in accounts: [Account]) -> Account? {
@@ -68,13 +68,13 @@ struct AccountsListCommand: CommanderRunnableCommand {
         }
 
         if settings.accounts.isEmpty {
-            print("No accounts configured. Run `repobar login` first.")
+            cliPrint("No accounts configured. Run `repobar login` first.")
             return
         }
         for account in settings.accounts {
             let marker = account.id == activeAccountID ? "*" : " "
             let method = account.authMethod.rawValue
-            print("\(marker) \(account.id)  [\(method)]  \(account.host.host ?? "github.com")")
+            cliPrint("\(marker) \(account.id)  [\(method)]  \(account.host.host ?? "github.com")")
         }
     }
 }
@@ -92,7 +92,7 @@ struct AccountsUseCommand: CommanderRunnableCommand {
 
     mutating func bind(_ values: ParsedValues) throws {
         if values.positional.count > 1 {
-            throw ValidationError("Only one account identifier can be specified")
+            throw ValidationError(cliText("Only one account identifier can be specified"))
         }
         self.target = values.positional.first
     }
@@ -105,7 +105,7 @@ struct AccountsUseCommand: CommanderRunnableCommand {
         settings.activeAccountID = account.id
         mirrorActiveAccountIntoSettings(account, settings: &settings)
         store.save(settings)
-        print("Active account set to \(account.id).")
+        cliPrint("Active account set to \(account.id).")
     }
 }
 
@@ -122,7 +122,7 @@ struct AccountsRemoveCommand: CommanderRunnableCommand {
 
     mutating func bind(_ values: ParsedValues) throws {
         if values.positional.count > 1 {
-            throw ValidationError("Only one account identifier can be specified")
+            throw ValidationError(cliText("Only one account identifier can be specified"))
         }
         self.target = values.positional.first
     }
@@ -140,7 +140,7 @@ struct AccountsRemoveCommand: CommanderRunnableCommand {
         settings.accountRepoLists.pinnedByAccount.removeValue(forKey: account.id)
         settings.accountRepoLists.hiddenByAccount.removeValue(forKey: account.id)
         store.save(settings)
-        print("Removed account \(account.id).")
+        cliPrint("Removed account \(account.id).")
     }
 }
 

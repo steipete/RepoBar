@@ -43,7 +43,7 @@ struct ChangelogCommand: CommanderRunnableCommand {
         self.output.bind(values)
 
         if values.positional.count > 1 {
-            throw ValidationError("Only one changelog file can be specified")
+            throw ValidationError(cliText("Only one changelog file can be specified"))
         }
         self.path = values.positional.first
     }
@@ -70,20 +70,20 @@ struct ChangelogCommand: CommanderRunnableCommand {
             return
         }
 
-        print("Sections: \(outputSections.count)")
+        cliPrint("Sections: \(outputSections.count)")
         for section in outputSections {
-            print("- \(section.title) (\(section.entryCount))")
+            cliPrint("- \(section.title) (\(section.entryCount))")
         }
         if let outputPresentation {
-            print("Presentation: \(outputPresentation.title)")
+            cliPrint("Presentation: \(outputPresentation.title)")
             if let badge = outputPresentation.badgeText {
-                print("Badge: \(badge)")
+                cliPrint("Badge: \(badge)")
             }
             if let detail = outputPresentation.detailText {
-                print("Detail: \(detail)")
+                cliPrint("Detail: \(detail)")
             }
         } else {
-            print("Presentation: -")
+            cliPrint("Presentation: -")
         }
     }
 }
@@ -108,7 +108,7 @@ private func resolveChangelogURL(explicitPath: String?) throws -> URL {
         }
     }
 
-    throw ValidationError("Missing changelog file. Provide a path or add CHANGELOG.md/CHANGELOG.")
+    throw ValidationError(cliText("Missing changelog file. Provide a path or add CHANGELOG.md/CHANGELOG."))
 }
 
 private func gitRootURL() -> URL? {

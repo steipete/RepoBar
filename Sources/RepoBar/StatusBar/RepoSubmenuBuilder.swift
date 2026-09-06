@@ -417,7 +417,7 @@ struct RepoSubmenuBuilder {
     }
 
     private func loadingItem() -> NSMenuItem {
-        let item = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: AppLocalizer().string("Loading…"), action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
     }
@@ -472,7 +472,7 @@ struct RepoSubmenuBuilder {
             systemImage: config.systemImage
         ))
         submenu.addItem(.separator())
-        let loading = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
+        let loading = NSMenuItem(title: AppLocalizer().string("Loading…"), action: nil, keyEquivalent: "")
         loading.isEnabled = false
         submenu.addItem(loading)
 
@@ -491,7 +491,7 @@ struct RepoSubmenuBuilder {
         submenu.autoenablesItems = false
         submenu.delegate = self.target
         events.prefix(AppLimits.MoreMenus.limit).forEach { submenu.addItem(self.menuBuilder.activityMenuItem(for: $0)) }
-        let item = NSMenuItem(title: "More Activity…", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: AppLocalizer().string("More Activity…"), action: nil, keyEquivalent: "")
         item.submenu = submenu
         if let image = self.menuBuilder.cachedSystemImage(named: "ellipsis") {
             item.image = image
@@ -504,7 +504,7 @@ struct RepoSubmenuBuilder {
         submenu.autoenablesItems = false
         submenu.delegate = self.target
         commits.prefix(AppLimits.MoreMenus.limit).forEach { submenu.addItem(self.menuBuilder.commitMenuItem(for: $0)) }
-        let item = NSMenuItem(title: "More Commits…", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: AppLocalizer().string("More Commits…"), action: nil, keyEquivalent: "")
         item.submenu = submenu
         if let image = self.menuBuilder.cachedSystemImage(named: "ellipsis") {
             item.image = image

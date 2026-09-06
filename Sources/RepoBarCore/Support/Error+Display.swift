@@ -2,6 +2,7 @@ import Foundation
 
 public extension Error {
     var userFacingMessage: String {
+        let localizer = RepoBarLocalization.localizer()
         if let decodingError = self as? DecodingError {
             return decodingError.userFacingMessage
         }
@@ -10,14 +11,14 @@ public extension Error {
         }
         if let urlError = self as? URLError {
             switch urlError.code {
-            case .notConnectedToInternet: return "No internet connection."
-            case .timedOut: return "Request timed out."
-            case .cannotLoadFromNetwork: return "Rate limited; retry soon."
-            case .cannotParseResponse: return "GitHub returned an unexpected response."
-            case .userAuthenticationRequired: return "Authentication required. Please sign in again."
+            case .notConnectedToInternet: return localizer.string("error.noInternet")
+            case .timedOut: return localizer.string("error.timeout")
+            case .cannotLoadFromNetwork: return localizer.string("error.rateLimited")
+            case .cannotParseResponse: return localizer.string("error.unexpectedResponse")
+            case .userAuthenticationRequired: return localizer.string("error.authenticationRequired")
             case .serverCertificateUntrusted, .serverCertificateHasBadDate, .serverCertificateHasUnknownRoot,
                  .serverCertificateNotYetValid:
-                return "Enterprise host certificate is not trusted."
+                return localizer.string("error.untrustedCertificate")
             default: break
             }
         }
