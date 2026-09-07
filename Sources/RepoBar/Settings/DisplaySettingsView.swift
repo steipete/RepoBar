@@ -83,16 +83,16 @@ struct DisplaySettingsView: View {
         let effectiveSubtitle: String? = {
             if isRequired {
                 if let subtitle, subtitle.isEmpty == false {
-                    return "Required · \(subtitle)"
+                    return "\(AppLocalizer().string("Required")) · \(AppLocalizer().string(subtitle))"
                 }
-                return "Required"
+                return AppLocalizer().string("Required")
             }
-            return subtitle
+            return subtitle.map { AppLocalizer().string($0) }
         }()
 
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(title)
+                Text(AppLocalizer().string(title))
                     .foregroundStyle(isVisible.wrappedValue ? .primary : .secondary)
                 Text(effectiveSubtitle ?? " ")
                     .font(.caption)

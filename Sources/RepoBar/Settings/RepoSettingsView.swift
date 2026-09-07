@@ -40,7 +40,7 @@ struct RepoSettingsView: View {
 
             RepoInputRow(
                 placeholder: "owner/name",
-                buttonTitle: "Add Rule",
+                buttonTitle: AppLocalizer().string("Add Rule"),
                 text: self.$newRepoInput,
                 onCommit: self.addNewRepo,
                 session: self.session,
@@ -48,7 +48,7 @@ struct RepoSettingsView: View {
             ) {
                 Picker("Visibility", selection: self.$newRepoVisibility) {
                     ForEach([RepoVisibility.pinned, .hidden], id: \.id) { vis in
-                        Text(vis.label).tag(vis)
+                        Text(AppLocalizer().string(vis.label)).tag(vis)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -258,15 +258,15 @@ private struct RepoVisibilityMenu: View {
                     self.onChange(item)
                 } label: {
                     if item == self.visibility {
-                        Label(item.label, systemImage: "checkmark")
+                        Label(AppLocalizer().string(item.label), systemImage: "checkmark")
                     } else {
-                        Text(item.label)
+                        Text(AppLocalizer().string(item.label))
                     }
                 }
             }
         } label: {
             HStack(spacing: 6) {
-                Text(self.visibility.label)
+                Text(AppLocalizer().string(self.visibility.label))
                     .lineLimit(1)
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.up.chevron.down")

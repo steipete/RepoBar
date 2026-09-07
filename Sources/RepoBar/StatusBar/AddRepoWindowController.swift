@@ -18,7 +18,7 @@ final class AddRepoWindowController {
             let hosting = NSHostingController(rootView: rootView)
             let window = NSWindow(contentViewController: hosting)
             window.styleMask = [.titled, .closable]
-            window.title = "Add Repository"
+            window.title = AppLocalizer().string("Add Repository")
             window.level = .floating
             window.isReleasedWhenClosed = false
             window.center()

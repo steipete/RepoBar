@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "RepoBar",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v15),
         .iOS(.v26),
@@ -49,6 +50,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
             ],
             exclude: ["Resources/Info.plist"],
+            resources: [.process("Resources/Localizations")],
             swiftSettings: [
                 .enableUpcomingFeature("StrictConcurrency"),
                 .unsafeFlags([

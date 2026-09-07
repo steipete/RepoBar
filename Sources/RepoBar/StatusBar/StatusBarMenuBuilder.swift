@@ -117,9 +117,9 @@ final class StatusBarMenuBuilder {
         case .signInAction:
             switch session.account {
             case .loggedOut:
-                return [self.actionItem(title: "Sign in to GitHub", action: #selector(self.target.signIn))]
+                return [self.actionItem(title: AppLocalizer().string("Sign in to GitHub"), action: #selector(self.target.signIn))]
             case .loggingIn:
-                let signInItem = self.actionItem(title: "Signing in…", action: #selector(self.target.signIn))
+                let signInItem = self.actionItem(title: AppLocalizer().string("Signing in…"), action: #selector(self.target.signIn))
                 signInItem.isEnabled = false
                 return [signInItem]
             case .loggedIn:
@@ -225,22 +225,22 @@ final class StatusBarMenuBuilder {
             guard case .loggedIn = session.account else { return [] }
 
             return [self.actionItem(
-                title: "Issue Navigator…",
+                title: AppLocalizer().string("Issue Navigator…"),
                 action: #selector(self.target.openIssueNavigator),
                 keyEquivalent: "f",
                 systemImage: "rectangle.and.text.magnifyingglass"
             )]
         case .preferences:
-            return [self.actionItem(title: "Preferences…", action: #selector(self.target.openPreferences), keyEquivalent: ",")]
+            return [self.actionItem(title: AppLocalizer().string("Preferences…"), action: #selector(self.target.openPreferences), keyEquivalent: ",")]
         case .about:
-            return [self.actionItem(title: "About RepoBar", action: #selector(self.target.openAbout))]
+            return [self.actionItem(title: AppLocalizer().string("About RepoBar"), action: #selector(self.target.openAbout))]
         case .restartToUpdate:
             guard case .loggedIn = session.account else { return [] }
             guard SparkleController.shared.updateStatus.isUpdateReady else { return [] }
 
-            return [self.actionItem(title: "Restart to update", action: #selector(self.target.checkForUpdates))]
+            return [self.actionItem(title: AppLocalizer().string("Restart to update"), action: #selector(self.target.checkForUpdates))]
         case .quit:
-            return [self.actionItem(title: "Quit RepoBar", action: #selector(self.target.quitApp), keyEquivalent: "q")]
+            return [self.actionItem(title: AppLocalizer().string("Quit RepoBar"), action: #selector(self.target.quitApp), keyEquivalent: "q")]
         }
     }
 

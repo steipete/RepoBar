@@ -54,7 +54,7 @@ struct CLIParsingTests {
 
     @Test
     @MainActor
-    func test_localResetYesFlagBindsAssumeYes() throws {
+    func `local reset yes flag binds assume yes`() throws {
         let defaultCommand = try parseCommand(LocalResetCommand.self, arguments: ["local-reset"])
         let flaggedCommand = try parseCommand(LocalResetCommand.self, arguments: ["local-reset", "--yes"])
 
@@ -64,7 +64,7 @@ struct CLIParsingTests {
 
     @Test
     @MainActor
-    func test_checkoutOpenFlagBindsOpenAfter() throws {
+    func `checkout open flag binds open after`() throws {
         let defaultCommand = try parseCommand(CheckoutCommand.self, arguments: ["checkout"])
         let flaggedCommand = try parseCommand(CheckoutCommand.self, arguments: ["checkout", "--open"])
 
@@ -74,7 +74,7 @@ struct CLIParsingTests {
 
     @Test
     @MainActor
-    func test_repoTrafficFlagBindsIncludeTraffic() throws {
+    func `repo traffic flag binds include traffic`() throws {
         let defaultCommand = try parseCommand(RepoCommand.self, arguments: ["repo"])
         let flaggedCommand = try parseCommand(RepoCommand.self, arguments: ["repo", "--traffic"])
 
@@ -84,7 +84,7 @@ struct CLIParsingTests {
 
     @Test
     @MainActor
-    func test_repoHeatmapFlagBindsIncludeHeatmap() throws {
+    func `repo heatmap flag binds include heatmap`() throws {
         let defaultCommand = try parseCommand(RepoCommand.self, arguments: ["repo"])
         let flaggedCommand = try parseCommand(RepoCommand.self, arguments: ["repo", "--heatmap"])
 
@@ -94,7 +94,7 @@ struct CLIParsingTests {
 
     @Test
     @MainActor
-    func test_repoReleaseFlagBindsIncludeRelease() throws {
+    func `repo release flag binds include release`() throws {
         let defaultCommand = try parseCommand(RepoCommand.self, arguments: ["repo"])
         let flaggedCommand = try parseCommand(RepoCommand.self, arguments: ["repo", "--release"])
 

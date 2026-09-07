@@ -223,7 +223,7 @@ extension RecentListMenuCoordinator {
 
         let menu = NSMenu()
         menu.autoenablesItems = false
-        let all = NSMenuItem(title: "All Labels", action: #selector(StatusBarMenuManager.clearIssueLabelFilters), keyEquivalent: "")
+        let all = NSMenuItem(title: AppLocalizer().string("All Labels"), action: #selector(StatusBarMenuManager.clearIssueLabelFilters), keyEquivalent: "")
         all.target = self.actionHandler
         all.state = self.appState.session.recentIssueLabelSelection.isEmpty ? NSControl.StateValue.on : NSControl.StateValue.off
         menu.addItem(all)
@@ -238,7 +238,7 @@ extension RecentListMenuCoordinator {
             menu.addItem(item)
         }
 
-        let parent = NSMenuItem(title: "More Labels…", action: nil, keyEquivalent: "")
+        let parent = NSMenuItem(title: AppLocalizer().string("More Labels…"), action: nil, keyEquivalent: "")
         parent.submenu = menu
         return parent
     }
@@ -322,7 +322,7 @@ extension RecentListMenuCoordinator {
         for commit in items.prefix(AppLimits.MoreMenus.limit) {
             self.addCommitMenuItem(commit, to: submenu)
         }
-        let item = NSMenuItem(title: "More Commits…", action: nil, keyEquivalent: "")
+        let item = NSMenuItem(title: AppLocalizer().string("More Commits…"), action: nil, keyEquivalent: "")
         item.submenu = submenu
         self.applyMenuItemSymbol("ellipsis", to: item)
         return item

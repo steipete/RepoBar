@@ -100,7 +100,7 @@ struct SettingsView: View {
         #if DEBUG
             titles.append(SettingsTab.debug.title)
         #endif
-        return Set(titles)
+        return Set(titles + titles.map { AppLocalizer().string($0) })
     }
 
     private static var settingsWindow: NSWindow? {
