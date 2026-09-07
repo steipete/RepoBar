@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+**Highlights:** RepoBar now follows your macOS language preference with Turkish menus and common Settings controls.
+
+- Add Turkish translations for macOS menu actions, Settings tabs, repository visibility controls, and Display customization, with English fallback and unchanged CLI output (thanks @husodrn46). (#114)
+
 ## 0.8.8 - 2026-09-06
 
 **Highlights:** CLI flags now behave as requested, and workflow names make CI runs for the same commit easy to distinguish.
