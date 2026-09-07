@@ -8,6 +8,27 @@ import Testing
 struct CLIEndToEndTests {
     @Test
     @MainActor
+    func `stdout capture handles output larger than a pipe buffer`() async throws {
+        let expected = String(repeating: "output line\n", count: 16384)
+        let output = try await captureStdout { print(expected, terminator: "") }
+        #expect(output == expected)
+    }
+
+    @Test
+    @MainActor
+    func `stdout capture restores output after a thrown error`() async throws {
+        await #expect(throws: FixtureError.self) {
+            _ = try await captureStdout {
+                print("before error")
+                throw FixtureError.missing("synthetic")
+            }
+        }
+        let output = try await captureStdout { print("after error") }
+        #expect(output == "after error\n")
+    }
+
+    @Test
+    @MainActor
     func `markdown command renders changelog content`() async throws {
         let url = try fixtureURL("ChangelogSample")
         let output = try await runCLI([
@@ -317,25 +338,29 @@ private func runCLI(_ args: [String]) async throws -> String {
 
 @MainActor
 private func captureStdout(_ work: () async throws -> Void) async throws -> String {
-    let pipe = Pipe()
-    let original = dup(STDOUT_FILENO)
-    dup2(pipe.fileHandleForWriting.fileDescriptor, STDOUT_FILENO)
+    // Commands can exceed the pipe buffer before the capture starts reading.
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("repobar-stdout-\(UUID().uuidString)")
+    let descriptor = open(url.path, O_RDWR | O_CREAT | O_EXCL, 0o600)
+    guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
 
-    do {
-        try await work()
-    } catch {
-        fflush(stdout)
-        dup2(original, STDOUT_FILENO)
-        close(original)
-        pipe.fileHandleForWriting.closeFile()
-        throw error
+    defer {
+        close(descriptor)
+        try? FileManager.default.removeItem(at: url)
     }
 
     fflush(stdout)
-    dup2(original, STDOUT_FILENO)
-    close(original)
-    pipe.fileHandleForWriting.closeFile()
+    let original = dup(STDOUT_FILENO)
+    guard original >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
 
-    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+    defer {
+        fflush(stdout)
+        dup2(original, STDOUT_FILENO)
+        close(original)
+    }
+    guard dup2(descriptor, STDOUT_FILENO) >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+
+    try await work()
+    fflush(stdout)
+    let data = try Data(contentsOf: url)
     return String(bytes: data, encoding: .utf8) ?? ""
 }
