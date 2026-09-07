@@ -71,9 +71,9 @@ RESOURCE_BUNDLE="${BUILD_DIR}/${APP_NAME}_${APP_NAME}.bundle"
 if [ -d "${RESOURCE_BUNDLE}" ] && [ -n "$(find "${RESOURCE_BUNDLE}" -type f -print -quit 2>/dev/null || true)" ]; then
   log "==> Installing resources: $(basename "${RESOURCE_BUNDLE}")"
   if command -v ditto >/dev/null 2>&1; then
-    ditto "${RESOURCE_BUNDLE}" "${APP_BUNDLE}/$(basename "${RESOURCE_BUNDLE}")"
+    ditto "${RESOURCE_BUNDLE}" "${APP_BUNDLE}/Contents/Resources/$(basename "${RESOURCE_BUNDLE}")"
   else
-    cp -R "${RESOURCE_BUNDLE}" "${APP_BUNDLE}/"
+    cp -R "${RESOURCE_BUNDLE}" "${APP_BUNDLE}/Contents/Resources/"
   fi
 fi
 
