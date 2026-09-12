@@ -1,5 +1,5 @@
 {
-  "originHash" : "37faab75eed7ba06dbff056dce994407a3c8ba1e63c3a434d774a2ab3a9d7c66",
+  "originHash" : "4c57b5b45d367498d2f9558993f88e9082b3afb7b8b7f23e83674edc7d33a20b",
   "pins" : [
     {
       "identity" : "apollo-ios",
@@ -105,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "revision" : "3ffafb9722d5d918c614feb496c8789a3b59d222",
-        "version" : "1.15.0"
+        "revision" : "9c6fb14227f55d8f711ce3847dc2f419fb0ecacb",
+        "version" : "1.15.1"
       }
     },
     {

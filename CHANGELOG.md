@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Update SwiftLog to 1.15.1 and Zod to 4.6.2 for app logging and GraphQL developer tooling.
+
 ## 0.9.0 - 2026-09-07
 
 **Highlights:** RepoBar now follows your macOS language preference with Turkish menus and common Settings controls.
