@@ -51,6 +51,8 @@ Goal: map a local “project folder” (e.g. `~/Projects`) to GitHub repos shown
 
 ## Auto-Sync Rules
 
+Manual Sync, Rebase, and Reset first fetch the upstream state. If fetching fails, the action stops and displays Git's error; it does not rebase, reset, or push using stale remote-tracking refs.
+
 Only attempt sync when:
 - repo is **clean** (no local changes),
 - not detached HEAD,

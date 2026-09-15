@@ -198,6 +198,51 @@ struct LocalGitServiceTests {
         #expect(head == upstream)
     }
 
+    @Test(arguments: ["sync", "rebase", "reset"])
+    func `upstream actions stop when fetch fails`(action: String) throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let repo = root.appendingPathComponent("repo", isDirectory: true)
+        let origin = root.appendingPathComponent("origin.git", isDirectory: true)
+        try FileManager.default.createDirectory(at: repo, withIntermediateDirectories: true)
+        try initializeRepo(at: repo)
+        try runGit(["init", "--bare", origin.path], in: root)
+        try runGit(["remote", "add", "origin", origin.path], in: repo)
+        try runGit(["push", "-u", "origin", "main"], in: repo)
+
+        // Keep a valid push destination to catch sync continuing after a failed fetch.
+        try runGit(["remote", "set-url", "--push", "origin", origin.path], in: repo)
+        try runGit(["remote", "set-url", "origin", root.appendingPathComponent("missing.git").path], in: repo)
+        if action != "rebase" {
+            try Data("local commit\n".utf8).write(to: repo.appendingPathComponent("local.txt"))
+            try runGit(["add", "."], in: repo)
+            try runGit(["commit", "-m", "local"], in: repo)
+        }
+        if action == "reset" {
+            try Data("uncommitted work\n".utf8).write(to: repo.appendingPathComponent("README.md"))
+        }
+        let headBefore = try runGit(["rev-parse", "HEAD"], in: repo)
+        let remoteBefore = try runGit(["rev-parse", "refs/heads/main"], in: origin)
+        let readmeBefore = try Data(contentsOf: repo.appendingPathComponent("README.md"))
+        let service = LocalGitService()
+
+        do {
+            switch action {
+            case "sync": _ = try service.smartSync(at: repo)
+            case "rebase": try service.rebaseOntoUpstream(at: repo)
+            default: try service.hardResetToUpstream(at: repo)
+            }
+            Issue.record("Expected the fetch failure to abort \(action)")
+        } catch {
+            #expect(error.localizedDescription.contains("missing.git"))
+        }
+
+        #expect(try runGit(["rev-parse", "HEAD"], in: repo) == headBefore)
+        #expect(try runGit(["rev-parse", "refs/heads/main"], in: origin) == remoteBefore)
+        #expect(try Data(contentsOf: repo.appendingPathComponent("README.md")) == readmeBefore)
+    }
+
     @Test
     func `smart sync errors when detached`() throws {
         let root = try makeTempDirectory()

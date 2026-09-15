@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Stop manual local Sync, Rebase, and Reset when fetching fails, preserving local work and reporting Git's error instead of continuing against stale upstream refs.
+
 ## 0.9.1 - 2026-09-13
 
 **Highlights:** GitHub secondary rate limits are honored, iOS builds and workflow-run display are restored, and submenu timeouts no longer cancel other menus.

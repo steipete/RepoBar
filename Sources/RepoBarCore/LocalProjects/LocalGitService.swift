@@ -67,7 +67,7 @@
             guard currentBranch(at: repoURL, git: git) != "detached" else { throw LocalGitError.detachedHead }
             guard upstreamBranch(at: repoURL, git: git) != nil else { throw LocalGitError.missingUpstream }
 
-            let didFetch = fetchPrune(at: repoURL, git: git)
+            _ = try git.run(["fetch", "--prune"], in: repoURL)
             var (ahead, behind) = aheadBehind(at: repoURL, git: git)
             var didPull = false
             if (behind ?? 0) > 0 {
@@ -82,7 +82,7 @@
                 didPush = true
             }
 
-            return LocalGitSyncResult(didFetch: didFetch, didPull: didPull, didPush: didPush)
+            return LocalGitSyncResult(didFetch: true, didPull: didPull, didPush: didPush)
         }
 
         public func rebaseOntoUpstream(at repoURL: URL) throws {
@@ -90,7 +90,7 @@
             guard isClean(at: repoURL, git: git) else { throw LocalGitError.dirtyWorkingTree }
             guard upstreamBranch(at: repoURL, git: git) != nil else { throw LocalGitError.missingUpstream }
 
-            _ = fetchPrune(at: repoURL, git: git)
+            _ = try git.run(["fetch", "--prune"], in: repoURL)
             _ = try git.run(["rebase", "--autostash", "@{u}"], in: repoURL)
         }
 
@@ -98,7 +98,7 @@
             let git = LocalGitRunner()
             guard upstreamBranch(at: repoURL, git: git) != nil else { throw LocalGitError.missingUpstream }
 
-            _ = fetchPrune(at: repoURL, git: git)
+            _ = try git.run(["fetch", "--prune"], in: repoURL)
             _ = try git.run(["reset", "--hard", "@{u}"], in: repoURL)
         }
 
@@ -245,10 +245,6 @@
                 return fallback.isEmpty ? "Git command failed." : fallback
             }
         }
-    }
-
-    private func fetchPrune(at repoURL: URL, git: LocalGitRunner) -> Bool {
-        (try? git.run(["fetch", "--prune"], in: repoURL)) != nil
     }
 
     private func isClean(at repoURL: URL, git: LocalGitRunner) -> Bool {
