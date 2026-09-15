@@ -36,6 +36,8 @@ The file store lives under `~/Library/Application Support/RepoBar/DebugAuth`. Se
 - `--plain`: plain table (no links, no colors, no URLs).
 - `--no-color`: disable color output.
 
+Fatal command errors are written to stderr and exit with status 1, keeping stdout available for command data, including JSON output.
+
 ## Commands
 
 ### Implemented

@@ -173,11 +173,12 @@ extension String {
 }
 
 func printError(_ message: String) {
-    if Ansi.supportsColor {
-        print(Ansi.red.wrap("Error: \(message)"))
+    let diagnostic = if Ansi.supportsColor {
+        Ansi.red.wrap("Error: \(message)")
     } else {
-        print("Error: \(message)")
+        "Error: \(message)"
     }
+    FileHandle.standardError.write(Data("\(diagnostic)\n".utf8))
 }
 
 func printJSON(_ output: some Encodable) throws {

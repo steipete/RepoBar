@@ -39,6 +39,20 @@ struct CLIEndToEndTests {
 
     @Test
     @MainActor
+    func `errors use stderr and leave stdout empty`() async throws {
+        var diagnostic = ""
+        let output = try await captureStdout {
+            diagnostic = try await captureOutput(descriptor: STDERR_FILENO) {
+                printError("synthetic failure")
+            }
+        }
+        #expect(output.isEmpty)
+        #expect(diagnostic.contains("Error: synthetic failure"))
+        #expect(diagnostic.hasSuffix("\n"))
+    }
+
+    @Test
+    @MainActor
     func `markdown command renders changelog content`() async throws {
         let url = try fixtureURL("ChangelogSample")
         let output = try await runCLI([
@@ -346,8 +360,13 @@ private func runCLI(_ args: [String]) async throws -> String {
 
 @MainActor
 private func captureStdout(_ work: () async throws -> Void) async throws -> String {
+    try await captureOutput(descriptor: STDOUT_FILENO, work)
+}
+
+@MainActor
+private func captureOutput(descriptor target: Int32, _ work: () async throws -> Void) async throws -> String {
     // Commands can exceed the pipe buffer before the capture starts reading.
-    let url = FileManager.default.temporaryDirectory.appendingPathComponent("repobar-stdout-\(UUID().uuidString)")
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("repobar-output-\(UUID().uuidString)")
     let descriptor = open(url.path, O_RDWR | O_CREAT | O_EXCL, 0o600)
     guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
 
@@ -356,19 +375,19 @@ private func captureStdout(_ work: () async throws -> Void) async throws -> Stri
         try? FileManager.default.removeItem(at: url)
     }
 
-    fflush(stdout)
-    let original = dup(STDOUT_FILENO)
+    fflush(nil)
+    let original = dup(target)
     guard original >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
 
     defer {
-        fflush(stdout)
-        dup2(original, STDOUT_FILENO)
+        fflush(nil)
+        dup2(original, target)
         close(original)
     }
-    guard dup2(descriptor, STDOUT_FILENO) >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+    guard dup2(descriptor, target) >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
 
     try await work()
-    fflush(stdout)
+    fflush(nil)
     let data = try Data(contentsOf: url)
     return String(bytes: data, encoding: .utf8) ?? ""
 }
