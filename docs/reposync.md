@@ -31,6 +31,8 @@ Goal: map a local “project folder” (e.g. `~/Projects`) to GitHub repos shown
   - Open in Finder
   - Open in Terminal (preferred terminal)
 
+Worktree listings preserve complete paths, including spaces, Unicode, and line breaks, and complete nested branch names when resolving status and commit metadata.
+
 ### Notifications
 - Fire a local notification on **successful sync** (auto or manual).
 - No notification on failure.

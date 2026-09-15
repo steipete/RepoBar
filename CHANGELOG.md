@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Preserve worktree paths containing whitespace, Unicode, or `worktree ` and nested branch names when listing local worktrees and loading their metadata.
 - Stop manual local Sync, Rebase, and Reset when fetching fails, preserving local work and reporting Git's error instead of continuing against stale upstream refs.
 
 ## 0.9.1 - 2026-09-13

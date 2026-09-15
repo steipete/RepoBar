@@ -143,8 +143,8 @@
 
         public func worktrees(at repoURL: URL) throws -> [LocalGitWorktree] {
             let git = LocalGitRunner()
-            let raw = try git.run(["worktree", "list", "--porcelain"], in: repoURL)
-            let lines = raw.split(whereSeparator: \.isNewline).map(String.init)
+            let raw = try git.run(["worktree", "list", "--porcelain", "-z"], in: repoURL)
+            let fields = raw.split(separator: "\0")
             var entries: [LocalGitWorktree] = []
             var currentPath: URL?
             var currentBranch: String?
@@ -179,19 +179,18 @@
                 currentIsDetached = false
             }
 
-            for line in lines {
-                if line.hasPrefix("worktree ") {
+            for field in fields {
+                if field.hasPrefix("worktree ") {
                     commitEntry()
-                    let pathValue = line.replacingOccurrences(of: "worktree ", with: "")
+                    let pathValue = String(field.dropFirst("worktree ".count))
                     currentPath = URL(fileURLWithPath: pathValue, isDirectory: true)
                     continue
                 }
-                if line.hasPrefix("branch ") {
-                    let branchValue = line.replacingOccurrences(of: "branch ", with: "")
-                    currentBranch = branchValue.replacingOccurrences(of: "refs/heads/", with: "")
+                if field.hasPrefix("branch refs/heads/") {
+                    currentBranch = String(field.dropFirst("branch refs/heads/".count))
                     continue
                 }
-                if line == "detached" {
+                if field == "detached" {
                     currentIsDetached = true
                 }
             }

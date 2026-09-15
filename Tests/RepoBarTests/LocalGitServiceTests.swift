@@ -169,6 +169,28 @@ struct LocalGitServiceTests {
         #expect(hasCurrent)
     }
 
+    @Test(arguments: ["worktree worktree", "quote\"path", "tab\tpath", "line\npath", "café"])
+    func `worktrees preserve paths and nested branch names`(name: String) throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let repo = root.appendingPathComponent("repo", isDirectory: true)
+        try FileManager.default.createDirectory(at: repo, withIntermediateDirectories: true)
+        try initializeRepo(at: repo)
+        let path = root.appendingPathComponent(name, isDirectory: true)
+        let branch = "topic/refs/heads/fix"
+        try LocalGitService().createWorktree(at: repo, path: path, branch: branch)
+        try Data("modified\n".utf8).write(to: path.appendingPathComponent("README.md"))
+
+        let worktrees = try LocalGitService().worktrees(at: path)
+        #expect(worktrees.count == 2)
+        let entry = try #require(worktrees.first { $0.path.standardizedFileURL == path.standardizedFileURL })
+        #expect(entry.branch == branch)
+        #expect(entry.isCurrent)
+        #expect(entry.lastCommitAuthor == "RepoBar Tests")
+        #expect(entry.dirtyCounts?.modified == 1)
+    }
+
     @Test
     func `hard reset to upstream discards local commit`() throws {
         let base = try makeTempDirectory()
