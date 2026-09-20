@@ -5,6 +5,9 @@ actor GraphQLClient {
     private var endpoint: URL = .init(string: "https://api.github.com/graphql")!
     private var tokenProvider: (@Sendable () async throws -> String)?
     private var rateLimit: RateLimitSnapshot?
+    // Seed missing quota once without fanning cached callers out into requests
+    // or repeatedly retrying a failed bootstrap while offline.
+    private var hasAttemptedQuotaRefresh = false
     private var blockedUntil: Date?
     private let responseCache: GraphQLResponseDiskCache?
     private let dataLoader: HTTPDataLoader
@@ -40,6 +43,7 @@ actor GraphQLClient {
         }
         let endpoint = components?.url ?? self.endpoint
         if endpoint != self.endpoint {
+            self.hasAttemptedQuotaRefresh = false
             let snapshot = self.responseCache?.rateLimitSnapshot(endpoint: endpoint)
             self.rateLimit = snapshot
             self.blockedUntil = snapshot?.remaining == 0 ? snapshot?.reset : nil
@@ -74,19 +78,21 @@ actor GraphQLClient {
         encoder.outputFormatting = .sortedKeys
         let bodyData = try encoder.encode(body)
         let cacheKey = self.cacheKey(operation: "RepoSummary", bodyData: bodyData)
-        if let cached = self.responseCache?.cached(key: cacheKey, maxAge: self.responseCacheTTL),
+        if self.rateLimit != nil || self.hasAttemptedQuotaRefresh,
+           let cached = self.responseCache?.cached(key: cacheKey, maxAge: self.responseCacheTTL),
            let summary = try? Self.decodeRepoSummary(from: cached.data, owner: owner, name: name) {
             await self.diag.message("GraphQL RepoSummary \(owner)/\(name) cached")
             return summary
         }
 
-        var request = URLRequest(url: endpoint)
+        var request = URLRequest(url: endpoint, cachePolicy: self.rateLimit == nil ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = bodyData
 
         let result: GitHubHTTPResult
+        self.hasAttemptedQuotaRefresh = true
         do {
             result = try await self.data(for: request)
         } catch {
@@ -173,19 +179,21 @@ actor GraphQLClient {
         encoder.outputFormatting = .sortedKeys
         let bodyData = try encoder.encode(body)
         let cacheKey = self.cacheKey(operation: "UserContributions", bodyData: bodyData)
-        if let cached = self.responseCache?.cached(key: cacheKey, maxAge: self.responseCacheTTL),
+        if self.rateLimit != nil || self.hasAttemptedQuotaRefresh,
+           let cached = self.responseCache?.cached(key: cacheKey, maxAge: self.responseCacheTTL),
            let heatmap = try? self.decodeContributionHeatmap(from: cached.data, login: login) {
             await self.diag.message("GraphQL UserContributions \(login) cached")
             return heatmap
         }
 
-        var request = URLRequest(url: endpoint)
+        var request = URLRequest(url: endpoint, cachePolicy: self.rateLimit == nil ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         request.addValue("bearer \(token)", forHTTPHeaderField: "Authorization")
         request.httpBody = bodyData
 
         let result: GitHubHTTPResult
+        self.hasAttemptedQuotaRefresh = true
         do {
             result = try await self.data(for: request)
         } catch {

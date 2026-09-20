@@ -113,6 +113,11 @@ Current behavior:
 - GraphQL quota observations survive restarts even when all repository responses
   come from cache. Restoring a sample makes no API request and does not change
   its original observation time. Expired samples are not restored.
+- When no current GraphQL quota sample exists (including upgrades from older
+  caches), the first query refreshes from GitHub even if its data is cached.
+  This makes at most one bootstrap refresh attempt, costs that query's usual
+  points, and still permits stale-cache fallback on failure. Other cached
+  queries do not fan out into additional bootstrap requests.
 - On menu refresh, RepoBar seeds the first visible repository rows from cached
   `/user/repos` pages plus cached repo-detail PR counts before live GitHub
   hydration finishes. Rows without cached PR counts stay out of that seed so

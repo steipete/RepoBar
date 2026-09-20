@@ -136,6 +136,29 @@ struct GraphQLResponseTests {
         #expect(cache.rateLimitSnapshot(endpoint: endpoint, now: now) == nil)
     }
 
+    @Test(arguments: [false, true])
+    func `legacy cached data attempts one quota refresh and retains offline fallback`(offline: Bool) async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "GraphQLQuotaTests-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let path = folder.appending(path: "Cache.sqlite").path
+        let legacyTransport = GraphQLTestTransport(bodies: [Self.summary])
+        let legacy = try GraphQLClient(responseCache: GraphQLResponseDiskCache(path: path), dataLoader: HTTPDataLoader { try await legacyTransport.data(for: $0) })
+        await legacy.setTokenProvider { "test-token" }
+        _ = try await legacy.repoSummary(owner: "owner", name: "repo")
+
+        let liveTransport = GraphQLTestTransport(bodies: offline ? [] : [Self.summary], headers: [
+            "X-RateLimit-Resource": "graphql", "X-RateLimit-Limit": "5000",
+            "X-RateLimit-Remaining": "842", "X-RateLimit-Reset": String(Int(Date().addingTimeInterval(3600).timeIntervalSince1970))
+        ])
+        let upgraded = try GraphQLClient(responseCache: GraphQLResponseDiskCache(path: path), dataLoader: HTTPDataLoader { try await liveTransport.data(for: $0) })
+        await upgraded.setTokenProvider { "test-token" }
+        _ = try await upgraded.repoSummary(owner: "owner", name: "repo")
+        _ = try await upgraded.repoSummary(owner: "owner", name: "repo")
+        #expect(await liveTransport.requests.count == 1)
+        #expect(await liveTransport.requests.first?.cachePolicy == .reloadIgnoringLocalCacheData)
+        #expect(await upgraded.rateLimitSnapshot()?.remaining == (offline ? nil : 842))
+    }
+
     @Test
     func `restart preserves an observed exhausted GraphQL window`() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "GraphQLQuotaTests-\(UUID())")
