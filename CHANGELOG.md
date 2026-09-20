@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.9.3 - 2026-09-19
 
 - Keep actual REST and GraphQL usage visible when GitHub's quota endpoint incorrectly reports completely unused budgets; preserve response-header counts and reset times until their known window expires.
 
