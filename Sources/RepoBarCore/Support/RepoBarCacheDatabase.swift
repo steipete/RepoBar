@@ -399,6 +399,7 @@ final class HTTPResponseDiskCache: @unchecked Sendable {
             try self.queue.write { db in
                 try db.execute(sql: "delete from api_responses")
                 try db.execute(sql: "delete from graphql_responses")
+                try db.execute(sql: "delete from graphql_quota_snapshots")
                 try db.execute(sql: "delete from rate_limits")
             }
         } catch {
@@ -461,6 +462,12 @@ final class HTTPResponseDiskCache: @unchecked Sendable {
         migrator.registerMigration("v3") { db in
             try db.alter(table: "api_responses") { table in
                 table.add(column: "rate_limit_limit", .integer)
+            }
+        }
+        migrator.registerMigration("v4") { db in
+            try db.create(table: "graphql_quota_snapshots") { table in
+                table.column("endpoint", .text).primaryKey()
+                table.column("snapshot", .blob).notNull()
             }
         }
         try migrator.migrate(queue)

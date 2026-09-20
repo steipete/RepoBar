@@ -93,6 +93,8 @@ Current tables:
   time, and rate-limit metadata.
 - `graphql_responses`: endpoint, operation, request-body key, response body,
   and fetch time for GraphQL calls such as contribution heatmaps.
+- `graphql_quota_snapshots`: endpoint and last observed response-header quota,
+  scoped to the account database and restored only before its reset time.
 - `rate_limits`: GitHub resource name, remaining budget, reset time, and last
   error.
 
@@ -108,6 +110,9 @@ Current behavior:
 - GraphQL calls use the persistent cache for 15 minutes and fall back to stale
   cached response bodies when GitHub is rate-limited, offline, or temporarily
   unavailable.
+- GraphQL quota observations survive restarts even when all repository responses
+  come from cache. Restoring a sample makes no API request and does not change
+  its original observation time. Expired samples are not restored.
 - On menu refresh, RepoBar seeds the first visible repository rows from cached
   `/user/repos` pages plus cached repo-detail PR counts before live GitHub
   hydration finishes. Rows without cached PR counts stay out of that seed so
@@ -139,7 +144,7 @@ Current behavior:
 - GraphQL HTTP-200 error envelopes are reported as GraphQL errors, never cached
   as successful data. Invalid legacy cache entries are bypassed on refresh.
 - `repobar cache clear --json` clears persisted REST responses, GraphQL
-  responses, and rate limits.
+  responses, quota observations, and rate limits.
 
 ## Discrawl-Compatible Snapshot
 

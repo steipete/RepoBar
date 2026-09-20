@@ -1,6 +1,6 @@
 import Foundation
 
-public struct RateLimitSnapshot: Sendable {
+public struct RateLimitSnapshot: Codable, Sendable {
     public let resource: String?
     public let limit: Int?
     public let remaining: Int?

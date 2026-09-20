@@ -24,6 +24,9 @@ actor GraphQLClient {
     ) {
         self.responseCache = responseCache
         self.dataLoader = dataLoader
+        let snapshot = responseCache?.rateLimitSnapshot(endpoint: self.endpoint)
+        self.rateLimit = snapshot
+        self.blockedUntil = snapshot?.remaining == 0 ? snapshot?.reset : nil
     }
 
     func setEndpoint(apiHost: URL) {
@@ -37,8 +40,9 @@ actor GraphQLClient {
         }
         let endpoint = components?.url ?? self.endpoint
         if endpoint != self.endpoint {
-            self.blockedUntil = nil
-            self.rateLimit = nil
+            let snapshot = self.responseCache?.rateLimitSnapshot(endpoint: endpoint)
+            self.rateLimit = snapshot
+            self.blockedUntil = snapshot?.remaining == 0 ? snapshot?.reset : nil
         }
         self.endpoint = endpoint
     }
@@ -276,6 +280,7 @@ actor GraphQLClient {
 
             if request.url == self.endpoint, let snapshot = RateLimitSnapshot.from(response: response) {
                 self.rateLimit = snapshot
+                self.responseCache?.saveRateLimitSnapshot(snapshot, endpoint: self.endpoint)
             }
             let retryAt = GitHubRateLimitPolicy.graphQLRetryDate(response: response, data: data)
             let budget = [retryAt, GitHubRateLimitPolicy.primaryResetDate(response: response)].compactMap(\.self).max()
