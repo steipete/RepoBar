@@ -8,7 +8,12 @@ actor GitHubRequestRunner {
     private let logger = RepoBarLogging.logger("github-rest")
     private var lastRateLimitReset: Date?
     private var lastRateLimitError: String?
-    private var responseRateLimits: [String: RateLimitSnapshot] = [:]
+    private var responseRateLimitWindows: [String: RateLimitWindowSamples] = [:]
+    private var responseRateLimits: [String: RateLimitSnapshot] {
+        let now = Date()
+        return self.responseRateLimitWindows.compactMapValues { $0.snapshot(now: now) }
+    }
+
     private var latestRateLimitResources: RateLimitResourcesSnapshot?
     private let coreLimiter = AsyncPermitPool(limit: 6)
     private let searchLimiter = AsyncPermitPool(limit: 1)
@@ -236,7 +241,7 @@ actor GitHubRequestRunner {
         await self.backoff.clear()
         self.lastRateLimitReset = nil
         self.lastRateLimitError = nil
-        self.responseRateLimits = [:]
+        self.responseRateLimitWindows = [:]
         self.latestRateLimitResources = nil
     }
 
@@ -289,7 +294,7 @@ actor GitHubRequestRunner {
         let snapshot = RateLimitSnapshot.from(response: response)
         if let snapshot {
             let resource = snapshot.resource ?? "core"
-            self.responseRateLimits[resource] = RateLimitSnapshot.newest(self.responseRateLimits[resource], snapshot)
+            self.responseRateLimitWindows[resource, default: RateLimitWindowSamples()].record(snapshot)
             if let current = self.latestRateLimitResources {
                 var resources = current.resources
                 resources[resource] = RateLimitSnapshot.preferred(reported: resources[resource], response: self.responseRateLimits[resource])

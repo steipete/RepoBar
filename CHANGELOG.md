@@ -5,6 +5,7 @@
 - Keep actual REST and GraphQL usage visible when GitHub's quota endpoint incorrectly reports completely unused budgets; preserve response-header counts and reset times until their known window expires.
 - Retain observed GraphQL quota across app restarts and cached-only refreshes without making additional API requests.
 - Refresh one cached GraphQL query when no current quota observation exists, including the first upgrade from older caches, instead of trusting a synthetic full budget.
+- Keep the lowest observed remaining REST quota across active windows when repository and user-events responses report different budgets under the same core resource.
 
 ## 0.9.2 - 2026-09-19
 

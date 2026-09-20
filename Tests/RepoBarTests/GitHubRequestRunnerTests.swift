@@ -424,6 +424,32 @@ struct GitHubRequestRunnerTests {
         }
     }
 
+    @Test
+    func `user events cannot hide a constrained repository core window`() async throws {
+        let repoURL = try #require(URL(string: "https://api.github.com/repos/owner/repo"))
+        let eventsURL = try #require(URL(string: "https://api.github.com/users/owner/events"))
+        let now = Date()
+        let transport = StubHTTPTransport(responses: [
+            Self.response(url: repoURL, status: 200, headers: [
+                "X-RateLimit-Resource": "core", "X-RateLimit-Limit": "5000",
+                "X-RateLimit-Remaining": "599", "X-RateLimit-Reset": "\(Int(now.addingTimeInterval(600).timeIntervalSince1970))"
+            ], body: "{}"),
+            Self.response(url: eventsURL, status: 200, headers: [
+                "X-RateLimit-Resource": "core", "X-RateLimit-Limit": "5000",
+                "X-RateLimit-Remaining": "4959", "X-RateLimit-Reset": "\(Int(now.addingTimeInterval(3600).timeIntervalSince1970))"
+            ], body: "{}")
+        ])
+        let runner = GitHubRequestRunner(etagCache: ETagCache(), dataLoader: HTTPDataLoader { try await transport.data(for: $0) })
+        _ = try await runner.get(url: repoURL, token: "test-token")
+        _ = try await runner.get(url: eventsURL, token: "test-token")
+        #expect(await runner.diagnosticsSnapshot().restRateLimit?.remaining == 599)
+        let reported = RateLimitSnapshot(resource: "core", limit: 5000, remaining: 5000, used: 0, reset: now.addingTimeInterval(3600), fetchedAt: Date())
+        await runner.recordRateLimitResources(RateLimitResourcesSnapshot(fetchedAt: Date(), resources: ["core": reported]))
+        #expect(await runner.diagnosticsSnapshot().rateLimitResources?["core"]?.remaining == 599)
+        await runner.clear()
+        #expect(await runner.diagnosticsSnapshot().restRateLimit == nil)
+    }
+
     private static func response(
         url: URL,
         status: Int,

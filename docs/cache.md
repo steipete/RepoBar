@@ -142,6 +142,11 @@ Current behavior:
   That endpoint supplies fallback/resource inventory data, not proof that an active
   budget refilled. Search headers never replace REST core quota. Counts are
   last-observed values, not a live guarantee.
+- Different REST endpoints can report independent reset windows under `core`.
+  The display conservatively uses the lowest remaining active observation,
+  discarding expired windows rather than letting a fuller events budget hide
+  an almost exhausted repository budget. Late responses cannot increase the
+  observed remaining count within the same active window.
 - The menu bar labels both budgets: `R` is REST core requests remaining; `G` is
   GraphQL points remaining (not requests). REST is stacked above GraphQL without an extra icon to save space. Hover for exact counts and
   units; open GitHub API Status for reset times and separate search budgets.
