@@ -36,6 +36,7 @@ Keep `TMPDIR` set to a private, writable directory for release commands. Packagi
 2) Package + notarize  
    - `Scripts/package_app.sh [debug|release]`
    - Optional notarization: `NOTARIZE=1 NOTARY_PROFILE="Xcode Notary" Scripts/package_app.sh release`
+   - Packaging exits with the failing command's status if signing or requested notarization fails; resolve the error before distributing the bundle.
    - Verify: `spctl --assess --verbose .build/release/RepoBar.app`
    - Inspect release auth storage: `plutil -p .build/release/RepoBar.app/Contents/Info.plist | rg RepoBarTokenStore` should print nothing.
 

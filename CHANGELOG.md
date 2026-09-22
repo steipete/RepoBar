@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fix direct debug packaging on macOS Bash 3.2 while preserving strict shell checks and universal release builds (thanks @prakersh). (#134)
+- Stop packaging when signing or requested notarization fails instead of reporting success for an unfinished app bundle.
 
 ## 0.9.3 - 2026-09-19
 

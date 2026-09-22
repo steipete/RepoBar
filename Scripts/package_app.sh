@@ -153,10 +153,10 @@ PLIST
 IDENTITY="${CODESIGN_IDENTITY:-${CODE_SIGN_IDENTITY:-}}"
 if [ -n "${IDENTITY}" ] && [ -d "${APP_BUNDLE}" ]; then
   log "==> Codesigning with ${IDENTITY}"
-  "${ROOT_DIR}/Scripts/codesign_app.sh" "${APP_BUNDLE}" "${IDENTITY}" || true
+  "${ROOT_DIR}/Scripts/codesign_app.sh" "${APP_BUNDLE}" "${IDENTITY}"
 elif [ "${CONFIGURATION}" = "debug" ] && [ -d "${APP_BUNDLE}" ] && command -v codesign >/dev/null 2>&1; then
   log "==> Ad-hoc codesigning debug app"
-  codesign --force --deep --sign - "${APP_BUNDLE}" || true
+  codesign --force --deep --sign - "${APP_BUNDLE}"
 fi
 
 # Package dSYM (release builds only)
@@ -174,5 +174,5 @@ fi
 # Optional notarization (set NOTARIZE=1 and NOTARY_PROFILE if needed)
 if [ "${NOTARIZE:-0}" -eq 1 ] && [ -d "${APP_BUNDLE}" ]; then
   log "==> Notarizing app (profile: ${NOTARY_PROFILE:-Xcode Notary})"
-  "${ROOT_DIR}/Scripts/notarize_app.sh" "${APP_BUNDLE}" "${NOTARY_PROFILE:-}" || log "Notarization failed"
+  "${ROOT_DIR}/Scripts/notarize_app.sh" "${APP_BUNDLE}" "${NOTARY_PROFILE:-}"
 fi
