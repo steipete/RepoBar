@@ -4,13 +4,6 @@ import Foundation
 actor BackoffTracker {
     private var cooldowns: [String: Date] = [:]
 
-    func isCoolingDown(url: URL, now: Date = Date()) -> Bool {
-        if let until = cooldowns[url.absoluteString], until > now {
-            return true
-        }
-        return false
-    }
-
     func cooldown(for url: URL, now: Date = Date()) -> Date? {
         if let until = cooldowns[url.absoluteString], until > now {
             return until
@@ -29,9 +22,5 @@ actor BackoffTracker {
 
     func clear() {
         self.cooldowns.removeAll()
-    }
-
-    func count() -> Int {
-        self.cooldowns.count
     }
 }

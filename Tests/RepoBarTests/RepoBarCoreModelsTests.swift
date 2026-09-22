@@ -207,13 +207,12 @@ struct RepoBarCoreModelsTests {
         let tracker = BackoffTracker()
         let url = try #require(URL(string: "https://example.com"))
         let now = Date()
-        #expect(await tracker.isCoolingDown(url: url, now: now) == false)
+        #expect(await tracker.cooldown(for: url, now: now) == nil)
         await tracker.setCooldown(url: url, until: now.addingTimeInterval(60))
-        #expect(await tracker.isCoolingDown(url: url, now: now) == true)
-        #expect(await tracker.cooldown(for: url, now: now) != nil)
-        #expect(await tracker.count() == 1)
+        #expect(await tracker.cooldown(for: url, now: now) == now.addingTimeInterval(60))
+        #expect(await tracker.activeCooldowns(now: now) == [url.absoluteString: now.addingTimeInterval(60)])
         await tracker.clear()
-        #expect(await tracker.count() == 0)
+        #expect(await tracker.activeCooldowns(now: now).isEmpty)
     }
 
     @Test

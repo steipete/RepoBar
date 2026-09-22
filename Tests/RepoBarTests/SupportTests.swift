@@ -83,19 +83,14 @@ struct RefreshAndBackoffTests {
     func `backoff tracks cooldown`() async throws {
         let tracker = BackoffTracker()
         let url = try #require(URL(string: "https://example.com/path"))
-        let initial = await tracker.isCoolingDown(url: url)
-        #expect(initial == false)
+        let now = Date()
+        #expect(await tracker.cooldown(for: url, now: now) == nil)
 
-        let until = Date().addingTimeInterval(30)
+        let until = now.addingTimeInterval(30)
         await tracker.setCooldown(url: url, until: until)
 
-        let cooling = await tracker.isCoolingDown(url: url)
-        #expect(cooling)
-        let reported = await tracker.cooldown(for: url)
-        #expect(reported != nil)
-        if let reported {
-            #expect(abs(reported.timeIntervalSince1970 - until.timeIntervalSince1970) < 0.5)
-        }
+        #expect(await tracker.cooldown(for: url, now: now) == until)
+        #expect(await tracker.cooldown(for: url, now: until) == nil)
     }
 
     @Test
