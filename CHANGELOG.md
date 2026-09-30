@@ -7,6 +7,7 @@
 - Apply a changed Heatmap color to repository submenu heatmaps instead of keeping the previous color until the repository's data changes (thanks @drluckyspin). (#141)
 - Add an Appearance setting (Light, Dark, System Default) to General settings so RepoBar's menus and windows can follow macOS or stay in a fixed mode; also available as `repobar settings set color-scheme` (thanks @drluckyspin). (#139)
 - Recolor the main menu and repository submenus on the first open after the appearance switches between Light and Dark instead of showing the previous appearance once (thanks @drluckyspin). (#139)
+- Refresh Kingfisher image loading, Unicode terminal-width tables, and Chalk/ANSI tooling while retaining the existing Swift 6.2 and Node.js 22.13 minimums.
 
 ## 0.9.3 - 2026-09-19
 

@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/onevcat/Kingfisher",
       "state" : {
-        "revision" : "be0d257b9bd47a4e6e1265fc8c237411825f107a",
-        "version" : "8.12.0"
+        "revision" : "8648fe649c5d62be38721110f835821906e9242a",
+        "version" : "8.13.0"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/ainame/swift-displaywidth",
       "state" : {
-        "revision" : "5493276f6c91fd09d348e6cea70d66346fc7b610",
-        "version" : "0.1.0"
+        "revision" : "76dd45f36c6fda21e6ad05fb4613df001e91109e",
+        "version" : "0.2.0"
       }
     },
     {
