@@ -1,13 +1,17 @@
 # Changelog
 
-## Unreleased
+## 0.10.0 - 2026-09-30
 
-- Fix direct debug packaging on macOS Bash 3.2 while preserving strict shell checks and universal release builds (thanks @prakersh). (#134)
-- Stop packaging when signing or requested notarization fails instead of reporting success for an unfinished app bundle.
-- Apply a changed Heatmap color to repository submenu heatmaps instead of keeping the previous color until the repository's data changes (thanks @drluckyspin). (#141)
+**Highlights:** Choose Light, Dark, or System appearance, with menus and heatmaps that refresh their colors reliably.
+
 - Add an Appearance setting (Light, Dark, System Default) to General settings so RepoBar's menus and windows can follow macOS or stay in a fixed mode; also available as `repobar settings set color-scheme` (thanks @drluckyspin). (#139)
 - Recolor the main menu and repository submenus on the first open after the appearance switches between Light and Dark instead of showing the previous appearance once (thanks @drluckyspin). (#139)
+- Apply a changed Heatmap color to repository submenu heatmaps instead of keeping the previous color until the repository's data changes (thanks @drluckyspin). (#141)
+- Fix direct debug packaging on macOS Bash 3.2 while preserving strict shell checks and universal release builds (thanks @prakersh). (#134)
+- Stop packaging when signing or requested notarization fails instead of reporting success for an unfinished app bundle.
 - Refresh Kingfisher image loading, Unicode terminal-width tables, and Chalk/ANSI tooling while retaining the existing Swift 6.2 and Node.js 22.13 minimums.
+
+- Update development tooling to pnpm 11.28.2 after the release cooldown, retaining the Node.js 22.13 minimum.
 
 ## 0.9.3 - 2026-09-19
 
