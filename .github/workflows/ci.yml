@@ -63,9 +63,9 @@ jobs:
           mkdir -p "$RUNNER_TEMP/repobar-tools"
           cd "$RUNNER_TEMP/repobar-tools"
           curl -fsSL --retry 3 https://github.com/realm/SwiftLint/releases/download/0.65.1/portable_swiftlint.zip -o swiftlint.zip
-          curl -fsSL --retry 3 https://github.com/nicklockwood/SwiftFormat/releases/download/0.63.0/swiftformat.zip -o swiftformat.zip
+          curl -fsSL --retry 3 https://github.com/nicklockwood/SwiftFormat/releases/download/0.63.1/swiftformat.zip -o swiftformat.zip
           printf '%s\n' 'c1e429b0599cf1b516f369a2d9ec04eaf0e436f3c12b637df8851fa52ff694d0  swiftlint.zip' | shasum -a 256 -c -
-          printf '%s\n' '28c7802e11fa5ae113d903066439c6bb1be20a8ac1ad9709c42616a7e273fb0f  swiftformat.zip' | shasum -a 256 -c -
+          printf '%s\n' '385ef1a263ba28685157b98c5536b9c9105e124518f28b7ef8a2bee4b167eaeb  swiftformat.zip' | shasum -a 256 -c -
           unzip -q swiftlint.zip -d swiftlint
           unzip -q swiftformat.zip -d swiftformat
           "$PWD/swiftlint/swiftlint" version

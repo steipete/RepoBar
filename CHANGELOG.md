@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Update development tooling to pnpm 11.28.4 and SwiftFormat 0.63.1 after the release cooldown, retaining the Node.js 22.13 minimum.
+
 ## 0.10.0 - 2026-09-30
 
 **Highlights:** Choose Light, Dark, or System appearance, with menus and heatmaps that refresh their colors reliably.
