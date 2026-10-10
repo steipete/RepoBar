@@ -14,7 +14,7 @@ enum RepoBarCLI {
 
         do {
             let program = Program(descriptors: [RepoBarRoot.descriptor()])
-            let invocation = try program.resolve(argv: argv)
+            let invocation = try program.resolve(arguments: argv)
             var command = try makeCommand(from: invocation)
             try await command.run()
         } catch {

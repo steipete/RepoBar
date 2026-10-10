@@ -9,7 +9,7 @@ struct ReferenceTranslateCommand: CommanderRunnableCommand {
     @OptionGroup
     var output: OutputOptions
 
-    @Argument
+    @Argument(parsing: .remaining)
     private var text: String?
 
     static var commandDescription: CommandDescription {

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Update Commander to 0.3.0, SwiftLog to 1.16.1, and pnpm to 11.28.5 for stricter CLI argument validation and corrected multiplexed logging metadata, preserving default command routing, multiword reference translation, and the Swift 6.2 and Node.js 22.13 minimums.
 - Update development tooling to pnpm 11.28.4 and SwiftFormat 0.63.1 after the release cooldown, retaining the Node.js 22.13 minimum.
 
 ## 0.10.0 - 2026-09-30

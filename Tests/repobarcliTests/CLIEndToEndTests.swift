@@ -351,7 +351,7 @@ private func withCurrentDirectory<T>(_ url: URL, _ work: () async throws -> T) a
 private func runCLI(_ args: [String]) async throws -> String {
     let argv = CLIArgumentNormalizer.normalize(["repobar"] + args)
     let program = Program(descriptors: [RepoBarRoot.descriptor()])
-    let invocation = try program.resolve(argv: argv)
+    let invocation = try program.resolve(arguments: argv)
     var command = try RepoBarCLI.makeCommand(from: invocation)
     return try await captureStdout {
         try await command.run()

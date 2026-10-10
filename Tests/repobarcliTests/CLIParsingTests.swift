@@ -110,6 +110,6 @@ private func parseCommand<T: CommanderRunnableCommand>(
 ) throws -> T {
     let argv = CLIArgumentNormalizer.normalize(["repobar"] + arguments)
     let program = Program(descriptors: [RepoBarRoot.descriptor()])
-    let invocation = try program.resolve(argv: argv)
+    let invocation = try program.resolve(arguments: argv)
     return try #require(RepoBarCLI.makeCommand(from: invocation) as? T)
 }

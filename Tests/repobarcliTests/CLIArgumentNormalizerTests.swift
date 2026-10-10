@@ -16,8 +16,17 @@ struct CLIArgumentNormalizerTests {
     func `normalized args resolve to status command`() throws {
         let argv = CLIArgumentNormalizer.normalize(["/Applications/RepoBar.app/Contents/MacOS/repobarcli", "status"])
         let program = Program(descriptors: [RepoBarRoot.descriptor()])
-        let invocation = try program.resolve(argv: argv)
+        let invocation = try program.resolve(arguments: argv)
         #expect(invocation.path.last == StatusCommand.commandName)
+    }
+
+    @Test
+    @MainActor
+    func `normalized empty invocation resolves to default repos command`() throws {
+        let argv = CLIArgumentNormalizer.normalize(["/usr/local/bin/repobar"])
+        let program = Program(descriptors: [RepoBarRoot.descriptor()])
+        let invocation = try program.resolve(arguments: argv)
+        #expect(invocation.path == [RepoBarRoot.commandName, ReposCommand.commandName])
     }
 
     @Test
@@ -105,7 +114,7 @@ struct CLIArgumentNormalizerTests {
     func `normalized archive args resolve`() throws {
         let argv = CLIArgumentNormalizer.normalize(["repobar", "archives", "list"])
         let program = Program(descriptors: [RepoBarRoot.descriptor()])
-        let invocation = try program.resolve(argv: argv)
+        let invocation = try program.resolve(arguments: argv)
         #expect(invocation.path.last == ArchivesListCommand.commandName)
     }
 
@@ -114,7 +123,7 @@ struct CLIArgumentNormalizerTests {
     func `normalized rate limit args resolve`() throws {
         let argv = CLIArgumentNormalizer.normalize(["repobar", "cache", "rate-limits"])
         let program = Program(descriptors: [RepoBarRoot.descriptor()])
-        let invocation = try program.resolve(argv: argv)
+        let invocation = try program.resolve(arguments: argv)
         #expect(invocation.path.last == RateLimitsCommand.commandName)
         #expect(try RepoBarCLI.makeCommand(from: invocation) is RateLimitsCommand)
     }
@@ -124,7 +133,7 @@ struct CLIArgumentNormalizerTests {
     func `normalized account args resolve`() throws {
         let argv = CLIArgumentNormalizer.normalize(["repobar", "accounts", "list"])
         let program = Program(descriptors: [RepoBarRoot.descriptor()])
-        let invocation = try program.resolve(argv: argv)
+        let invocation = try program.resolve(arguments: argv)
         #expect(invocation.path.last == AccountsListCommand.commandName)
         #expect(try RepoBarCLI.makeCommand(from: invocation) is AccountsListCommand)
     }
@@ -145,7 +154,7 @@ struct CLIArgumentNormalizerTests {
             "/tmp/archive.sqlite"
         ])
         let program = Program(descriptors: [RepoBarRoot.descriptor()])
-        let invocation = try program.resolve(argv: argv)
+        let invocation = try program.resolve(arguments: argv)
         let command = try #require(RepoBarCLI.makeCommand(from: invocation) as? ArchivesAddCommand)
 
         #expect(command.repoPath == "/tmp/repo")
@@ -155,12 +164,24 @@ struct CLIArgumentNormalizerTests {
 
     @Test
     @MainActor
+    func `archive add binds attached long option values`() throws {
+        let argv = CLIArgumentNormalizer.normalize([
+            "repobar", "archives", "add", "example", "--repo=/tmp/repo"
+        ])
+        let program = Program(descriptors: [RepoBarRoot.descriptor()])
+        let invocation = try program.resolve(arguments: argv)
+        let command = try #require(RepoBarCLI.makeCommand(from: invocation) as? ArchivesAddCommand)
+        #expect(command.repoPath == "/tmp/repo")
+    }
+
+    @Test
+    @MainActor
     func `commands without positional arguments reject stray input`() throws {
         let argv = CLIArgumentNormalizer.normalize(["repobar", "status", "unexpected"])
         let program = Program(descriptors: [RepoBarRoot.descriptor()])
 
         #expect(throws: CommanderProgramError.self) {
-            _ = try program.resolve(argv: argv)
+            _ = try program.resolve(arguments: argv)
         }
     }
 

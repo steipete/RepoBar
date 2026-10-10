@@ -38,6 +38,8 @@ The file store lives under `~/Library/Application Support/RepoBar/DebugAuth`. Se
 
 Fatal command errors are written to stderr and exit with status 1, keeping stdout available for command data, including JSON output.
 
+Long options with values accept either `--option value` or `--option=value`, including values that start with a dash when attached with `=`.
+
 ## Commands
 
 ### Implemented
@@ -91,6 +93,7 @@ Fatal command errors are written to stderr and exit with status 1, keeping stdou
   - Flags: `--release`, `--json`, `--plain`, `--no-color`.
 - `markdown <path>`: render markdown to ANSI text.
   - Flags: `--width`, `--no-wrap`, `--plain`, `--no-color`.
+- `reference-translate <text...>`: translate copied text into GitHub references; accepts quoted text or multiple words, with `--json` for structured output.
 - `pin <owner/name>` / `unpin <owner/name>`: manage pinned repos.
 - `hide <owner/name>` / `show <owner/name>`: manage hidden repos.
 - `archives list`: list configured GitHub backup archive sources.

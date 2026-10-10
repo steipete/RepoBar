@@ -14,7 +14,7 @@ let package = Package(
         .executable(name: "repobarcli", targets: ["repobarcli"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/steipete/Commander", exact: "0.2.4"),
+        .package(url: "https://github.com/steipete/Commander", exact: "0.3.0"),
         .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.8.1"),
         .package(url: "https://github.com/apple/swift-algorithms", from: "1.2.1"),
         .package(url: "https://github.com/apple/swift-log", from: "1.8.0"),

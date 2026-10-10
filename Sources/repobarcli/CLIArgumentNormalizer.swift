@@ -8,8 +8,8 @@ enum CLIArgumentNormalizer {
         var normalized = args
         let invokedName = URL(fileURLWithPath: args[0]).lastPathComponent
 
-        // Commander expects argv[0] to be the command name used in help/usage. Our binary name can vary
-        // (e.g. `repobarcli` when bundled inside the app), but the public interface stays `repobar`.
+        // Commander's argument-tail API expects the root command first. Our binary name can vary
+        // (e.g. `repobarcli` when bundled inside the app), but the root stays `repobar`.
         if invokedName != RepoBarRoot.commandName {
             normalized[0] = RepoBarRoot.commandName
         } else {
