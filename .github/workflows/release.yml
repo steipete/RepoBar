@@ -1,0 +1,149 @@
+name: Release
+run-name: Release ${{ inputs.tag || github.ref_name }}${{ inputs.dry_run && ' (dry run)' || '' }}
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Build, sign, notarize and verify without publishing
+        type: boolean
+        default: true
+      tag:
+        description: Existing signed tag (leave empty to prove current main)
+        type: string
+        default: ''
+
+permissions: {}
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+env:
+  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+  RELEASE_TAG: ${{ github.event_name == 'push' && github.ref_name || inputs.tag }}
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      commit: ${{ steps.validate.outputs.commit }}
+    steps:
+      - name: Preflight Homebrew access before a publishing run
+        if: env.DRY_RUN == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          test -n "$GH_TOKEN"
+          test "$(gh api repos/steipete/homebrew-tap --jq .permissions.push)" = true
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
+        with:
+          xcode-version: '26.1'
+      - name: Enable package manager
+        run: corepack enable
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '26'
+          cache: pnpm
+      - name: Validate frozen source and exact push CI
+        id: validate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/validate-release.py
+      - run: pnpm install --frozen-lockfile
+      - name: Import signing credentials into an ephemeral keychain
+        env:
+          MACOS_SIGNING_P12: ${{ secrets.MACOS_SIGNING_P12 }}
+          MACOS_SIGNING_P12_PASSWORD: ${{ secrets.MACOS_SIGNING_P12_PASSWORD }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_P8: ${{ secrets.ASC_PRIVATE_KEY_P8 }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: bash .github/scripts/setup-signing.sh
+      - name: Build universal app and CLI, notarize, package, and sign appcast
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY_P8: ${{ secrets.ASC_PRIVATE_KEY_P8 }}
+        run: bash .github/scripts/package-release.sh
+      - name: Remove signing credentials
+        if: always()
+        run: |
+          if [[ -f "$RUNNER_TEMP/original-keychains" ]]; then
+            python3 - "$RUNNER_TEMP/original-keychains" <<'PY'
+          import pathlib, shlex, subprocess, sys
+          subprocess.run(['security','list-keychains','-d','user','-s',*shlex.split(pathlib.Path(sys.argv[1]).read_text())], check=True)
+          PY
+          fi
+          if [[ -f "$RUNNER_TEMP/release.keychain-db" ]]; then
+            security delete-keychain "$RUNNER_TEMP/release.keychain-db"
+          fi
+          rm -f "$RUNNER_TEMP/signing.p12" "$RUNNER_TEMP/sparkle-key"
+      - name: Verify source unchanged
+        run: git diff --exit-code
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release/
+          if-no-files-found: error
+          retention-days: 14
+
+  verify:
+    needs: build
+    runs-on: macos-26
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release/
+      - name: Independently verify signed artifacts and smoke the bundled CLI
+        run: bash .github/scripts/verify-release.sh
+
+  publish:
+    needs: [build, verify]
+    if: github.event_name == 'push' || !inputs.dry_run
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.build.outputs.commit }}
+          persist-credentials: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release/
+      - name: Verify uploaded bytes and publish once
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_COMMIT: ${{ needs.build.outputs.commit }}
+        run: python3 .github/scripts/publish-release.py
+      - name: Update the public Sparkle feed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/release-handoff.py appcast
+      - name: Update the Homebrew cask from the verified archive checksum
+        env:
+          GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: python3 .github/scripts/release-handoff.py homebrew

@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+case "${1:-}" in
+  status|notes|changelog-html|verify-appcast|check-assets|codesign-run|package-run) ;;
+  *) echo "Use GitHub Actions release.yml for publishing; this helper only supports local verification and packaging." >&2; exit 2 ;;
+esac
+
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 cd "$ROOT"

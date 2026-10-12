@@ -72,6 +72,8 @@ jobs:
           "$PWD/swiftformat/swiftformat" --version
           printf '%s\n' "$PWD/swiftlint" "$PWD/swiftformat" >> "$GITHUB_PATH"
 
+      - name: Test release validation
+        run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
       - name: Run checks
         run: pnpm check
 
