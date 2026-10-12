@@ -12,7 +12,9 @@ codesign --verify --strict --check-notarization "$app"
 spctl --assess --type execute --verbose=2 "$app"
 xcrun stapler validate "$app"
 for binary in "$app/Contents/MacOS/RepoBar" "$app/Contents/MacOS/repobarcli"; do
-  lipo -verify_arch arm64 x86_64 "$binary"
+  architectures="$(lipo -archs "$binary")"
+  [[ " $architectures " == *" arm64 "* ]]
+  [[ " $architectures " == *" x86_64 "* ]]
   codesign --verify --strict --check-notarization "$binary"
   details="$(codesign -d --verbose=4 "$binary" 2>&1)"
   grep -F 'TeamIdentifier=Y5PE65HELJ' <<< "$details"
