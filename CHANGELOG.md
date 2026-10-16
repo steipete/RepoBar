@@ -2,9 +2,14 @@
 
 ## Unreleased
 
-- Update Zod to 4.6.7 and refresh the pinned Node setup and release artifact actions after the release cooldown, preserving the existing Node.js 22.13 minimum and signed release verification.
+## 0.10.1 - 2026-10-16
+
+**Highlights:** Updated CLI parsing and logging dependencies preserve command routing and improve argument validation and logging metadata.
+
 - Update Commander to 0.3.0, SwiftLog to 1.16.1, and pnpm to 11.28.5 for stricter CLI argument validation and corrected multiplexed logging metadata, preserving default command routing, multiword reference translation, and the Swift 6.2 and Node.js 22.13 minimums.
+- Update Zod to 4.6.7 and refresh the pinned Node setup and release artifact actions after the release cooldown, preserving the existing Node.js 22.13 minimum and signed release verification.
 - Update development tooling to pnpm 11.28.4 and SwiftFormat 0.63.1 after the release cooldown, retaining the Node.js 22.13 minimum.
+- Verify the macOS 15 minimum in every app and CLI architecture before publication, and preflight Apple notarization access before building release artifacts.
 
 ## 0.10.0 - 2026-09-30
 

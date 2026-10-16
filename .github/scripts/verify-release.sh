@@ -15,6 +15,15 @@ for binary in "$app/Contents/MacOS/RepoBar" "$app/Contents/MacOS/repobarcli"; do
   architectures="$(lipo -archs "$binary")"
   [[ " $architectures " == *" arm64 "* ]]
   [[ " $architectures " == *" x86_64 "* ]]
+  for architecture in arm64 x86_64; do
+    otool -arch "$architecture" -l "$binary" | grep -A3 LC_BUILD_VERSION
+    minimum="$(otool -arch "$architecture" -l "$binary" | awk '/LC_BUILD_VERSION/ { found=1 } found && $1 == "minos" { print $2; found=0 }')"
+    python3 - "$minimum" <<'PY'
+import sys
+minimum = tuple(map(int, sys.argv[1].split('.')))
+assert minimum <= (15, 0, 0), f"Binary requires macOS {sys.argv[1]}, newer than macOS 15.0"
+PY
+  done
   codesign --verify --strict --check-notarization "$binary"
   details="$(codesign -d --verbose=4 "$binary" 2>&1)"
   grep -F 'TeamIdentifier=Y5PE65HELJ' <<< "$details"

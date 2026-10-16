@@ -1,6 +1,6 @@
 {
   "name": "repobar",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "private": true,
   "packageManager": "pnpm@11.28.5",
   "engines": {

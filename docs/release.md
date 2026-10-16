@@ -30,6 +30,9 @@ binaries. No npm token or trusted publisher is required.
    in a separate job without signing secrets. Verification covers both CPU
    architectures, the bundled CLI, signing identity/runtime/timestamp,
    notarization, version metadata, dSYM UUIDs, and the Sparkle public key.
+   A read-only `notarytool history` preflight checks Apple access before building;
+   the verifier checks each app and CLI slice's `LC_BUILD_VERSION` minimum against
+   the supported macOS 15.0 minimum before publication.
 6. The publisher creates a draft, checks every downloaded asset and the notes,
    and publishes it once. It then commits the verified Sparkle item to `main`
    and updates the existing Homebrew cask with the verified ZIP checksum.
