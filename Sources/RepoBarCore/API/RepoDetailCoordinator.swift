@@ -11,7 +11,7 @@ public struct RepositoryDetailOptions: Sendable {
 }
 
 actor RepoDetailCoordinator {
-    private var store: RepoDetailStore
+    private let store: RepoDetailStore
     private let policy: RepoDetailCachePolicy
     private let restAPI: GitHubRestAPI
     private let graphQL: GraphQLClient
@@ -21,7 +21,7 @@ actor RepoDetailCoordinator {
         restAPI: GitHubRestAPI,
         graphQL: GraphQLClient,
         policy: RepoDetailCachePolicy,
-        store: RepoDetailStore = RepoDetailStore()
+        store: RepoDetailStore = .shared
     ) {
         self.restAPI = restAPI
         self.graphQL = graphQL
@@ -49,7 +49,7 @@ actor RepoDetailCoordinator {
         let resolvedOwner = details.owner.login
         let resolvedName = details.name
         let apiHost = await self.restAPI.apiHost()
-        var cache = self.store.load(apiHost: apiHost, owner: resolvedOwner, name: resolvedName)
+        var cache = await self.store.load(apiHost: apiHost, owner: resolvedOwner, name: resolvedName)
         var didUpdateCache = false
         if let discussionsEnabled = details.hasDiscussions {
             if cache.discussionsEnabled != discussionsEnabled {
@@ -192,7 +192,7 @@ actor RepoDetailCoordinator {
 
         let finalCacheState = self.policy.state(for: cache, now: now)
         if didUpdateCache {
-            self.store.save(cache, apiHost: apiHost, owner: resolvedOwner, name: resolvedName)
+            await self.store.save(cache, apiHost: apiHost, owner: resolvedOwner, name: resolvedName)
         }
 
         return Repository.from(
@@ -215,11 +215,17 @@ actor RepoDetailCoordinator {
 
     func cachedRepositories(from items: [RepoItem], now: Date = Date()) async -> [Repository] {
         let apiHost = await self.restAPI.apiHost()
-        return items.compactMap { self.cachedRepository(from: $0, apiHost: apiHost, now: now) }
+        var repositories: [Repository] = []
+        for item in items {
+            if let repository = await self.cachedRepository(from: item, apiHost: apiHost, now: now) {
+                repositories.append(repository)
+            }
+        }
+        return repositories
     }
 
-    private func cachedRepository(from item: RepoItem, apiHost: URL, now: Date) -> Repository? {
-        let cache = self.store.load(apiHost: apiHost, owner: item.owner.login, name: item.name)
+    private func cachedRepository(from item: RepoItem, apiHost: URL, now: Date) async -> Repository? {
+        let cache = await self.store.load(apiHost: apiHost, owner: item.owner.login, name: item.name)
         guard let openPulls = cache.openPulls else { return nil }
 
         let cacheState = self.policy.state(for: cache, now: now)
@@ -244,9 +250,13 @@ actor RepoDetailCoordinator {
         )
     }
 
-    func clearCache() {
+    func flushCache() async {
+        await self.store.flush()
+    }
+
+    func clearCache() async {
         self.logger.info("Clearing repo detail cache (disk + memory)")
-        self.store.clear()
+        await self.store.clear()
     }
 
     func cachedDiscussionsEnabled(
@@ -256,7 +266,7 @@ actor RepoDetailCoordinator {
         ttl: TimeInterval = RepoDetailCacheConstants.discussionsCapabilityTTL
     ) async -> Bool? {
         let apiHost = await self.restAPI.apiHost()
-        return self.store.discussionsEnabled(
+        return await self.store.discussionsEnabled(
             apiHost: apiHost,
             owner: owner,
             name: name,
@@ -273,7 +283,7 @@ actor RepoDetailCoordinator {
         source: String
     ) async {
         let apiHost = await self.restAPI.apiHost()
-        let updated = self.store.updateDiscussionsEnabled(
+        let updated = await self.store.updateDiscussionsEnabled(
             apiHost: apiHost,
             owner: owner,
             name: name,
@@ -297,7 +307,7 @@ actor RepoDetailCoordinator {
         for item in items {
             guard let enabled = item.hasDiscussions else { continue }
 
-            if self.store.updateDiscussionsEnabled(
+            if await self.store.updateDiscussionsEnabled(
                 apiHost: apiHost,
                 owner: item.owner.login,
                 name: item.name,

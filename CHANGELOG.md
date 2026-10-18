@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Coalesce repository detail cache updates into one snapshot per 30-second window instead of rewriting a file for every refreshed repository, and flush pending changes on quit.
+
 ## 0.10.1 - 2026-10-16
 
 **Highlights:** Updated CLI parsing and logging dependencies preserve command routing and improve argument validation and logging metadata.

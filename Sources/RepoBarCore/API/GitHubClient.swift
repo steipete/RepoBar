@@ -385,6 +385,10 @@ public actor GitHubClient {
         await self.repoDetailCoordinator.clearCache()
     }
 
+    public func flushRepoDetailCache() async {
+        await self.repoDetailCoordinator.flushCache()
+    }
+
     public func diagnostics() async -> DiagnosticsSummary {
         let requestDiagnostics = await self.requestRunner.diagnosticsSnapshot()
         let graphQLRateLimit = await self.graphQL.rateLimitSnapshot()

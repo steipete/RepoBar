@@ -73,6 +73,7 @@ private struct RepoBarLifecycleKeepaliveView: View {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuManager: StatusBarMenuManager?
     private var suppressIssueNavigatorReopenUntil: Date?
+    private var isTerminating = false
 
     func configure(menuManager: StatusBarMenuManager) {
         self.menuManager = menuManager
@@ -95,6 +96,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             object: nil
         )
         self.menuManager?.ensureStatusItems()
+    }
+
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard !self.isTerminating else { return .terminateLater }
+
+        self.isTerminating = true
+        self.menuManager?.appState.shutdown()
+        Task {
+            await self.menuManager?.appState.github.flushRepoDetailCache()
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
     }
 
     func applicationWillTerminate(_: Notification) {

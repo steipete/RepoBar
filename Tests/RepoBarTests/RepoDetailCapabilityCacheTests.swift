@@ -4,16 +4,19 @@ import Testing
 
 struct RepoDetailCapabilityCacheTests {
     @Test
-    func `discussions capability respects TTL`() throws {
+    func `discussions capability respects TTL`() async throws {
         let baseURL = FileManager.default.temporaryDirectory.appending(path: "repobar-capability-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: baseURL) }
+        defer {
+            try? FileManager.default.removeItem(at: baseURL)
+            try? FileManager.default.removeItem(at: baseURL.appendingPathExtension("json"))
+        }
 
         let diskStore = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
-        var store = RepoDetailStore(diskStore: diskStore)
+        let store = RepoDetailStore(diskStore: diskStore)
         let apiHost = try #require(URL(string: "https://api.github.com"))
         let now = Date(timeIntervalSinceReferenceDate: 123_456)
 
-        _ = store.updateDiscussionsEnabled(
+        _ = await store.updateDiscussionsEnabled(
             apiHost: apiHost,
             owner: "steipete",
             name: "RepoBar",
@@ -21,7 +24,7 @@ struct RepoDetailCapabilityCacheTests {
             checkedAt: now
         )
 
-        let cached = store.discussionsEnabled(
+        let cached = await store.discussionsEnabled(
             apiHost: apiHost,
             owner: "steipete",
             name: "RepoBar",
@@ -30,7 +33,7 @@ struct RepoDetailCapabilityCacheTests {
         )
         #expect(cached == false)
 
-        let stale = store.discussionsEnabled(
+        let stale = await store.discussionsEnabled(
             apiHost: apiHost,
             owner: "steipete",
             name: "RepoBar",
@@ -41,16 +44,19 @@ struct RepoDetailCapabilityCacheTests {
     }
 
     @Test
-    func `discussions capability persists across stores`() throws {
+    func `discussions capability persists across stores`() async throws {
         let baseURL = FileManager.default.temporaryDirectory.appending(path: "repobar-capability-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: baseURL) }
+        defer {
+            try? FileManager.default.removeItem(at: baseURL)
+            try? FileManager.default.removeItem(at: baseURL.appendingPathExtension("json"))
+        }
 
         let diskStore = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
         let apiHost = try #require(URL(string: "https://api.github.com"))
         let now = Date(timeIntervalSinceReferenceDate: 222_222)
 
-        var writer = RepoDetailStore(diskStore: diskStore)
-        _ = writer.updateDiscussionsEnabled(
+        let writer = RepoDetailStore(diskStore: diskStore)
+        _ = await writer.updateDiscussionsEnabled(
             apiHost: apiHost,
             owner: "steipete",
             name: "RepoBar",
@@ -58,8 +64,10 @@ struct RepoDetailCapabilityCacheTests {
             checkedAt: now
         )
 
-        var reader = RepoDetailStore(diskStore: diskStore)
-        let cached = reader.discussionsEnabled(
+        await writer.flush()
+
+        let reader = RepoDetailStore(diskStore: RepoDetailCacheStore(baseURL: baseURL))
+        let cached = await reader.discussionsEnabled(
             apiHost: apiHost,
             owner: "steipete",
             name: "RepoBar",

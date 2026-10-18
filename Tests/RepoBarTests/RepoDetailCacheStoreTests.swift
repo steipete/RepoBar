@@ -6,10 +6,12 @@ struct RepoDetailCacheStoreTests {
     @Test
     func `save and load round trip`() throws {
         let baseURL = FileManager.default.temporaryDirectory.appending(path: "repobar-cache-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: baseURL) }
+        defer {
+            try? FileManager.default.removeItem(at: baseURL)
+            try? FileManager.default.removeItem(at: baseURL.appendingPathExtension("json"))
+        }
 
-        let store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
-        let apiHost = try #require(URL(string: "https://api.github.com"))
+        var store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
         let now = Date(timeIntervalSinceReferenceDate: 123_456)
 
         let cache = try RepoDetailCache(
@@ -48,8 +50,9 @@ struct RepoDetailCacheStoreTests {
             discussionsCheckedAt: now
         )
 
-        store.save(cache, apiHost: apiHost, owner: "steipete", name: "RepoBar")
-        let loaded = store.load(apiHost: apiHost, owner: "steipete", name: "RepoBar")
+        let saved = store.save(["api.github.com::steipete/RepoBar": cache])
+        #expect(saved)
+        let loaded = store.load()["api.github.com::steipete/RepoBar"]
 
         let result = try #require(loaded)
         #expect(result.openPulls == 7)
@@ -65,35 +68,37 @@ struct RepoDetailCacheStoreTests {
     @Test
     func `load corrupt cache removes file`() throws {
         let baseURL = FileManager.default.temporaryDirectory.appending(path: "repobar-cache-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: baseURL) }
+        defer {
+            try? FileManager.default.removeItem(at: baseURL)
+            try? FileManager.default.removeItem(at: baseURL.appendingPathExtension("json"))
+        }
 
-        let store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
-        let apiHost = try #require(URL(string: "https://api.github.com"))
+        var store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
 
-        let cacheFile = baseURL
-            .appending(path: "api.github.com")
-            .appending(path: "steipete")
-            .appending(path: "RepoBar.json")
+        let cacheFile = baseURL.appendingPathExtension("json")
 
         try FileManager.default.createDirectory(at: cacheFile.deletingLastPathComponent(), withIntermediateDirectories: true)
         try Data("not json".utf8).write(to: cacheFile, options: .atomic)
 
-        #expect(store.load(apiHost: apiHost, owner: "steipete", name: "RepoBar") == nil)
+        #expect(store.load().isEmpty)
         #expect(FileManager.default.fileExists(atPath: cacheFile.path()) == false)
     }
 
     @Test
-    func `clear removes cache directory`() throws {
+    func `clear removes snapshot`() {
         let baseURL = FileManager.default.temporaryDirectory.appending(path: "repobar-cache-\(UUID().uuidString)")
-        defer { try? FileManager.default.removeItem(at: baseURL) }
+        defer {
+            try? FileManager.default.removeItem(at: baseURL)
+            try? FileManager.default.removeItem(at: baseURL.appendingPathExtension("json"))
+        }
 
-        let store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
-        let apiHost = try #require(URL(string: "https://api.github.com"))
+        var store = RepoDetailCacheStore(fileManager: .default, baseURL: baseURL)
 
-        store.save(RepoDetailCache(), apiHost: apiHost, owner: "steipete", name: "RepoBar")
-        #expect(FileManager.default.fileExists(atPath: baseURL.path()))
+        let saved = store.save(["api.github.com::steipete/RepoBar": RepoDetailCache()])
+        #expect(saved)
+        #expect(FileManager.default.fileExists(atPath: baseURL.appendingPathExtension("json").path()))
 
         store.clear()
-        #expect(FileManager.default.fileExists(atPath: baseURL.path()) == false)
+        #expect(FileManager.default.fileExists(atPath: baseURL.appendingPathExtension("json").path()) == false)
     }
 }

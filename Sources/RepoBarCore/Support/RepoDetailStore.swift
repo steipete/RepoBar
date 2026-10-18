@@ -1,33 +1,78 @@
 import Foundation
 
-struct RepoDetailStore {
+actor RepoDetailStore {
+    /// All clients share one snapshot, including clients for different accounts.
+    static let shared = RepoDetailStore()
+
     private var memory: [String: RepoDetailCache] = [:]
     private var diskStore: RepoDetailCacheStore
+    private let flushDelay: Duration
+    private var hasLoaded = false
+    private var isDirty = false
+    private var flushTask: Task<Void, Never>?
 
-    init(diskStore: RepoDetailCacheStore = RepoDetailCacheStore()) {
+    init(diskStore: RepoDetailCacheStore = RepoDetailCacheStore(), flushDelay: Duration = .seconds(30)) {
         self.diskStore = diskStore
+        self.flushDelay = flushDelay
     }
 
-    mutating func load(apiHost: URL, owner: String, name: String) -> RepoDetailCache {
+    deinit {
+        self.flushTask?.cancel()
+    }
+
+    func load(apiHost: URL, owner: String, name: String) -> RepoDetailCache {
+        self.loadIfNeeded()
         let key = Self.cacheKey(apiHost: apiHost, owner: owner, name: name)
-        if let cached = self.memory[key] {
-            return cached
-        }
-        if let cached = self.diskStore.load(apiHost: apiHost, owner: owner, name: name) {
-            self.memory[key] = cached
-            return cached
-        }
-        return RepoDetailCache()
+        return self.memory[key] ?? RepoDetailCache()
     }
 
-    mutating func save(_ cache: RepoDetailCache, apiHost: URL, owner: String, name: String) {
+    func save(_ cache: RepoDetailCache, apiHost: URL, owner: String, name: String) {
+        self.loadIfNeeded()
         let key = Self.cacheKey(apiHost: apiHost, owner: owner, name: name)
         self.memory[key] = cache
-        self.diskStore.save(cache, apiHost: apiHost, owner: owner, name: name)
+        self.isDirty = true
+        self.scheduleFlush()
+    }
+
+    /// Actor isolation keeps snapshot encoding and file IO off the main actor.
+    func flush() {
+        self.flushTask?.cancel()
+        self.flushTask = nil
+        guard self.isDirty else { return }
+
+        if self.diskStore.save(self.memory) {
+            self.isDirty = false
+        } else {
+            self.scheduleFlush()
+        }
+    }
+
+    private func loadIfNeeded() {
+        guard !self.hasLoaded else { return }
+
+        self.memory = self.diskStore.load()
+        self.hasLoaded = true
+    }
+
+    private func scheduleFlush() {
+        guard self.flushTask == nil else { return }
+
+        let delay = self.flushDelay
+        // Anchor to the first dirty save so ongoing refreshes cannot starve persistence.
+        self.flushTask = Task { [weak self] in
+            do {
+                try await Task.sleep(for: delay)
+            } catch {
+                return
+            }
+            guard !Task.isCancelled else { return }
+
+            await self?.flush()
+        }
     }
 
     /// Capability cache: use TTL so newly-enabled discussions can reappear without a manual reset.
-    mutating func discussionsEnabled(
+    func discussionsEnabled(
         apiHost: URL,
         owner: String,
         name: String,
@@ -41,7 +86,7 @@ struct RepoDetailStore {
         return enabled
     }
 
-    mutating func updateDiscussionsEnabled(
+    func updateDiscussionsEnabled(
         apiHost: URL,
         owner: String,
         name: String,
@@ -59,8 +104,12 @@ struct RepoDetailStore {
         return hasChanged
     }
 
-    mutating func clear() {
+    func clear() {
+        self.flushTask?.cancel()
+        self.flushTask = nil
         self.memory = [:]
+        self.hasLoaded = true
+        self.isDirty = false
         self.diskStore.clear()
     }
 
