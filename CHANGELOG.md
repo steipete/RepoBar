@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.10.2 - 2026-10-18
+
+**Highlights:** RepoBar no longer rewrites hundreds of cache files on every refresh; repository details persist as one coalesced snapshot.
 
 - Coalesce repository detail cache updates into one snapshot per 30-second window instead of rewriting a file for every refreshed repository, and flush pending changes on quit.
 
