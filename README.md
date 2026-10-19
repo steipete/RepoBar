@@ -86,7 +86,7 @@ The [CLI reference](docs/cli.md) covers authentication, repositories, local Git 
 
 ## Development
 
-Development requires macOS, Xcode 26 with Swift 6.2, Node.js 22.13 or newer, and pnpm 11. CI uses Node.js 26, checks the macOS targets with Xcode 26.1, and builds the iOS app and tests with Xcode 26.6 and its available iOS 26.5 platform. The supported application versions remain macOS 15 and iOS 26.
+Development requires macOS, Xcode 26 with Swift 6.2, Node.js 22.13 or newer, and pnpm 11. CI and release jobs use the Apple silicon `xcode-27` runner with its default Xcode 27 toolchain; CI uses Node.js 26 and builds both macOS and iOS targets. Release verification smoke-tests both CLI architectures, using Rosetta for Intel. The supported application versions remain macOS 15 and iOS 26.
 
 ```sh
 pnpm install

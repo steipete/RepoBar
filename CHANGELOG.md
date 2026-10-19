@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Move macOS CI and release jobs to `xcode-27`, preserve universal macOS 15 builds, and smoke-test the Intel CLI through Rosetta.
+
 ## 0.10.2 - 2026-10-18
 
 **Highlights:** RepoBar no longer rewrites hundreds of cache files on every refresh; repository details persist as one coalesced snapshot.

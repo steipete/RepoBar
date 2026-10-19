@@ -15,19 +15,16 @@ concurrency:
 
 jobs:
   macos:
-    name: macOS (Xcode 26.1)
-    runs-on: macos-26
+    name: macOS (Xcode 27)
+    runs-on: xcode-27
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
     timeout-minutes: 35
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Select Xcode
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
-        with:
-          xcode-version: '26.1'
 
       - name: Enable Corepack (pnpm)
         run: corepack enable
@@ -53,7 +50,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .build
-          key: ${{ runner.os }}-${{ runner.arch }}-xcode26.1-${{ hashFiles('Package.swift', 'Package.resolved') }}
+          key: ${{ runner.os }}-${{ runner.arch }}-xcode27-${{ hashFiles('Package.swift', 'Package.resolved') }}
 
       - name: Resolve Swift packages
         run: swift package resolve
@@ -76,11 +73,6 @@ jobs:
         run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
       - name: Run checks
         run: pnpm check
-
-      - name: Select Xcode for iOS
-        uses: maxim-lobanov/setup-xcode@ed7a3b1fda3918c0306d1b724322adc0b8cc0a90 # v1.7.0
-        with:
-          xcode-version: '26.6'
 
       - name: Build iOS app and tests
         run: |

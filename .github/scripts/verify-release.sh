@@ -31,8 +31,10 @@ PY
   grep -E 'flags=.*runtime' <<< "$details"
   grep -E '^Timestamp=' <<< "$details"
 done
-"$app/Contents/MacOS/repobarcli" --help > "$RUNNER_TEMP/cli-help.txt"
-grep -i 'repobar' "$RUNNER_TEMP/cli-help.txt"
+for architecture in arm64 x86_64; do
+  arch "-$architecture" "$app/Contents/MacOS/repobarcli" --help > "$RUNNER_TEMP/cli-help-$architecture.txt"
+  grep -i 'repobar' "$RUNNER_TEMP/cli-help-$architecture.txt"
+done
 python3 - "$app/Contents/Info.plist" "$MARKETING_VERSION" "$BUILD_NUMBER" <<'PY'
 import plistlib, sys
 with open(sys.argv[1], 'rb') as stream:

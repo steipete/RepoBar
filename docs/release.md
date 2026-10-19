@@ -25,10 +25,10 @@ binaries. No npm token or trusted publisher is required.
 4. Create a signed annotated `vX.Y.Z` tag with the authorized SSH signing key
    listed in `.github/release-signers`, then push it. Never move a release tag.
 5. `.github/workflows/release.yml` validates the tag and versions, builds with
-   Xcode 26.1, signs with Developer ID, notarizes and staples the app, generates
+   the default Xcode 27 on the Apple silicon `xcode-27` runner, signs with Developer ID, notarizes and staples the app, generates
    the signed Sparkle enclosure, and verifies the downloaded immutable build
    in a separate job without signing secrets. Verification covers both CPU
-   architectures, the bundled CLI, signing identity/runtime/timestamp,
+   architectures, both bundled CLI slices (Intel via Rosetta), signing identity/runtime/timestamp,
    notarization, version metadata, dSYM UUIDs, and the Sparkle public key.
    A read-only `notarytool history` preflight checks Apple access before building;
    the verifier checks each app and CLI slice's `LC_BUILD_VERSION` minimum against
