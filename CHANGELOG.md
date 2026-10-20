@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Update Kingfisher to 8.14.0 for cached-image rendering and Retina image-processing fixes, and pnpm to 11.28.6 for install and credential-handling fixes, preserving the Swift 6.2 and Node.js 22.13 minimums.
 - Move macOS CI and release jobs to `xcode-27`, preserve universal macOS 15 builds, and smoke-test the Intel CLI through Rosetta.
 
 ## 0.10.2 - 2026-10-18

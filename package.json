@@ -2,7 +2,7 @@
   "name": "repobar",
   "version": "0.10.2",
   "private": true,
-  "packageManager": "pnpm@11.28.5",
+  "packageManager": "pnpm@11.28.6",
   "engines": {
     "node": ">=22.13.0"
   },
