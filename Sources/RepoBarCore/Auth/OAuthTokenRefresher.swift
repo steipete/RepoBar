@@ -21,7 +21,7 @@ public struct OAuthTokenRefresher: Sendable {
     }
 
     public func refreshIfNeeded(host: URL, force: Bool = false, accountID: String?) async throws -> OAuthTokens? {
-        guard let tokens = self.loadTokens(accountID: accountID) else { return nil }
+        guard let tokens = try self.loadTokens(accountID: accountID) else { return nil }
 
         if tokens.refreshToken.isEmpty {
             return tokens
@@ -41,7 +41,7 @@ public struct OAuthTokenRefresher: Sendable {
     }
 
     private func performRefreshIfNeeded(host: URL, force: Bool, accountID: String?) async throws -> OAuthTokens? {
-        guard var tokens = self.loadTokens(accountID: accountID) else { return nil }
+        guard var tokens = try self.loadTokens(accountID: accountID) else { return nil }
 
         if tokens.refreshToken.isEmpty {
             return tokens
@@ -102,8 +102,11 @@ public struct OAuthTokenRefresher: Sendable {
         }
     }
 
-    private func loadTokens(accountID: String?) -> OAuthTokens? {
-        accountID.map { try? self.tokenStore.loadTokens(accountID: $0) } ?? (try? self.tokenStore.load())
+    private func loadTokens(accountID: String?) throws -> OAuthTokens? {
+        if let accountID {
+            return try self.tokenStore.loadTokens(accountID: accountID)
+        }
+        return try? self.tokenStore.load()
     }
 }
 

@@ -18,6 +18,25 @@ struct MenuLoggedOutView: View {
     }
 }
 
+struct MenuAccountAttentionView: View {
+    let attention: AccountAttention
+
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "arrow.clockwise.circle")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(.secondary)
+            Text(self.attention.title ?? "")
+                .font(.headline)
+            Text(self.attention.subtitle ?? "")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, minHeight: 140)
+    }
+}
+
 struct MenuEmptyStateView: View {
     let title: String
     let subtitle: String

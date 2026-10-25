@@ -10,6 +10,7 @@ final class AppState {
     let patAuth = PATAuthenticator()
     let legacyGitHub: GitHubClient
     var github: GitHubClient
+    let bundleReplacementDetector = AppBundleReplacementDetector()
     let accountManager: AccountManager
     let refreshScheduler = RefreshScheduler()
     let settingsStore: SettingsStore
@@ -56,13 +57,19 @@ final class AppState {
             verbosity: self.session.settings.loggingVerbosity,
             fileLoggingEnabled: self.session.settings.fileLoggingEnabled
         )
-        let storedOAuthTokens = self.auth.loadTokens()
-        let storedPAT = self.patAuth.loadPAT()
-        self.session.hasStoredTokens = (storedOAuthTokens != nil) || (storedPAT != nil)
-        let inferredAuthMethod: AuthMethod = storedPAT != nil ? .pat : .oauth
-        if self.session.settings.authMethod != inferredAuthMethod {
-            self.session.settings.authMethod = inferredAuthMethod
-            self.settingsStore.save(self.session.settings)
+        do {
+            let storedOAuthTokens = try self.accountManager.tokenStore.load()
+            let storedPAT = try self.accountManager.tokenStore.loadPAT()
+            self.session.hasStoredTokens = storedOAuthTokens != nil || storedPAT != nil
+            // The active account is authoritative; legacy keys only describe account-less installs.
+            let inferredAuthMethod: AuthMethod = self.session.settings.resolvedActiveAccount()?.authMethod
+                ?? (storedPAT != nil ? .pat : .oauth)
+            if self.session.settings.authMethod != inferredAuthMethod {
+                self.session.settings.authMethod = inferredAuthMethod
+                self.settingsStore.save(self.session.settings)
+            }
+        } catch {
+            // An unreadable store says nothing about the saved authentication method.
         }
     }
 
@@ -72,7 +79,7 @@ final class AppState {
         self.isStarted = true
         let lifecycleID = UUID()
         self.lifecycleID = lifecycleID
-        let tokenStore = TokenStore.shared
+        let tokenStore = self.accountManager.tokenStore
         self.startupTask = Task { [weak self] in
             await self?.performStartup(tokenStore: tokenStore, lifecycleID: lifecycleID)
         }
@@ -109,14 +116,14 @@ final class AppState {
 
             let accountID = await MainActor.run { self.session.settings.resolvedActiveAccount()?.id }
             if let accountID {
-                if let token = try? await self.accountManager.currentAccessToken(accountID: accountID) {
+                if let token = try await self.accountManager.currentAccessToken(accountID: accountID) {
                     return OAuthTokens(accessToken: token, refreshToken: "", expiresAt: nil)
                 }
                 return nil
             }
 
             let authMethod = await MainActor.run { self.session.settings.authMethod }
-            if authMethod == .pat, let pat = try? tokenStore.loadPAT() {
+            if authMethod == .pat, let pat = try tokenStore.loadPAT() {
                 return OAuthTokens(accessToken: pat, refreshToken: "", expiresAt: nil)
             }
             return try? await self.auth.refreshIfNeeded()
