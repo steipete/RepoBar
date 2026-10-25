@@ -60,6 +60,8 @@ extension AppState {
             case .unavailable:
                 let localSnapshot = await self.snapshotForLoggedOutState(localSettings: localSettings)
                 self.applyCredentialsUnavailableState(localSnapshot: localSnapshot)
+                // Cached display models embed local status; rebuild them so the local fallback stays current.
+                await self.updateMenuDisplayIndex(now: now)
                 return
             case .missing:
                 self.updateHeatmapRange(now: now)

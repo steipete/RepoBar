@@ -155,6 +155,50 @@ struct CredentialFailureTests {
     }
 
     @Test
+    func `unavailable refresh rebuilds cached display models with the new local snapshot`() async throws {
+        let fixture = try CredentialFixture()
+        defer { fixture.cleanUp() }
+        try fixture.makeUnreadable(key: "\(fixture.account.id):pat")
+        let app = fixture.makeApp()
+        await app.bootstrapAccounts()
+        let repo = Repository(
+            id: "test",
+            name: "repo",
+            owner: "test",
+            sortOrder: nil,
+            error: nil,
+            rateLimitedUntil: nil,
+            ciStatus: .unknown,
+            openIssues: 1,
+            openPulls: 2,
+            latestRelease: nil,
+            latestActivity: nil,
+            traffic: nil,
+            heatmap: []
+        )
+        let staleStatus = LocalRepoStatus(
+            path: fixture.directory.appendingPathComponent("repo", isDirectory: true),
+            name: "repo",
+            fullName: "test/repo",
+            branch: "stale",
+            isClean: false,
+            aheadCount: 0,
+            behindCount: 3,
+            syncState: .behind
+        )
+        app.session.repositories = [repo]
+        app.session.localRepoIndex = LocalRepoIndex(statuses: [staleStatus])
+        app.session.menuDisplayIndex = ["test/repo": RepositoryDisplayModel(repo: repo, localStatus: staleStatus)]
+
+        // The fixture has no projects folder, so the fresh local snapshot no longer contains the repo.
+        await app.refresh()
+
+        let model = try #require(app.session.menuDisplayIndex["test/repo"])
+        #expect(model.source.id == repo.id)
+        #expect(model.localStatus == nil)
+    }
+
+    @Test
     func `refresh restores active identity once credentials become readable`() async throws {
         let fixture = try CredentialFixture()
         defer { fixture.cleanUp() }
