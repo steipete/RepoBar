@@ -7,6 +7,7 @@ struct MainMenuPlan {
 }
 
 struct MenuBuildSignature: Hashable {
+    let attention: AccountAttention
     let account: AccountSignature
     let settings: MenuSettingsSignature
     let isLightAppearance: Bool
@@ -200,6 +201,10 @@ struct AccountSignature: Hashable {
 
     init(_ account: AccountState) {
         switch account {
+        case let .credentialsUnavailable(user):
+            self.state = "credentialsUnavailable"
+            self.user = user?.username
+            self.host = user?.host.host
         case .loggedOut:
             self.state = "loggedOut"
             self.user = nil

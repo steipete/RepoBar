@@ -48,6 +48,7 @@ extension AppState {
     }
 
     func refresh() async {
+        self.checkBundleReplacement()
         let localSettings = self.session.settings.localProjects
         self.session.localProjectsScanInProgress = (localSettings.rootPath?.isEmpty == false)
         do {
@@ -55,15 +56,26 @@ extension AppState {
                 return
             }
             let now = Date()
-            self.updateHeatmapRange(now: now)
-            if await self.hasAuthenticationMaterial() == false {
+            switch self.authenticationMaterialState() {
+            case .unavailable:
+                let localSnapshot = await self.snapshotForLoggedOutState(localSettings: localSettings)
+                self.applyCredentialsUnavailableState(localSnapshot: localSnapshot)
+                return
+            case .missing:
+                self.updateHeatmapRange(now: now)
                 let localSnapshot = await self.snapshotForLoggedOutState(localSettings: localSettings)
                 await self.applyLoggedOutState(localSnapshot: localSnapshot, lastError: nil)
                 return
+            case .present:
+                break
             }
+            self.updateHeatmapRange(now: now)
             await self.applyCachedMenuSnapshotIfAvailable(now: now)
             // If we have tokens but no user in session, fetch identity once per launch.
-            if case .loggedOut = self.session.account {
+            if self.session.account == .loggedOut || self.session.account.isCredentialsUnavailable {
+                if let active = self.accountManager.activeAccount() {
+                    self.session.account = .loggedIn(UserIdentity(username: active.username, host: active.host))
+                }
                 if let user = try? await self.github.currentUser() {
                     await MainActor.run { self.session.account = .loggedIn(user) }
                 }
@@ -157,12 +169,24 @@ extension AppState {
         }
     }
 
-    private func hasAuthenticationMaterial() async -> Bool {
+    func authenticationMaterialState() -> StoredCredentialState {
         if let accountID = self.session.settings.resolvedActiveAccount()?.id {
-            return (try? TokenStore.shared.loadTokens(accountID: accountID)) != nil
-                || (try? TokenStore.shared.loadPAT(accountID: accountID)) != nil
+            return self.accountManager.credentialState(accountID: accountID)
         }
-        return self.auth.loadTokens() != nil || self.patAuth.loadPAT() != nil
+        return self.accountManager.legacyCredentialState()
+    }
+
+    private func applyCredentialsUnavailableState(localSnapshot: LocalRepoManager.SnapshotResult) {
+        let identity = self.accountManager.activeAccount().map { UserIdentity(username: $0.username, host: $0.host) }
+        self.session.account = .credentialsUnavailable(identity)
+        self.session.localRepoIndex = localSnapshot.repoIndex
+        self.session.localDiscoveredRepoCount = localSnapshot.discoveredCount
+        self.session.localProjectsAccessDenied = localSnapshot.accessDenied
+        self.session.localProjectsScanInProgress = false
+    }
+
+    func checkBundleReplacement() {
+        self.session.bundleReplacement = self.bundleReplacementDetector.currentReplacement()
     }
 
     func refreshLocalProjects(cancelInFlight: Bool = true, forceRescan: Bool = false) {

@@ -201,3 +201,12 @@
 "Repo heatmap submenu" = "Depo ısı haritası alt menüsü";
 "Commit list preview" = "İşleme listesi önizlemesi";
 "Activity feed preview" = "Etkinlik akışı önizlemesi";
+
+/* Saved credentials and app updates */
+"RepoBar was updated while running" = "RepoBar çalışırken güncellendi";
+"Relaunch to finish updating to %@." = "%@ sürümüne güncellemeyi tamamlamak için yeniden başlatın.";
+"Relaunch to finish updating." = "Güncellemeyi tamamlamak için yeniden başlatın.";
+"Can’t read your saved GitHub credentials" = "Kayıtlı GitHub kimlik bilgileriniz okunamıyor";
+"macOS denied Keychain access. Relaunch RepoBar to restore it." = "macOS, Anahtar Zinciri erişimini reddetti. Erişimi yeniden sağlamak için RepoBar’ı yeniden başlatın.";
+"Relaunch RepoBar" = "RepoBar’ı Yeniden Başlat";
+"%@ @ %@ uses a personal access token. Update it in Accounts settings." = "%@ @ %@ bir kişisel erişim belirteci kullanıyor. Belirteci Hesaplar ayarlarından güncelleyin.";

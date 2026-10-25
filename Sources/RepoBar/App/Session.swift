@@ -5,6 +5,7 @@ import RepoBarCore
 @Observable
 final class Session {
     var account: AccountState = .loggedOut
+    var bundleReplacement: AppBundleReplacement?
     var hasStoredTokens = false
     var accessibleRepositories: [Repository] = []
     var repositories: [Repository] = []
@@ -52,8 +53,16 @@ final class Session {
 
 enum AccountState: Equatable {
     case loggedOut
+    case credentialsUnavailable(UserIdentity?)
     case loggingIn
     case loggedIn(UserIdentity)
+
+    var isCredentialsUnavailable: Bool {
+        if case .credentialsUnavailable = self {
+            return true
+        }
+        return false
+    }
 
     var isLoggedIn: Bool {
         if case .loggedIn = self {

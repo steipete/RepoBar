@@ -33,6 +33,7 @@ final class StatusBarMenuBuilder {
         let settings = session.settings
         let repos = self.orderedViewModels(now: now)
         let signature = MenuBuildSignature(
+            attention: AccountAttention.resolve(account: session.account, bundleReplacement: session.bundleReplacement),
             account: AccountSignature(session.account),
             settings: MenuSettingsSignature(settings: settings, selection: session.menuRepoSelection),
             isLightAppearance: self.isLightAppearance,
@@ -106,24 +107,32 @@ final class StatusBarMenuBuilder {
     ) -> [NSMenuItem] {
         switch itemID {
         case .loggedOutPrompt:
-            switch session.account {
-            case .loggedOut, .loggingIn:
+            let attention = AccountAttention.resolve(account: session.account, bundleReplacement: session.bundleReplacement)
+            switch attention {
+            case .relaunchAfterUpdate, .credentialsUnavailable:
+                let banner = MenuAccountAttentionView(attention: attention)
+                    .padding(.horizontal, MenuStyle.sectionHorizontalPadding)
+                    .padding(.vertical, MenuStyle.sectionVerticalPadding)
+                return [self.viewItem(for: banner, enabled: false)]
+            case .signIn, .signingIn:
                 let loggedOut = MenuLoggedOutView()
                     .padding(.horizontal, MenuStyle.sectionHorizontalPadding)
                     .padding(.vertical, MenuStyle.sectionVerticalPadding)
                 return [self.viewItem(for: loggedOut, enabled: false)]
-            case .loggedIn:
+            case .none:
                 return []
             }
         case .signInAction:
-            switch session.account {
-            case .loggedOut:
+            switch AccountAttention.resolve(account: session.account, bundleReplacement: session.bundleReplacement) {
+            case .relaunchAfterUpdate, .credentialsUnavailable:
+                return [self.actionItem(title: AppLocalizer().string("Relaunch RepoBar"), action: #selector(self.target.relaunchApp))]
+            case .signIn:
                 return [self.actionItem(title: AppLocalizer().string("Sign in to GitHub"), action: #selector(self.target.signIn))]
-            case .loggingIn:
+            case .signingIn:
                 let signInItem = self.actionItem(title: AppLocalizer().string("Signing in…"), action: #selector(self.target.signIn))
                 signInItem.isEnabled = false
                 return [signInItem]
-            case .loggedIn:
+            case .none:
                 return []
             }
         case .contributionHeader:

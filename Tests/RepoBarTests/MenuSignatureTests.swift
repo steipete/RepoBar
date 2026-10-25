@@ -4,6 +4,29 @@ import Foundation
 import Testing
 
 struct MenuSignatureTests {
+    @Test
+    func `unavailable account has distinct menu signature`() {
+        #expect(AccountSignature(.credentialsUnavailable(nil)) != AccountSignature(.loggedOut))
+    }
+
+    @MainActor
+    @Test
+    func `menu signature changes with relaunch attention and update version`() throws {
+        let fixture = try CredentialFixture()
+        defer { fixture.cleanUp() }
+        let app = fixture.makeApp()
+        let manager = StatusBarMenuManager(appState: app)
+        let builder = StatusBarMenuBuilder(appState: app, target: manager)
+        let now = Date(timeIntervalSinceReferenceDate: 1234)
+        let original = builder.mainMenuPlan(now: now).signature
+        app.session.bundleReplacement = AppBundleReplacement(version: nil)
+        let unversioned = builder.mainMenuPlan(now: now).signature
+        app.session.bundleReplacement = AppBundleReplacement(version: "2.0")
+        let versioned = builder.mainMenuPlan(now: now).signature
+        #expect(original != unversioned)
+        #expect(unversioned != versioned)
+    }
+
     @MainActor
     @Test
     func `repo submenu cache preserves full name when API id differs`() {
@@ -171,6 +194,7 @@ struct MenuSignatureTests {
         )
         let display = RepositoryDisplayModel(repo: repo, now: now)
         let signatureA = MenuBuildSignature(
+            attention: .none,
             account: AccountSignature(.loggedOut),
             settings: MenuSettingsSignature(settings: settings, selection: .all),
             isLightAppearance: true,
@@ -190,6 +214,7 @@ struct MenuSignatureTests {
 
         settings.repoList.pinnedRepositories = [repo.fullName]
         let signatureB = MenuBuildSignature(
+            attention: .none,
             account: AccountSignature(.loggedOut),
             settings: MenuSettingsSignature(settings: settings, selection: .all),
             isLightAppearance: true,
@@ -291,6 +316,7 @@ struct MenuSignatureTests {
         now: Date
     ) -> MenuBuildSignature {
         MenuBuildSignature(
+            attention: .none,
             account: AccountSignature(.loggedOut),
             settings: MenuSettingsSignature(settings: settings, selection: .all),
             isLightAppearance: isLightAppearance,
