@@ -11,6 +11,40 @@ struct MenuSignatureTests {
 
     @MainActor
     @Test
+    func `unavailable credentials keep local repositories in the main menu`() throws {
+        let fixture = try CredentialFixture()
+        defer { fixture.cleanUp() }
+        let app = fixture.makeApp()
+        app.session.account = .credentialsUnavailable(fixture.identity)
+        app.session.menuRepoSelection = .all
+        let localRepo = LocalRepoStatus(
+            path: fixture.directory.appendingPathComponent("local", isDirectory: true),
+            name: "local",
+            fullName: "alice/local",
+            branch: "main",
+            isClean: true,
+            aheadCount: 0,
+            behindCount: 0,
+            syncState: .synced
+        )
+        app.session.localRepoIndex = LocalRepoIndex(statuses: [localRepo])
+        let manager = StatusBarMenuManager(appState: app)
+        let builder = StatusBarMenuBuilder(appState: app, target: manager)
+        let plan = builder.mainMenuPlan()
+        #expect(plan.repos.map(\.title) == ["alice/local"])
+
+        let menu = builder.makeMainMenu()
+        builder.populateMainMenu(menu, repos: plan.repos)
+        let repoTitles = menu.items.compactMap { $0.representedObject as? String }
+        #expect(repoTitles == ["alice/local"])
+        let repoItem = try #require(menu.items.first { ($0.representedObject as? String) == "alice/local" })
+        #expect(repoItem.view != nil)
+        #expect(repoItem.isEnabled)
+        #expect(app.session.menuRepoSelection == .all)
+    }
+
+    @MainActor
+    @Test
     func `menu signature changes with relaunch attention and update version`() throws {
         let fixture = try CredentialFixture()
         defer { fixture.cleanUp() }

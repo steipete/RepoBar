@@ -42,6 +42,11 @@ final class Session {
     var actionsOrgSnapshots: [ActionsOrgSnapshot] = []
     var actionsPlanTier: GitHubPlanTier = .free
 
+    var effectiveMenuRepoSelection: MenuRepoSelection {
+        // Keep local repos reachable without overwriting the saved choice.
+        self.account.isCredentialsUnavailable ? .local : self.menuRepoSelection
+    }
+
     var rateLimitDisplayState: RateLimitDisplayState {
         RateLimitDisplayState(
             diagnostics: self.rateLimitDiagnostics,

@@ -50,7 +50,7 @@ REPOBAR_TOKEN_STORE=keychain .build/debug/repobarcli status
 
 ## Unavailable Credentials
 
-A failed credential read is distinct from missing credentials. When macOS denies Keychain access, RepoBar keeps loaded GitHub data and the selected repository filter, refreshes local projects only, and asks you to relaunch. Access is checked again on the next refresh, so the session recovers automatically when credentials become readable. If an update replaces the app while it is running, the menu asks you to relaunch to finish updating.
+A failed credential read is distinct from missing credentials. When macOS denies Keychain access, RepoBar keeps loaded GitHub data and the saved repository filter, shows local repositories in the menu, refreshes local projects only, and asks you to relaunch. Access is checked again on the next refresh, so the session recovers automatically and resumes the saved filter when credentials become readable. If an update replaces the app while it is running, the menu asks you to relaunch to finish updating.
 
 Menu sign-in opens Accounts settings when a GitHub.com personal-access-token account already exists. Update that token there; the explicit GitHub.com OAuth flow in Accounts settings remains available.
 

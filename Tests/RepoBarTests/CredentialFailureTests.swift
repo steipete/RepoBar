@@ -162,7 +162,10 @@ struct CredentialFailureTests {
         try fixture.makeUnreadable(key: key)
         let app = fixture.makeApp()
         await app.bootstrapAccounts()
+        app.session.menuRepoSelection = .all
+        await app.refresh()
         #expect(app.session.account == .credentialsUnavailable(fixture.identity))
+        #expect(app.session.menuRepoSelection == .all)
         try FileManager.default.removeItem(at: fixture.tokenURL(key: key))
         try fixture.tokens.savePAT("recovered", accountID: fixture.account.id)
         await app.github.setTokenProvider {
@@ -171,6 +174,7 @@ struct CredentialFailureTests {
         }
         await app.refresh()
         #expect(app.session.account == .loggedIn(fixture.identity))
+        #expect(app.session.menuRepoSelection == .all)
     }
 
     @Test
