@@ -2,6 +2,16 @@ import Foundation
 import Logging
 import Security
 
+public struct EndpointAPIKey: Codable, Equatable, Sendable {
+    public let baseURL: URL
+    public let key: String
+
+    public init(baseURL: URL, key: String) {
+        self.baseURL = baseURL
+        self.key = key
+    }
+}
+
 public struct OAuthTokens: Codable, Equatable, Sendable {
     public let accessToken: String
     public let refreshToken: String
@@ -95,6 +105,7 @@ public struct TokenStore: Sendable {
     public func clearAllCredentials() {
         self.clear()
         self.clearOpenAIAPIKey()
+        self.clearOpenAICompatibleAPIKey()
     }
 
     // MARK: - PAT Storage
@@ -136,6 +147,27 @@ public struct TokenStore: Sendable {
 
     public func clearOpenAIAPIKey() {
         self.clear(account: "openai-api-key")
+    }
+
+    public func saveOpenAICompatibleAPIKey(_ key: String, baseURL: URL) throws {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else {
+            self.clearOpenAICompatibleAPIKey()
+            return
+        }
+
+        let data = try JSONEncoder().encode(EndpointAPIKey(baseURL: baseURL, key: trimmed))
+        try self.save(data: data, account: "openai-compatible-api-key")
+    }
+
+    public func loadOpenAICompatibleAPIKey() throws -> EndpointAPIKey? {
+        guard let data = try self.loadData(account: "openai-compatible-api-key") else { return nil }
+
+        return try JSONDecoder().decode(EndpointAPIKey.self, from: data)
+    }
+
+    public func clearOpenAICompatibleAPIKey() {
+        self.clear(account: "openai-compatible-api-key")
     }
 
     // MARK: - Account-Scoped Storage (Phase 1)

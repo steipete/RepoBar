@@ -3,6 +3,7 @@ import Foundation
 public enum OpenAIAPIKeySource: Equatable, Sendable {
     case keychain
     case environment(String)
+    case keychainForOtherEndpoint
     case missing
 
     public var label: String {
@@ -11,6 +12,8 @@ public enum OpenAIAPIKeySource: Equatable, Sendable {
             "Stored in Keychain"
         case let .environment(name):
             "Using \(name)"
+        case .keychainForOtherEndpoint:
+            "Stored key belongs to a different base URL"
         case .missing:
             "No key configured"
         }
@@ -42,6 +45,14 @@ public struct OpenAIAPIKeyStore: Sendable {
         self.tokenStore.clearOpenAIAPIKey()
     }
 
+    public func saveCompatibleKey(_ key: String, for baseURL: URL) throws {
+        try self.tokenStore.saveOpenAICompatibleAPIKey(key, baseURL: baseURL)
+    }
+
+    public func clearCompatibleKey() {
+        self.tokenStore.clearOpenAICompatibleAPIKey()
+    }
+
     public func resolve() -> OpenAIAPIKeyResolution {
         if let stored = try? self.tokenStore.loadOpenAIAPIKey(), stored.isEmpty == false {
             return OpenAIAPIKeyResolution(key: stored, source: .keychain)
@@ -58,5 +69,21 @@ public struct OpenAIAPIKeyStore: Sendable {
         }
 
         return OpenAIAPIKeyResolution(key: nil, source: .missing)
+    }
+
+    public func resolve(for endpoint: AISummaryEndpoint) -> OpenAIAPIKeyResolution {
+        switch endpoint.provider {
+        case .openAI:
+            return self.resolve()
+        case .openAICompatible:
+            guard let stored = try? self.tokenStore.loadOpenAICompatibleAPIKey() else {
+                return OpenAIAPIKeyResolution(key: nil, source: .missing)
+            }
+            guard stored.baseURL == endpoint.baseURL else {
+                return OpenAIAPIKeyResolution(key: nil, source: .keychainForOtherEndpoint)
+            }
+
+            return OpenAIAPIKeyResolution(key: stored.key, source: .keychain)
+        }
     }
 }

@@ -317,6 +317,9 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
 
     public var enabled = false
     public var model = defaultModel
+    public var provider: AISummaryProvider = .openAI
+    public var compatibleBaseURL = ""
+    public var compatibleModel = ""
 
     public init() {}
 
@@ -330,6 +333,9 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
     enum CodingKeys: String, CodingKey {
         case enabled
         case model
+        case provider
+        case compatibleBaseURL
+        case compatibleModel
     }
 
     public init(from decoder: Decoder) throws {
@@ -337,6 +343,22 @@ public struct AISummarySettings: Equatable, Codable, Sendable {
         self.enabled = try container.decodeIfPresent(Bool.self, forKey: .enabled) ?? false
         let decodedModel = try container.decodeIfPresent(String.self, forKey: .model) ?? Self.defaultModel
         self.model = Self.normalizedModel(decodedModel)
+        let decodedProvider = try container.decodeIfPresent(String.self, forKey: .provider)
+        self.provider = decodedProvider.flatMap(AISummaryProvider.init(rawValue:)) ?? .openAI
+        self.compatibleBaseURL = try container.decodeIfPresent(String.self, forKey: .compatibleBaseURL) ?? ""
+        self.compatibleModel = try container.decodeIfPresent(String.self, forKey: .compatibleModel) ?? ""
+    }
+}
+
+public enum AISummaryProvider: String, CaseIterable, Codable, Sendable {
+    case openAI = "openai"
+    case openAICompatible = "openai-compatible"
+
+    public var label: String {
+        switch self {
+        case .openAI: "OpenAI"
+        case .openAICompatible: "OpenAI-compatible"
+        }
     }
 }
 

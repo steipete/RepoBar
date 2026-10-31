@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add an OpenAI-compatible provider for AI summaries with its own HTTPS base URL, free-form model id and a Keychain API key bound to that base URL, so gateways such as LiteLLM work without sending the OpenAI key elsewhere or reusing a key after the URL changes; invalid endpoints block requests, redirects are refused, and `repobar settings set` gains `ai-summary-provider`, `ai-summary-base-url` and `ai-summary-compatible-model`. (#157)
+- Build AI summaries only from Responses `message` text, so reasoning items from OpenAI-compatible servers no longer appear as the summary, and keep every text block of multi-part answers. (#156)
+
 ## 0.10.3 - 2026-10-20
 
 **Highlights:** Updated image handling fixes cached-image rendering and Retina image processing while preserving macOS 15 support.

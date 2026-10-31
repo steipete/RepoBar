@@ -16,7 +16,7 @@ public struct PullRequestAISummarizer: Sendable {
 
     public init(keyStore: OpenAIAPIKeyStore = OpenAIAPIKeyStore()) {
         self.init(keyStore: keyStore) { request in
-            try await URLSession.shared.data(for: request)
+            try await URLSession.shared.data(for: request, delegate: RedirectRejectingTaskDelegate())
         }
     }
 
@@ -27,11 +27,13 @@ public struct PullRequestAISummarizer: Sendable {
 
     public func summarize(_ match: GitHubReferenceMatch, settings: AISummarySettings, apiKeyOverride: String? = nil) async throws -> String? {
         guard settings.enabled, match.isResolved else { return nil }
-        guard let key = Self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, keyStore: self.keyStore) else { return nil }
+
+        let endpoint = try AISummaryEndpoint.resolve(settings)
+        guard let key = self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, endpoint: endpoint) else { return nil }
 
         let summary = try await self.generate(
             input: Self.prompt(for: match),
-            model: AISummarySettings.normalizedModel(settings.model),
+            endpoint: endpoint,
             system: Self.systemPrompt,
             maxTokens: 1024,
             apiKey: key
@@ -41,13 +43,14 @@ public struct PullRequestAISummarizer: Sendable {
     }
 
     public func test(settings: AISummarySettings, apiKeyOverride: String? = nil) async throws -> String {
-        guard let key = Self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, keyStore: self.keyStore) else {
-            throw AISummaryTestError.missingAPIKey
+        let endpoint = try AISummaryEndpoint.resolve(settings)
+        guard let key = self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, endpoint: endpoint) else {
+            throw AISummaryTestError.missingAPIKey(endpoint.provider)
         }
 
         let rawSummary = try await self.generate(
             input: "Return one short sentence confirming RepoBar AI summaries are ready.",
-            model: AISummarySettings.normalizedModel(settings.model),
+            endpoint: endpoint,
             system: "You test a macOS app AI summary connection. Return one plain sentence, no markdown.",
             maxTokens: 1024,
             apiKey: key
@@ -60,26 +63,36 @@ public struct PullRequestAISummarizer: Sendable {
         return summary
     }
 
-    private func generate(input: String, model: String, system: String, maxTokens: Int, apiKey: String) async throws -> String {
-        let url = URL(string: "https://api.openai.com/v1/responses")!
-        var request = URLRequest(url: url)
+    private func generate(
+        input: String,
+        endpoint: AISummaryEndpoint,
+        system: String,
+        maxTokens: Int,
+        apiKey: String
+    ) async throws -> String {
+        var request = URLRequest(url: endpoint.responsesURL)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONEncoder().encode(OpenAIResponseRequest(
-            model: model,
+            model: endpoint.model,
             instructions: system,
             input: input,
-            maxOutputTokens: maxTokens
+            maxOutputTokens: maxTokens,
+            reasoning: endpoint.sendsReasoningEffort ? OpenAIResponseRequest.Reasoning(effort: "low") : nil
         ))
 
         let (data, response) = try await self.dataLoader(request)
         guard let httpResponse = response as? HTTPURLResponse else {
-            throw AISummaryServiceError.invalidResponse
+            throw AISummaryServiceError.invalidResponse(endpoint.provider)
         }
         guard (200 ..< 300).contains(httpResponse.statusCode) else {
             let message = try? JSONDecoder().decode(OpenAIErrorEnvelope.self, from: data).error.message
-            throw AISummaryServiceError.requestFailed(statusCode: httpResponse.statusCode, message: message)
+            throw AISummaryServiceError.requestFailed(
+                provider: endpoint.provider,
+                statusCode: httpResponse.statusCode,
+                message: message
+            )
         }
 
         let decoded = try JSONDecoder().decode(OpenAIResponseEnvelope.self, from: data)
@@ -90,13 +103,13 @@ public struct PullRequestAISummarizer: Sendable {
         return text
     }
 
-    private static func resolvedAPIKey(apiKeyOverride: String?, keyStore: OpenAIAPIKeyStore) -> String? {
+    private func resolvedAPIKey(apiKeyOverride: String?, endpoint: AISummaryEndpoint) -> String? {
         let override = apiKeyOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let override, override.isEmpty == false {
             return override
         }
 
-        return keyStore.resolve().key
+        return self.keyStore.resolve(for: endpoint).key
     }
 
     private static func prompt(for match: GitHubReferenceMatch) -> String {
@@ -146,7 +159,7 @@ private struct OpenAIResponseRequest: Encodable {
     let instructions: String
     let input: String
     let maxOutputTokens: Int
-    let reasoning = Reasoning(effort: "low")
+    let reasoning: Reasoning?
 
     enum CodingKeys: String, CodingKey {
         case model
@@ -166,13 +179,16 @@ private struct OpenAIResponseEnvelope: Decodable {
     let output: [OutputItem]?
 
     var text: String? {
-        if let outputText, outputText.isEmpty == false {
+        if let outputText, outputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
             return outputText
         }
-        return self.output?
+        let messageText = (self.output ?? [])
+            .filter(\.isAssistantMessage)
             .flatMap(\.content)
+            .filter(\.isOutputText)
             .compactMap(\.text)
-            .first { $0.isEmpty == false }
+            .joined(separator: "\n")
+        return messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : messageText
     }
 
     enum CodingKeys: String, CodingKey {
@@ -181,20 +197,32 @@ private struct OpenAIResponseEnvelope: Decodable {
     }
 
     struct OutputItem: Decodable {
+        let type: String?
         let content: [ContentItem]
+
+        var isAssistantMessage: Bool {
+            self.type == nil || self.type == "message"
+        }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.type = try container.decodeIfPresent(String.self, forKey: .type)
             self.content = try container.decodeIfPresent([ContentItem].self, forKey: .content) ?? []
         }
 
         enum CodingKeys: String, CodingKey {
+            case type
             case content
         }
     }
 
     struct ContentItem: Decodable {
+        let type: String?
         let text: String?
+
+        var isOutputText: Bool {
+            self.type == nil || self.type == "output_text"
+        }
     }
 }
 
@@ -206,34 +234,56 @@ private struct OpenAIErrorEnvelope: Decodable {
     }
 }
 
+final class RedirectRejectingTaskDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(
+        _: URLSession,
+        task _: URLSessionTask,
+        willPerformHTTPRedirection _: HTTPURLResponse,
+        newRequest _: URLRequest
+    ) async -> URLRequest? {
+        nil
+    }
+}
+
 private enum AISummaryServiceError: LocalizedError {
-    case invalidResponse
-    case requestFailed(statusCode: Int, message: String?)
+    case invalidResponse(AISummaryProvider)
+    case requestFailed(provider: AISummaryProvider, statusCode: Int, message: String?)
 
     var errorDescription: String? {
         switch self {
-        case .invalidResponse:
-            "OpenAI returned an invalid response."
-        case let .requestFailed(statusCode, message):
+        case let .invalidResponse(provider):
+            "\(provider.serviceName) returned an invalid response."
+        case let .requestFailed(provider, statusCode, message):
             if let message, message.isEmpty == false {
-                "OpenAI request failed (\(statusCode)): \(message)"
+                "\(provider.serviceName) request failed (\(statusCode)): \(message)"
             } else {
-                "OpenAI request failed (\(statusCode))."
+                "\(provider.serviceName) request failed (\(statusCode))."
             }
         }
     }
 }
 
 enum AISummaryTestError: LocalizedError {
-    case missingAPIKey
+    case missingAPIKey(AISummaryProvider)
     case missingSummary
 
     var errorDescription: String? {
         switch self {
-        case .missingAPIKey:
+        case .missingAPIKey(.openAI):
             "No OpenAI API key configured."
+        case .missingAPIKey(.openAICompatible):
+            "No API key configured for the OpenAI-compatible endpoint."
         case .missingSummary:
             "The model did not return a summary."
+        }
+    }
+}
+
+private extension AISummaryProvider {
+    var serviceName: String {
+        switch self {
+        case .openAI: "OpenAI"
+        case .openAICompatible: "OpenAI-compatible endpoint"
         }
     }
 }

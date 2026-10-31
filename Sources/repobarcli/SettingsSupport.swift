@@ -41,6 +41,9 @@ enum SettingsKey: String, CaseIterable {
     case localShowDirtyFiles = "local-show-dirty-files"
     case aiSummaries = "ai-summaries"
     case aiSummaryModel = "ai-summary-model"
+    case aiSummaryProvider = "ai-summary-provider"
+    case aiSummaryBaseURL = "ai-summary-base-url"
+    case aiSummaryCompatibleModel = "ai-summary-compatible-model"
     case launchAtLogin = "launch-at-login"
 
     init?(argument: String) {
@@ -114,6 +117,12 @@ enum SettingsKey: String, CaseIterable {
             self = .aiSummaries
         case "ai-summary-model", "ai-model", "summary-model":
             self = .aiSummaryModel
+        case "ai-summary-provider", "ai-provider":
+            self = .aiSummaryProvider
+        case "ai-summary-base-url", "ai-base-url":
+            self = .aiSummaryBaseURL
+        case "ai-summary-compatible-model", "ai-compatible-model":
+            self = .aiSummaryCompatibleModel
         case "launch-at-login":
             self = .launchAtLogin
         default:
@@ -296,6 +305,30 @@ func applySetting(_ key: SettingsKey, value: String, settings: inout UserSetting
     case .aiSummaryModel:
         settings.aiSummaries.model = AISummarySettings.normalizedModel(value)
         return settings.aiSummaries.model
+    case .aiSummaryProvider:
+        guard let provider = AISummaryProvider(rawValue: value.lowercased()) else {
+            let allowed = AISummaryProvider.allCases.map(\.rawValue).joined(separator: ", ")
+            throw ValidationError("Invalid ai-summary-provider value: \(value) (expected \(allowed))")
+        }
+
+        settings.aiSummaries.provider = provider
+        return provider.rawValue
+    case .aiSummaryBaseURL:
+        do {
+            let url = try AISummaryEndpoint.validatedBaseURL(value)
+            settings.aiSummaries.compatibleBaseURL = url.absoluteString
+            return url.absoluteString
+        } catch {
+            throw ValidationError("Invalid ai-summary-base-url value: \(error.localizedDescription)")
+        }
+    case .aiSummaryCompatibleModel:
+        let model = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard model.isEmpty == false else {
+            throw ValidationError("ai-summary-compatible-model must not be empty")
+        }
+
+        settings.aiSummaries.compatibleModel = model
+        return model
     case .launchAtLogin:
         let flag = try parseBool(value)
         settings.launchAtLogin = flag
@@ -340,6 +373,9 @@ func settingsSummaryLines(settings: UserSettings) -> [String] {
         "Local show dirty files: \(settings.localProjects.showDirtyFilesInMenu ? "on" : "off")",
         "AI summaries: \(settings.aiSummaries.enabled ? "on" : "off")",
         "AI summary model: \(settings.aiSummaries.model)",
+        "AI summary provider: \(settings.aiSummaries.provider.rawValue)",
+        "AI summary base URL: \(settings.aiSummaries.compatibleBaseURL.isEmpty ? "-" : settings.aiSummaries.compatibleBaseURL)",
+        "AI summary compatible model: \(settings.aiSummaries.compatibleModel.isEmpty ? "-" : settings.aiSummaries.compatibleModel)",
         "GitHub archives: \(archives.isEmpty ? "-" : archives.map(\.name).joined(separator: ", "))",
         "Archive fallback on rate limit: \(settings.githubArchives.preferArchiveWhenRateLimited ? "on" : "off")",
         "Launch at login: \(settings.launchAtLogin ? "on" : "off")",
