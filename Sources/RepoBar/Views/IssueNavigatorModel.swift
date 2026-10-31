@@ -396,7 +396,10 @@ final class IssueNavigatorModel {
 
     private static func aiSummarySignature(for match: GitHubReferenceMatch, settings: AISummarySettings) -> String {
         [
+            settings.provider.rawValue,
             settings.model,
+            settings.compatibleBaseURL,
+            settings.compatibleModel,
             match.updatedAt.timeIntervalSinceReferenceDate.description,
             match.title,
             match.bodyPreview ?? "",

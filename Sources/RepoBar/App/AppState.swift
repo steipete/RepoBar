@@ -207,16 +207,16 @@ final class AppState {
         self.settingsStore.save(self.session.settings)
     }
 
-    func openAIAPIKeySource() -> OpenAIAPIKeySource {
-        OpenAIAPIKeyStore().resolve().source
+    func aiSummaryAPIKeySource(for provider: AISummaryProvider) -> OpenAIAPIKeySource {
+        OpenAIAPIKeyStore().resolve(for: provider).source
     }
 
-    func saveOpenAIAPIKey(_ key: String) throws {
-        try OpenAIAPIKeyStore().save(key)
+    func saveAISummaryAPIKey(_ key: String, for provider: AISummaryProvider) throws {
+        try OpenAIAPIKeyStore().save(key, for: provider)
     }
 
-    func clearOpenAIAPIKey() {
-        OpenAIAPIKeyStore().clearStoredKey()
+    func clearAISummaryAPIKey(for provider: AISummaryProvider) {
+        OpenAIAPIKeyStore().clearStoredKey(for: provider)
     }
 }
 

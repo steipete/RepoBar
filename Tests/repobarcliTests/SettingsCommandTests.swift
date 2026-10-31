@@ -66,6 +66,40 @@ struct SettingsCommandTests {
     }
 
     @Test
+    func `settings set supports OpenAI-compatible AI summary endpoints`() throws {
+        var settings = UserSettings()
+
+        #expect(SettingsKey(argument: "ai-provider") == .aiSummaryProvider)
+        #expect(try applySetting(.aiSummaryProvider, value: "OpenAI-Compatible", settings: &settings) == "openai-compatible")
+        #expect(try applySetting(.aiSummaryBaseURL, value: "https://gateway.example/v1/", settings: &settings) == "https://gateway.example/v1")
+        #expect(try applySetting(.aiSummaryCompatibleModel, value: " deepseek-flash ", settings: &settings) == "deepseek-flash")
+
+        #expect(settings.aiSummaries.provider == .openAICompatible)
+        #expect(settings.aiSummaries.compatibleBaseURL == "https://gateway.example/v1")
+        #expect(settings.aiSummaries.compatibleModel == "deepseek-flash")
+        let lines = settingsSummaryLines(settings: settings)
+        #expect(lines.contains("AI summary provider: openai-compatible"))
+        #expect(lines.contains("AI summary base URL: https://gateway.example/v1"))
+        #expect(lines.contains("AI summary compatible model: deepseek-flash"))
+    }
+
+    @Test
+    func `settings set rejects invalid AI summary endpoint values`() {
+        var settings = UserSettings()
+
+        #expect(throws: ValidationError.self) {
+            try applySetting(.aiSummaryProvider, value: "anthropic", settings: &settings)
+        }
+        #expect(throws: ValidationError.self) {
+            try applySetting(.aiSummaryBaseURL, value: "http://gateway.example/v1", settings: &settings)
+        }
+        #expect(throws: ValidationError.self) {
+            try applySetting(.aiSummaryCompatibleModel, value: "  ", settings: &settings)
+        }
+        #expect(settings.aiSummaries == AISummarySettings())
+    }
+
+    @Test
     func `settings set supports color scheme and aliases`() throws {
         var settings = UserSettings()
 

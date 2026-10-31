@@ -34,15 +34,34 @@ public struct OpenAIAPIKeyStore: Sendable {
         self.environmentValue = environmentValue
     }
 
-    public func save(_ key: String) throws {
-        try self.tokenStore.saveOpenAIAPIKey(key)
+    public func save(_ key: String, for provider: AISummaryProvider = .openAI) throws {
+        switch provider {
+        case .openAI:
+            try self.tokenStore.saveOpenAIAPIKey(key)
+        case .openAICompatible:
+            try self.tokenStore.saveOpenAICompatibleAPIKey(key)
+        }
     }
 
-    public func clearStoredKey() {
-        self.tokenStore.clearOpenAIAPIKey()
+    public func clearStoredKey(for provider: AISummaryProvider = .openAI) {
+        switch provider {
+        case .openAI:
+            self.tokenStore.clearOpenAIAPIKey()
+        case .openAICompatible:
+            self.tokenStore.clearOpenAICompatibleAPIKey()
+        }
     }
 
-    public func resolve() -> OpenAIAPIKeyResolution {
+    public func resolve(for provider: AISummaryProvider = .openAI) -> OpenAIAPIKeyResolution {
+        switch provider {
+        case .openAI:
+            self.resolveOpenAIKey()
+        case .openAICompatible:
+            self.resolveCompatibleKey()
+        }
+    }
+
+    private func resolveOpenAIKey() -> OpenAIAPIKeyResolution {
         if let stored = try? self.tokenStore.loadOpenAIAPIKey(), stored.isEmpty == false {
             return OpenAIAPIKeyResolution(key: stored, source: .keychain)
         }
@@ -55,6 +74,14 @@ public struct OpenAIAPIKeyStore: Sendable {
             if value.isEmpty == false {
                 return OpenAIAPIKeyResolution(key: value, source: .environment(name))
             }
+        }
+
+        return OpenAIAPIKeyResolution(key: nil, source: .missing)
+    }
+
+    private func resolveCompatibleKey() -> OpenAIAPIKeyResolution {
+        if let stored = try? self.tokenStore.loadOpenAICompatibleAPIKey(), stored.isEmpty == false {
+            return OpenAIAPIKeyResolution(key: stored, source: .keychain)
         }
 
         return OpenAIAPIKeyResolution(key: nil, source: .missing)

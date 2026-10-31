@@ -67,6 +67,89 @@ struct PullRequestAISummarizerTests {
     }
 
     @Test
+    func `compatible provider request omits reasoning and uses the configured endpoint`() async throws {
+        let summarizer = PullRequestAISummarizer { request in
+            #expect(request.url?.absoluteString == "https://gateway.example/v1/responses")
+            #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer gateway-key")
+
+            let body = try #require(request.httpBody)
+            let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            #expect(json["model"] as? String == "deepseek-flash")
+            #expect(json["reasoning"] == nil)
+
+            let data = Data(#"{"output":[{"type":"message","content":[{"type":"output_text","text":"Gateway ready."}]}]}"#.utf8)
+            let response = try #require(HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil))
+            return (data, response)
+        }
+        let settings = AISummaryEndpointTests.compatibleSettings(baseURL: "https://gateway.example/v1", model: "deepseek-flash")
+
+        let summary = try await summarizer.test(settings: settings, apiKeyOverride: "gateway-key")
+
+        #expect(summary == "Gateway ready.")
+    }
+
+    @Test
+    func `compatible provider with an invalid base URL makes no request`() async {
+        let requests = RequestCounter()
+        let summarizer = PullRequestAISummarizer { request in
+            requests.increment()
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (Data(), response)
+        }
+        var settings = AISummaryEndpointTests.compatibleSettings(baseURL: "http://gateway.example/v1", model: "deepseek-flash")
+        settings.enabled = true
+
+        await #expect(throws: AISummaryEndpointError.insecureBaseURL) {
+            try await summarizer.test(settings: settings, apiKeyOverride: "gateway-key")
+        }
+        #expect(requests.total == 0)
+    }
+
+    @Test
+    func `compatible provider never falls back to the stored OpenAI key`() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("repobar-ai-key-\(UUID().uuidString)", isDirectory: true)
+        let store = TokenStore(service: "repobar-tests", storage: .file(directory))
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try store.saveOpenAIAPIKey("sk-openai")
+        let keyStore = OpenAIAPIKeyStore(tokenStore: store) { name in
+            name == "OPENAI_API_KEY" ? "sk-env" : nil
+        }
+        let requests = RequestCounter()
+        let summarizer = PullRequestAISummarizer(keyStore: keyStore) { request in
+            requests.increment()
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (Data(), response)
+        }
+        let settings = AISummaryEndpointTests.compatibleSettings(baseURL: "https://gateway.example/v1", model: "deepseek-flash")
+
+        do {
+            _ = try await summarizer.test(settings: settings)
+            Issue.record("Expected a missing API key error")
+        } catch {
+            #expect(error.localizedDescription == "No API key configured for the OpenAI-compatible endpoint.")
+        }
+        #expect(requests.total == 0)
+    }
+
+    @Test
+    func `compatible provider errors name the endpoint instead of OpenAI`() async throws {
+        let summarizer = PullRequestAISummarizer { request in
+            let data = Data(#"{"error":{"message":"Invalid model."}}"#.utf8)
+            let response = try #require(HTTPURLResponse(url: request.url!, statusCode: 400, httpVersion: nil, headerFields: nil))
+            return (data, response)
+        }
+        let settings = AISummaryEndpointTests.compatibleSettings(baseURL: "https://gateway.example/v1", model: "nope")
+
+        do {
+            _ = try await summarizer.test(settings: settings, apiKeyOverride: "gateway-key")
+            Issue.record("Expected the request to fail")
+        } catch {
+            #expect(error.localizedDescription == "OpenAI-compatible endpoint request failed (400): Invalid model.")
+        }
+    }
+
+    @Test
     func `AI summary skips reasoning items before the message`() async throws {
         let summary = try await Self.testSummary(responseBody: #"""
         {"output":[
@@ -160,6 +243,19 @@ struct PullRequestAISummarizerTests {
             return (Data(responseBody.utf8), response)
         }
         return try await summarizer.test(settings: AISummarySettings(), apiKeyOverride: "test-key")
+    }
+}
+
+private final class RequestCounter: @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = 0
+
+    var total: Int {
+        self.lock.withLock { self.value }
+    }
+
+    func increment() {
+        self.lock.withLock { self.value += 1 }
     }
 }
 

@@ -95,6 +95,7 @@ public struct TokenStore: Sendable {
     public func clearAllCredentials() {
         self.clear()
         self.clearOpenAIAPIKey()
+        self.clearOpenAICompatibleAPIKey()
     }
 
     // MARK: - PAT Storage
@@ -117,25 +118,45 @@ public struct TokenStore: Sendable {
     // MARK: - OpenAI API Key Storage
 
     public func saveOpenAIAPIKey(_ key: String) throws {
-        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isEmpty == false else {
-            self.clearOpenAIAPIKey()
-            return
-        }
-
-        try self.save(data: Data(trimmed.utf8), account: "openai-api-key")
+        try self.saveAPIKey(key, account: "openai-api-key")
     }
 
     public func loadOpenAIAPIKey() throws -> String? {
-        guard let data = try self.loadData(account: "openai-api-key") else { return nil }
-
-        let key = String(data: data, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return key?.isEmpty == false ? key : nil
+        try self.loadAPIKey(account: "openai-api-key")
     }
 
     public func clearOpenAIAPIKey() {
         self.clear(account: "openai-api-key")
+    }
+
+    public func saveOpenAICompatibleAPIKey(_ key: String) throws {
+        try self.saveAPIKey(key, account: "openai-compatible-api-key")
+    }
+
+    public func loadOpenAICompatibleAPIKey() throws -> String? {
+        try self.loadAPIKey(account: "openai-compatible-api-key")
+    }
+
+    public func clearOpenAICompatibleAPIKey() {
+        self.clear(account: "openai-compatible-api-key")
+    }
+
+    private func saveAPIKey(_ key: String, account: String) throws {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else {
+            self.clear(account: account)
+            return
+        }
+
+        try self.save(data: Data(trimmed.utf8), account: account)
+    }
+
+    private func loadAPIKey(account: String) throws -> String? {
+        guard let data = try self.loadData(account: account) else { return nil }
+
+        let key = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return key?.isEmpty == false ? key : nil
     }
 
     // MARK: - Account-Scoped Storage (Phase 1)
