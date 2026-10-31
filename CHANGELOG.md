@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Build AI summaries only from Responses `message` text, so reasoning items from OpenAI-compatible servers no longer appear as the summary, and keep every text block of multi-part answers. (#156)
+
 ## 0.10.3 - 2026-10-20
 
 **Highlights:** Updated image handling fixes cached-image rendering and Retina image processing while preserving macOS 15 support.
