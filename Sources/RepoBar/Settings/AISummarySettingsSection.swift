@@ -132,7 +132,7 @@ struct AISummarySettingsSection: View {
             "Uses the stored key first, then OPENAI_API_KEY or REPOBAR_OPENAI_API_KEY from the app environment."
         case .openAICompatible:
             "Sends summaries to a server that implements the OpenAI Responses API, such as a LiteLLM gateway. "
-                + "Uses its own stored key; the OpenAI key is never sent to this endpoint. Press Return to apply edits."
+                + "Its key is saved for one base URL and never shared with OpenAI or another URL. Press Return to apply edits."
         }
     }
 
@@ -171,6 +171,7 @@ struct AISummarySettingsSection: View {
             self.baseURLDraft = url.absoluteString
             self.compatibleModelDraft = model
             self.endpointStatus = model.isEmpty ? AISummaryEndpointError.missingModel.localizedDescription : nil
+            self.refreshKeyStatus()
             return model.isEmpty == false
         } catch {
             self.endpointStatus = error.localizedDescription
@@ -179,12 +180,16 @@ struct AISummarySettingsSection: View {
     }
 
     private func refreshKeyStatus() {
-        self.keyStatus = self.appState.aiSummaryAPIKeySource(for: self.provider).label
+        self.keyStatus = self.appState.aiSummaryAPIKeySource(for: self.session.settings.aiSummaries).label
     }
 
     private func saveAPIKey() {
+        if self.provider == .openAICompatible, self.commitCompatibleEndpoint() == false {
+            return
+        }
+
         do {
-            try self.appState.saveAISummaryAPIKey(self.apiKey, for: self.provider)
+            try self.appState.saveAISummaryAPIKey(self.apiKey, for: self.session.settings.aiSummaries)
             self.apiKey = ""
             self.refreshKeyStatus()
         } catch {

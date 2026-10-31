@@ -107,14 +107,9 @@ struct PullRequestAISummarizerTests {
 
     @Test
     func `compatible provider never falls back to the stored OpenAI key`() async throws {
-        let directory = FileManager.default.temporaryDirectory
-            .appendingPathComponent("repobar-ai-key-\(UUID().uuidString)", isDirectory: true)
-        let store = TokenStore(service: "repobar-tests", storage: .file(directory))
+        let (keyStore, directory) = AISummaryEndpointTests.makeKeyStore()
         defer { try? FileManager.default.removeItem(at: directory) }
-        try store.saveOpenAIAPIKey("sk-openai")
-        let keyStore = OpenAIAPIKeyStore(tokenStore: store) { name in
-            name == "OPENAI_API_KEY" ? "sk-env" : nil
-        }
+        try keyStore.save("sk-openai")
         let requests = RequestCounter()
         let summarizer = PullRequestAISummarizer(keyStore: keyStore) { request in
             requests.increment()
@@ -130,6 +125,53 @@ struct PullRequestAISummarizerTests {
             #expect(error.localizedDescription == "No API key configured for the OpenAI-compatible endpoint.")
         }
         #expect(requests.total == 0)
+    }
+
+    @Test
+    func `compatible provider sends nothing after the base URL changes`() async throws {
+        let (keyStore, directory) = AISummaryEndpointTests.makeKeyStore()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try keyStore.saveCompatibleKey("sk-a", for: AISummaryEndpoint.validatedBaseURL("https://a.example/v1"))
+        let requests = RequestCounter()
+        let summarizer = PullRequestAISummarizer(keyStore: keyStore) { request in
+            requests.increment()
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            return (Data(), response)
+        }
+        let settings = AISummaryEndpointTests.compatibleSettings(baseURL: "https://b.example/v1", model: "deepseek-flash")
+
+        do {
+            _ = try await summarizer.test(settings: settings)
+            Issue.record("Expected a missing API key error")
+        } catch {
+            #expect(error.localizedDescription == "No API key configured for the OpenAI-compatible endpoint.")
+        }
+        #expect(requests.total == 0)
+    }
+
+    @Test
+    func `summary requests refuse HTTP redirects`() async throws {
+        let original = try #require(URL(string: "https://gateway.example/v1/responses"))
+        let redirect = try #require(HTTPURLResponse(
+            url: original,
+            statusCode: 307,
+            httpVersion: nil,
+            headerFields: ["Location": "https://elsewhere.example/v1/responses"]
+        ))
+        let target = try #require(URL(string: "https://elsewhere.example/v1/responses"))
+        let delegate = RedirectRejectingTaskDelegate()
+        let session = URLSession(configuration: .ephemeral)
+        defer { session.invalidateAndCancel() }
+        let task = session.dataTask(with: original)
+
+        let followed = await delegate.urlSession(
+            session,
+            task: task,
+            willPerformHTTPRedirection: redirect,
+            newRequest: URLRequest(url: target)
+        )
+
+        #expect(followed == nil)
     }
 
     @Test

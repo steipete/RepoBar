@@ -29,7 +29,7 @@ public struct PullRequestAISummarizer: Sendable {
         guard settings.enabled, match.isResolved else { return nil }
 
         let endpoint = try AISummaryEndpoint.resolve(settings)
-        guard let key = self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, provider: endpoint.provider) else { return nil }
+        guard let key = self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, endpoint: endpoint) else { return nil }
 
         let summary = try await self.generate(
             input: Self.prompt(for: match),
@@ -44,7 +44,7 @@ public struct PullRequestAISummarizer: Sendable {
 
     public func test(settings: AISummarySettings, apiKeyOverride: String? = nil) async throws -> String {
         let endpoint = try AISummaryEndpoint.resolve(settings)
-        guard let key = self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, provider: endpoint.provider) else {
+        guard let key = self.resolvedAPIKey(apiKeyOverride: apiKeyOverride, endpoint: endpoint) else {
             throw AISummaryTestError.missingAPIKey(endpoint.provider)
         }
 
@@ -103,13 +103,13 @@ public struct PullRequestAISummarizer: Sendable {
         return text
     }
 
-    private func resolvedAPIKey(apiKeyOverride: String?, provider: AISummaryProvider) -> String? {
+    private func resolvedAPIKey(apiKeyOverride: String?, endpoint: AISummaryEndpoint) -> String? {
         let override = apiKeyOverride?.trimmingCharacters(in: .whitespacesAndNewlines)
         if let override, override.isEmpty == false {
             return override
         }
 
-        return self.keyStore.resolve(for: provider).key
+        return self.keyStore.resolve(for: endpoint).key
     }
 
     private static func prompt(for match: GitHubReferenceMatch) -> String {
@@ -234,7 +234,7 @@ private struct OpenAIErrorEnvelope: Decodable {
     }
 }
 
-private final class RedirectRejectingTaskDelegate: NSObject, URLSessionTaskDelegate {
+final class RedirectRejectingTaskDelegate: NSObject, URLSessionTaskDelegate {
     func urlSession(
         _: URLSession,
         task _: URLSessionTask,

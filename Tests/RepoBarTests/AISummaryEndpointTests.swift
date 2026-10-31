@@ -88,24 +88,44 @@ struct AISummaryEndpointTests {
 
     @Test
     func `compatible key is stored separately from the OpenAI key`() throws {
+        let (keyStore, directory) = Self.makeKeyStore()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let gateway = try AISummaryEndpoint.resolve(Self.compatibleSettings(baseURL: "https://gateway.example/v1", model: "m"))
+        let openAI = try AISummaryEndpoint.resolve(AISummarySettings())
+
+        try keyStore.save("sk-openai")
+        #expect(keyStore.resolve(for: gateway) == OpenAIAPIKeyResolution(key: nil, source: .missing))
+
+        try keyStore.saveCompatibleKey("sk-gateway", for: gateway.baseURL)
+        #expect(keyStore.resolve(for: gateway) == OpenAIAPIKeyResolution(key: "sk-gateway", source: .keychain))
+        #expect(keyStore.resolve(for: openAI).key == "sk-openai")
+
+        keyStore.clearCompatibleKey()
+        #expect(keyStore.resolve(for: gateway).key == nil)
+        #expect(keyStore.resolve(for: openAI).key == "sk-openai")
+    }
+
+    @Test
+    func `compatible key is only used for the base URL it was saved for`() throws {
+        let (keyStore, directory) = Self.makeKeyStore()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let gatewayA = try AISummaryEndpoint.resolve(Self.compatibleSettings(baseURL: "https://a.example/v1", model: "m"))
+        let gatewayB = try AISummaryEndpoint.resolve(Self.compatibleSettings(baseURL: "https://b.example/v1", model: "m"))
+
+        try keyStore.saveCompatibleKey("sk-a", for: gatewayA.baseURL)
+
+        #expect(keyStore.resolve(for: gatewayA).key == "sk-a")
+        #expect(keyStore.resolve(for: gatewayB) == OpenAIAPIKeyResolution(key: nil, source: .keychainForOtherEndpoint))
+    }
+
+    static func makeKeyStore() -> (OpenAIAPIKeyStore, URL) {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("repobar-compatible-key-\(UUID().uuidString)", isDirectory: true)
         let store = TokenStore(service: "repobar-tests", storage: .file(directory))
-        defer { try? FileManager.default.removeItem(at: directory) }
         let keyStore = OpenAIAPIKeyStore(tokenStore: store) { name in
             name == "OPENAI_API_KEY" ? "sk-env" : nil
         }
-
-        try keyStore.save("sk-openai", for: .openAI)
-        #expect(keyStore.resolve(for: .openAICompatible) == OpenAIAPIKeyResolution(key: nil, source: .missing))
-
-        try keyStore.save("sk-gateway", for: .openAICompatible)
-        #expect(keyStore.resolve(for: .openAICompatible).key == "sk-gateway")
-        #expect(keyStore.resolve(for: .openAI).key == "sk-openai")
-
-        keyStore.clearStoredKey(for: .openAICompatible)
-        #expect(keyStore.resolve(for: .openAICompatible).key == nil)
-        #expect(keyStore.resolve(for: .openAI).key == "sk-openai")
+        return (keyStore, directory)
     }
 
     static func compatibleSettings(baseURL: String, model: String) -> AISummarySettings {

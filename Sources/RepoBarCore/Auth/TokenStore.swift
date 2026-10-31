@@ -2,6 +2,16 @@ import Foundation
 import Logging
 import Security
 
+public struct EndpointAPIKey: Codable, Equatable, Sendable {
+    public let baseURL: URL
+    public let key: String
+
+    public init(baseURL: URL, key: String) {
+        self.baseURL = baseURL
+        self.key = key
+    }
+}
+
 public struct OAuthTokens: Codable, Equatable, Sendable {
     public let accessToken: String
     public let refreshToken: String
@@ -118,45 +128,46 @@ public struct TokenStore: Sendable {
     // MARK: - OpenAI API Key Storage
 
     public func saveOpenAIAPIKey(_ key: String) throws {
-        try self.saveAPIKey(key, account: "openai-api-key")
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else {
+            self.clearOpenAIAPIKey()
+            return
+        }
+
+        try self.save(data: Data(trimmed.utf8), account: "openai-api-key")
     }
 
     public func loadOpenAIAPIKey() throws -> String? {
-        try self.loadAPIKey(account: "openai-api-key")
+        guard let data = try self.loadData(account: "openai-api-key") else { return nil }
+
+        let key = String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return key?.isEmpty == false ? key : nil
     }
 
     public func clearOpenAIAPIKey() {
         self.clear(account: "openai-api-key")
     }
 
-    public func saveOpenAICompatibleAPIKey(_ key: String) throws {
-        try self.saveAPIKey(key, account: "openai-compatible-api-key")
+    public func saveOpenAICompatibleAPIKey(_ key: String, baseURL: URL) throws {
+        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else {
+            self.clearOpenAICompatibleAPIKey()
+            return
+        }
+
+        let data = try JSONEncoder().encode(EndpointAPIKey(baseURL: baseURL, key: trimmed))
+        try self.save(data: data, account: "openai-compatible-api-key")
     }
 
-    public func loadOpenAICompatibleAPIKey() throws -> String? {
-        try self.loadAPIKey(account: "openai-compatible-api-key")
+    public func loadOpenAICompatibleAPIKey() throws -> EndpointAPIKey? {
+        guard let data = try self.loadData(account: "openai-compatible-api-key") else { return nil }
+
+        return try JSONDecoder().decode(EndpointAPIKey.self, from: data)
     }
 
     public func clearOpenAICompatibleAPIKey() {
         self.clear(account: "openai-compatible-api-key")
-    }
-
-    private func saveAPIKey(_ key: String, account: String) throws {
-        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.isEmpty == false else {
-            self.clear(account: account)
-            return
-        }
-
-        try self.save(data: Data(trimmed.utf8), account: account)
-    }
-
-    private func loadAPIKey(account: String) throws -> String? {
-        guard let data = try self.loadData(account: account) else { return nil }
-
-        let key = String(data: data, encoding: .utf8)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        return key?.isEmpty == false ? key : nil
     }
 
     // MARK: - Account-Scoped Storage (Phase 1)

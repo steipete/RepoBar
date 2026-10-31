@@ -207,16 +207,31 @@ final class AppState {
         self.settingsStore.save(self.session.settings)
     }
 
-    func aiSummaryAPIKeySource(for provider: AISummaryProvider) -> OpenAIAPIKeySource {
-        OpenAIAPIKeyStore().resolve(for: provider).source
+    func aiSummaryAPIKeySource(for settings: AISummarySettings) -> OpenAIAPIKeySource {
+        guard let endpoint = try? AISummaryEndpoint.resolve(settings) else {
+            return settings.provider == .openAI ? OpenAIAPIKeyStore().resolve().source : .missing
+        }
+
+        return OpenAIAPIKeyStore().resolve(for: endpoint).source
     }
 
-    func saveAISummaryAPIKey(_ key: String, for provider: AISummaryProvider) throws {
-        try OpenAIAPIKeyStore().save(key, for: provider)
+    func saveAISummaryAPIKey(_ key: String, for settings: AISummarySettings) throws {
+        switch settings.provider {
+        case .openAI:
+            try OpenAIAPIKeyStore().save(key)
+        case .openAICompatible:
+            let baseURL = try AISummaryEndpoint.validatedBaseURL(settings.compatibleBaseURL)
+            try OpenAIAPIKeyStore().saveCompatibleKey(key, for: baseURL)
+        }
     }
 
     func clearAISummaryAPIKey(for provider: AISummaryProvider) {
-        OpenAIAPIKeyStore().clearStoredKey(for: provider)
+        switch provider {
+        case .openAI:
+            OpenAIAPIKeyStore().clearStoredKey()
+        case .openAICompatible:
+            OpenAIAPIKeyStore().clearCompatibleKey()
+        }
     }
 }
 
