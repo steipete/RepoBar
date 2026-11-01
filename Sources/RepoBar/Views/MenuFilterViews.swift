@@ -41,10 +41,10 @@ struct MenuRepoFiltersView: View {
                     ) {
                         self.filterSelection.wrappedValue = selection
                     } label: {
-                        Text(selection.label)
+                        Text(AppLocalizer().string(selection.label))
                             .fontWeight(self.filterSelection.wrappedValue == selection ? .semibold : .medium)
                     }
-                    .accessibilityLabel(selection.label)
+                    .accessibilityLabel(AppLocalizer().string(selection.label))
 
                     if index < self.availableFilters.count - 1 {
                         MenuFilterBarDivider()
@@ -163,7 +163,7 @@ struct RecentPullRequestFiltersView: View {
         HStack(spacing: 6) {
             Picker("Scope", selection: self.$session.recentPullRequestScope) {
                 ForEach(RecentPullRequestScope.allCases, id: \.self) { scope in
-                    Text(scope.label).tag(scope)
+                    Text(AppLocalizer().string(scope.label)).tag(scope)
                 }
             }
             .labelsHidden()
@@ -176,9 +176,9 @@ struct RecentPullRequestFiltersView: View {
 
             Picker("Engagement", selection: self.$session.recentPullRequestEngagement) {
                 ForEach(RecentPullRequestEngagement.allCases, id: \.self) { engagement in
-                    Label(engagement.label, systemImage: engagement.systemImage)
+                    Label(AppLocalizer().string(engagement.label), systemImage: engagement.systemImage)
                         .labelStyle(.iconOnly)
-                        .accessibilityLabel(engagement.label)
+                        .accessibilityLabel(AppLocalizer().string(engagement.label))
                         .tag(engagement)
                 }
             }

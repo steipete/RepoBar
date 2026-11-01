@@ -9,7 +9,7 @@ struct RecentIssueFiltersView: View {
         HStack(spacing: 8) {
             Picker("Scope", selection: self.$session.recentIssueScope) {
                 ForEach(RecentIssueScope.allCases, id: \.self) { scope in
-                    Text(scope.label).tag(scope)
+                    Text(AppLocalizer().string(scope.label)).tag(scope)
                 }
             }
             .labelsHidden()
@@ -45,7 +45,7 @@ private struct IssueLabelFilterChipsView: View {
     var body: some View {
         HStack(spacing: 6) {
             IssueLabelFilterChip(
-                title: "All",
+                title: AppLocalizer().string("All"),
                 colorHex: nil,
                 isSelected: self.selection.isEmpty
             ) {

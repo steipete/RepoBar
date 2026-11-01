@@ -14,8 +14,18 @@ struct LocalizationTests {
         #expect(localizer.string("Pinned") == "Sabitlenmiş")
     }
 
+    @Test(arguments: ["zh-Hans", "zh-CN", "zh_CN", "zh-Hans-CN"])
+    func `simplified chinese language preferences`(language: String) {
+        let localizer = AppLocalizer(preferredLanguages: [language])
+        #expect(localizer.string("Preferences…") == "偏好设置…")
+        #expect(localizer.string("Notifications") == "通知")
+        #expect(localizer.string("Search repositories") == "搜索仓库")
+        #expect(localizer.string("Pinned") == "已固定")
+    }
+
     @Test func `language priority and fallback`() {
         #expect(AppLocalizer(preferredLanguages: ["en-US", "tr"]).string("General") == "General")
+        #expect(AppLocalizer(preferredLanguages: ["zh-Hans", "en"]).string("General") == "通用")
         #expect(AppLocalizer(preferredLanguages: ["fr", "tr"]).string("General") == "Genel")
         #expect(AppLocalizer(preferredLanguages: ["ja-JP"]).string("General") == "General")
         #expect(AppLocalizer(preferredLanguages: []).string("General") == "General")
@@ -36,13 +46,17 @@ struct LocalizationTests {
         }
         let english = try catalog("en")
         let turkish = try catalog("tr")
+        let chinese = try catalog("zh-Hans")
         #expect(Set(english.keys) == Set(turkish.keys))
+        #expect(Set(english.keys) == Set(chinese.keys))
         let titles = MainMenuItemID.allCases.map(\.title) + RepoSubmenuItemID.allCases.map(\.title)
         let subtitles = MainMenuItemID.allCases.compactMap(\.subtitle) + RepoSubmenuItemID.allCases.compactMap(\.subtitle)
         for key in titles + subtitles {
             #expect(english[key] == key)
             #expect(turkish[key] != nil)
             #expect(turkish[key] != key)
+            #expect(chinese[key] != nil)
+            #expect(chinese[key] != key)
         }
     }
 }

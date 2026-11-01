@@ -36,14 +36,14 @@ struct LocalRepoStateMenuView: View {
     private var detailsLine: String {
         var parts: [String] = []
         if let upstream = self.status.upstreamBranch {
-            parts.append("Upstream \(upstream)")
+            parts.append("\(AppLocalizer().string("Upstream")): \(upstream)")
         }
         if let dirty = self.status.dirtyCounts, dirty.isEmpty == false {
-            parts.append("Dirty \(dirty.summary)")
+            parts.append("\(AppLocalizer().string("Dirty")): \(dirty.summary)")
         }
         if let fetch = self.status.lastFetchAt {
             let age = RelativeFormatter.string(from: fetch, relativeTo: Date())
-            parts.append("Fetched \(age)")
+            parts.append("\(AppLocalizer().string("Fetched")): \(age)")
         }
         return parts.joined(separator: " · ")
     }
@@ -79,16 +79,36 @@ private struct LocalRepoHeaderRow: View {
             Text(self.status.branch)
                 .font(.system(size: 13, weight: .medium))
                 .lineLimit(1)
-            Text(self.status.syncDetail)
+            Text(self.formattedSyncDetail)
                 .font(.caption2)
                 .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             if let worktreeName = self.status.worktreeName {
-                Text("Worktree \(worktreeName)")
+                Text("\(AppLocalizer().string("Worktree")): \(worktreeName)")
                     .font(.caption2)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
             Spacer(minLength: 8)
         }
+    }
+
+    private var formattedSyncDetail: String {
+        let detail = self.status.syncDetail
+        if detail == "Up to date" { return AppLocalizer().string("Up to date") }
+        if detail.hasPrefix("Behind") {
+            let count = detail.replacingOccurrences(of: "Behind", with: "").trimmingCharacters(in: .whitespaces)
+            return count.isEmpty ? AppLocalizer().string("Behind") : "\(AppLocalizer().string("Behind")) \(count)"
+        }
+        if detail.hasPrefix("Ahead") {
+            let count = detail.replacingOccurrences(of: "Ahead", with: "").trimmingCharacters(in: .whitespaces)
+            return count.isEmpty ? AppLocalizer().string("Ahead") : "\(AppLocalizer().string("Ahead")) \(count)"
+        }
+        if detail == "Diverged" { return AppLocalizer().string("Diverged") }
+        if detail.hasPrefix("Dirty") {
+            let rest = detail.replacingOccurrences(of: "Dirty", with: "").trimmingCharacters(in: .whitespaces)
+            return rest.isEmpty ? AppLocalizer().string("Dirty") : "\(AppLocalizer().string("Dirty")) \(rest)"
+        }
+        if detail == "No upstream" { return AppLocalizer().string("No upstream") }
+        return AppLocalizer().string(detail)
     }
 
     private var syncColor: Color {
@@ -220,7 +240,7 @@ private struct LocalRepoActionButton: View {
 
     var body: some View {
         Button(action: self.action) {
-            Label(self.title, systemImage: self.systemImage)
+            Label(AppLocalizer().string(self.title), systemImage: self.systemImage)
                 .font(.caption2)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)

@@ -49,7 +49,7 @@ struct RecentListSubmenuRowView: View {
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
 
-            Text(self.title)
+            Text(AppLocalizer().string(self.title))
                 .font(.system(size: 14))
                 .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                 .lineLimit(1)
@@ -57,7 +57,7 @@ struct RecentListSubmenuRowView: View {
             Spacer(minLength: 8)
 
             if let detailText, detailText.isEmpty == false {
-                Text(detailText)
+                Text(AppLocalizer().string(detailText))
                     .font(.caption2)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)

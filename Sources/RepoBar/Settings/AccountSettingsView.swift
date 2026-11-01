@@ -25,10 +25,10 @@ struct AccountSettingsView: View {
             AccountsListSection(session: self.session, appState: self.appState)
             GitHubAPIUsageSection(session: self.session, appState: self.appState)
 
-            Section("Add Account") {
-                Picker("Host", selection: self.$hostMode) {
+            Section(AppLocalizer().string("Add Account")) {
+                Picker(AppLocalizer().string("Host"), selection: self.$hostMode) {
                     ForEach(HostMode.allCases, id: \.self) { mode in
-                        Text(mode.label).tag(mode)
+                        Text(AppLocalizer().string(mode.label)).tag(mode)
                     }
                 }
                 .pickerStyle(.segmented)
@@ -41,7 +41,7 @@ struct AccountSettingsView: View {
                                 Image(systemName: "checkmark.seal.fill")
                                     .foregroundStyle(.green)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text("Signed in")
+                                    Text(AppLocalizer().string("Signed in"))
                                         .font(.headline)
                                     Text("\(user.username) · \(user.host.host ?? "github.com")")
                                         .font(.subheadline)
@@ -49,7 +49,7 @@ struct AccountSettingsView: View {
                                 }
                             }
                             Spacer()
-                            Button("Log out") {
+                            Button(AppLocalizer().string("Log out")) {
                                 Task {
                                     await self.appState.logoutCurrentMethod()
                                     self.authMethod = .oauth
@@ -71,12 +71,12 @@ struct AccountSettingsView: View {
                             }
                         }
                         HStack(spacing: 8) {
-                            Button("Check token") {
+                            Button(AppLocalizer().string("Check token")) {
                                 Task { await self.validateToken() }
                             }
                             .disabled(self.tokenValidation == .checking)
                             if self.session.settings.authMethod == .oauth {
-                                Button("Refresh token") {
+                                Button(AppLocalizer().string("Refresh token")) {
                                     Task { await self.refreshToken() }
                                 }
                                 .disabled(self.tokenValidation == .checking)

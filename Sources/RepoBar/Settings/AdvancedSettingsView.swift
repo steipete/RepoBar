@@ -15,9 +15,9 @@ struct AdvancedSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Picker("Refresh interval", selection: self.$session.settings.refreshInterval) {
+                Picker(AppLocalizer().string("Refresh interval"), selection: self.$session.settings.refreshInterval) {
                     ForEach(RefreshInterval.allCases, id: \.self) { interval in
-                        Text(self.intervalLabel(interval)).tag(interval)
+                        Text(AppLocalizer().string(self.intervalLabel(interval))).tag(interval)
                     }
                 }
                 .onChange(of: self.session.settings.refreshInterval) { _, newValue in
@@ -30,19 +30,19 @@ struct AdvancedSettingsView: View {
                     }
                 }
             } header: {
-                Text("Refresh")
+                Text(AppLocalizer().string("Refresh"))
             } footer: {
-                Text("Controls how often RepoBar refreshes GitHub data.")
+                Text(AppLocalizer().string("Controls how often RepoBar refreshes GitHub data."))
             }
 
             Section {
-                LabeledContent("Project folder") {
+                LabeledContent(AppLocalizer().string("Project folder")) {
                     HStack(spacing: 8) {
-                        Text(self.projectFolderLabel)
+                        Text(AppLocalizer().string(self.projectFolderLabel))
                             .lineLimit(1)
                             .truncationMode(.middle)
                             .foregroundStyle(self.projectFolderLabelColor)
-                        Button("Choose…") { self.pickProjectFolder() }
+                        Button(AppLocalizer().string("Choose…")) { self.pickProjectFolder() }
                         if self.session.settings.localProjects.rootPath != nil {
                             Button {
                                 self.appState.refreshLocalProjects(forceRescan: true)
@@ -50,14 +50,14 @@ struct AdvancedSettingsView: View {
                                 Image(systemName: "arrow.clockwise")
                             }
                             .buttonStyle(.borderless)
-                            .help("Rescan local projects")
+                            .help(AppLocalizer().string("Rescan local projects"))
                             Button {
                                 self.clearProjectFolder()
                             } label: {
                                 Image(systemName: "trash")
                             }
                             .buttonStyle(.borderless)
-                            .help("Clear project folder")
+                            .help(AppLocalizer().string("Clear project folder"))
                         }
                     }
                 }
@@ -68,7 +68,7 @@ struct AdvancedSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Toggle("Auto-sync clean repos", isOn: self.$session.settings.localProjects.autoSyncEnabled)
+                Toggle(AppLocalizer().string("Auto-sync clean repos"), isOn: self.$session.settings.localProjects.autoSyncEnabled)
                     .disabled(self.session.settings.localProjects.rootPath == nil)
                     .onChange(of: self.session.settings.localProjects.autoSyncEnabled) { _, _ in
                         self.appState.persistSettings()
@@ -76,7 +76,7 @@ struct AdvancedSettingsView: View {
                         self.appState.requestRefresh(cancelInFlight: true)
                     }
 
-                Toggle("Show dirty files in menu", isOn: self.$session.settings.localProjects.showDirtyFilesInMenu)
+                Toggle(AppLocalizer().string("Show dirty files in menu"), isOn: self.$session.settings.localProjects.showDirtyFilesInMenu)
                     .disabled(self.session.settings.localProjects.rootPath == nil)
                     .onChange(of: self.session.settings.localProjects.showDirtyFilesInMenu) { _, _ in
                         self.appState.persistSettings()
@@ -84,7 +84,7 @@ struct AdvancedSettingsView: View {
                     }
 
                 HStack {
-                    Text("Worktree folder")
+                    Text(AppLocalizer().string("Worktree folder"))
                     Spacer()
                     TextField("", text: self.worktreeFolderBinding)
                         .frame(width: 120)
@@ -93,11 +93,11 @@ struct AdvancedSettingsView: View {
                 }
 
                 HStack {
-                    Text("Fetch interval")
+                    Text(AppLocalizer().string("Fetch interval"))
                     Spacer()
                     Picker("", selection: self.$session.settings.localProjects.fetchInterval) {
                         ForEach(LocalProjectsRefreshInterval.allCases, id: \.self) { interval in
-                            Text(interval.label).tag(interval)
+                            Text(AppLocalizer().string(interval.label)).tag(interval)
                         }
                     }
                     .pickerStyle(.menu)
@@ -110,7 +110,7 @@ struct AdvancedSettingsView: View {
                 }
 
                 HStack {
-                    Text("Scan depth")
+                    Text(AppLocalizer().string("Scan depth"))
                     Spacer()
                     Picker("", selection: self.$session.settings.localProjects.maxDepth) {
                         ForEach(1 ... 6, id: \.self) { depth in
@@ -128,7 +128,7 @@ struct AdvancedSettingsView: View {
                 }
 
                 HStack {
-                    Text("Preferred Terminal")
+                    Text(AppLocalizer().string("Preferred Terminal"))
                     Spacer()
                     Picker("", selection: self.preferredTerminalBinding) {
                         ForEach(TerminalApp.installed, id: \.rawValue) { terminal in
@@ -148,11 +148,11 @@ struct AdvancedSettingsView: View {
 
                 if self.isGhosttySelected {
                     HStack {
-                        Text("Ghostty opens in")
+                        Text(AppLocalizer().string("Ghostty opens in"))
                         Spacer()
                         Picker("", selection: self.ghosttyOpenModeBinding) {
                             ForEach(GhosttyOpenMode.allCases, id: \.self) { mode in
-                                Text(mode.label)
+                                Text(AppLocalizer().string(mode.label))
                                     .tag(mode)
                             }
                         }
@@ -162,9 +162,9 @@ struct AdvancedSettingsView: View {
                     }
                 }
             } header: {
-                Text("Local Projects")
+                Text(AppLocalizer().string("Local Projects"))
             } footer: {
-                Text("Scans up to the configured depth under the folder, fetches periodically, and can fast-forward pull clean repos.")
+                Text(AppLocalizer().string("Scans up to the configured depth under the folder, fetches periodically, and can fast-forward pull clean repos."))
             }
 
             GitHubArchiveSettingsSection(settings: self.$session.settings.githubArchives) {
@@ -172,34 +172,34 @@ struct AdvancedSettingsView: View {
             }
 
             Section {
-                Toggle("Watch copied GitHub references", isOn: self.$session.settings.gitHubReferenceMonitor.enabled)
+                Toggle(AppLocalizer().string("Watch copied GitHub references"), isOn: self.$session.settings.gitHubReferenceMonitor.enabled)
                     .onChange(of: self.session.settings.gitHubReferenceMonitor.enabled) { _, _ in
                         self.appState.persistSettings()
                         self.appState.updateGitHubReferenceMonitor()
                     }
 
                 if self.session.settings.gitHubReferenceMonitor.enabled {
-                    LabeledContent("Matches") {
-                        Text("GitHub URLs, issue numbers, commit hashes")
+                    LabeledContent(AppLocalizer().string("Matches")) {
+                        Text(AppLocalizer().string("GitHub URLs, issue numbers, commit hashes"))
                             .foregroundStyle(.secondary)
                     }
                 }
             } header: {
-                Text("GitHub References")
+                Text(AppLocalizer().string("GitHub References"))
             } footer: {
                 Text(
-                    "Shows the best cached or live match in a separate menu bar item when a copied reference resolves."
+                    AppLocalizer().string("Shows the best cached or live match in a separate menu bar item when a copied reference resolves.")
                 )
             }
 
             Section {
-                Toggle("Summarize Issue Navigator items", isOn: self.$session.settings.aiSummaries.enabled)
+                Toggle(AppLocalizer().string("Summarize Issue Navigator items"), isOn: self.$session.settings.aiSummaries.enabled)
                     .onChange(of: self.session.settings.aiSummaries.enabled) { _, _ in
                         self.appState.persistSettings()
                     }
 
                 HStack {
-                    Text("Model")
+                    Text(AppLocalizer().string("Model"))
                     Spacer()
                     Picker("", selection: self.aiSummaryModelBinding) {
                         ForEach(AISummarySettings.modelOptions) { option in
@@ -211,7 +211,7 @@ struct AdvancedSettingsView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Text("OpenAI API key")
+                    Text(AppLocalizer().string("OpenAI API key"))
                         .fixedSize()
                     Spacer(minLength: 12)
                     SecureField("API key", text: self.$openAIAPIKey)
@@ -257,9 +257,9 @@ struct AdvancedSettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             } header: {
-                Text("AI Summaries")
+                Text(AppLocalizer().string("AI Summaries"))
             } footer: {
-                Text("Uses the stored key first, then OPENAI_API_KEY or REPOBAR_OPENAI_API_KEY from the app environment.")
+                Text(AppLocalizer().string("Uses the stored key first, then OPENAI_API_KEY or REPOBAR_OPENAI_API_KEY from the app environment."))
             }
 
             Section {
@@ -270,7 +270,7 @@ struct AdvancedSettingsView: View {
                         if self.isInstallingCLI {
                             ProgressView().controlSize(.small)
                         } else {
-                            Text("Install CLI")
+                            Text(AppLocalizer().string("Install CLI"))
                         }
                     }
                     .disabled(self.isInstallingCLI)
@@ -283,25 +283,25 @@ struct AdvancedSettingsView: View {
                     }
                 }
 
-                Text("Install `repobar` into /usr/local/bin and /opt/homebrew/bin.")
+                Text(AppLocalizer().string("Install `repobar` into /usr/local/bin and /opt/homebrew/bin."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             } header: {
-                Text("CLI")
+                Text(AppLocalizer().string("CLI"))
             }
 
             #if DEBUG
                 Section {
-                    Toggle("Enable debug tools", isOn: self.$session.settings.debugPaneEnabled)
+                    Toggle(AppLocalizer().string("Enable debug tools"), isOn: self.$session.settings.debugPaneEnabled)
                         .onChange(of: self.session.settings.debugPaneEnabled) { _, _ in
                             self.appState.persistSettings()
                         }
                 } header: {
-                    Text("Debug")
+                    Text(AppLocalizer().string("Debug"))
                 } footer: {
-                    Text("Developer-only diagnostics and experimental tools.")
+                    Text(AppLocalizer().string("Developer-only diagnostics and experimental tools."))
                 }
             #endif
         }

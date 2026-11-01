@@ -89,8 +89,10 @@ struct RepoSubmenuBuilder {
         let local = repo.localStatus
         switch itemID {
         case .openOnGitHub:
+            let openTemplate = AppLocalizer().string("Open %@ on GitHub")
+            let title = openTemplate.contains("%@") ? String(format: openTemplate, repo.title) : AppLocalizer().string("Open on GitHub")
             let openRow = RecentListSubmenuRowView(
-                title: "Open \(repo.title) in GitHub",
+                title: title,
                 systemImage: "arrow.up.right.square",
                 badgeText: nil,
                 onOpen: { [weak target] in
@@ -102,7 +104,7 @@ struct RepoSubmenuBuilder {
             guard let local else { return [] }
 
             return [self.menuBuilder.actionItem(
-                title: "Open in Finder",
+                title: AppLocalizer().string("Open in Finder"),
                 action: #selector(StatusBarMenuManager.openLocalFinder(_:)),
                 represented: local.path,
                 systemImage: "folder"
@@ -111,7 +113,7 @@ struct RepoSubmenuBuilder {
             guard let local else { return [] }
 
             return [self.menuBuilder.actionItem(
-                title: "Open in Terminal",
+                title: AppLocalizer().string("Open in Terminal"),
                 action: #selector(StatusBarMenuManager.openLocalTerminal(_:)),
                 represented: local.path,
                 systemImage: "terminal"
@@ -120,7 +122,7 @@ struct RepoSubmenuBuilder {
             guard local == nil else { return [] }
 
             return [self.menuBuilder.actionItem(
-                title: "Checkout Repo",
+                title: AppLocalizer().string("Checkout Repo"),
                 action: #selector(self.target.checkoutRepoFromMenu),
                 represented: repo.title,
                 systemImage: "arrow.down.to.line"
@@ -141,21 +143,21 @@ struct RepoSubmenuBuilder {
             return [self.localWorktreesSubmenuItem(for: local, fullName: repo.title)]
         case .issues:
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "Issues",
+                title: AppLocalizer().string("Issues"),
                 systemImage: "exclamationmark.circle",
                 fullName: repo.title,
                 kind: .issues,
-                openTitle: "Open Issues",
+                openTitle: AppLocalizer().string("Open Issues"),
                 openAction: #selector(self.target.openIssues),
                 badgeText: StatValueFormatter.compact(repo.issues)
             ))]
         case .pulls:
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "Pull Requests",
+                title: AppLocalizer().string("Pull Requests"),
                 systemImage: "arrow.triangle.branch",
                 fullName: repo.title,
                 kind: .pullRequests,
-                openTitle: "Open Pull Requests",
+                openTitle: AppLocalizer().string("Open Pull Requests"),
                 openAction: #selector(self.target.openPulls),
                 badgeText: StatValueFormatter.compact(repo.pulls)
             ))]
@@ -171,11 +173,11 @@ struct RepoSubmenuBuilder {
                 }
             }()
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "Releases",
+                title: AppLocalizer().string("Releases"),
                 systemImage: "tag",
                 fullName: repo.title,
                 kind: .releases,
-                openTitle: "Open Releases",
+                openTitle: AppLocalizer().string("Open Releases"),
                 openAction: #selector(self.target.openReleases),
                 badgePrefixText: latestReleaseName,
                 badgeText: nil,
@@ -194,11 +196,11 @@ struct RepoSubmenuBuilder {
         case .ciRuns:
             let runBadge = repo.ciRunCount.flatMap { $0 > 0 ? String($0) : nil }
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "CI Runs",
+                title: AppLocalizer().string("CI Runs"),
                 systemImage: "bolt",
                 fullName: repo.title,
                 kind: .ciRuns,
-                openTitle: "Open Actions",
+                openTitle: AppLocalizer().string("Open Actions"),
                 openAction: #selector(self.target.openActions),
                 badgeText: runBadge
             ))]
@@ -207,21 +209,21 @@ struct RepoSubmenuBuilder {
                 return []
             }
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "Discussions",
+                title: AppLocalizer().string("Discussions"),
                 systemImage: "bubble.left.and.bubble.right",
                 fullName: repo.title,
                 kind: .discussions,
-                openTitle: "Open Discussions",
+                openTitle: AppLocalizer().string("Open Discussions"),
                 openAction: #selector(self.target.openDiscussions),
                 badgeText: nil
             ))]
         case .tags:
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "Tags",
+                title: AppLocalizer().string("Tags"),
                 systemImage: "tag",
                 fullName: repo.title,
                 kind: .tags,
-                openTitle: "Open Tags",
+                openTitle: AppLocalizer().string("Open Tags"),
                 openAction: #selector(self.target.openTags),
                 badgeText: nil
             ))]
@@ -230,21 +232,21 @@ struct RepoSubmenuBuilder {
                 return [self.branchesSubmenuItem(for: local, fullName: repo.title, badgeText: nil)]
             }
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "Branches",
+                title: AppLocalizer().string("Branches"),
                 systemImage: "point.topleft.down.curvedto.point.bottomright.up",
                 fullName: repo.title,
                 kind: .branches,
-                openTitle: "Open Branches",
+                openTitle: AppLocalizer().string("Open Branches"),
                 openAction: #selector(self.target.openBranches),
                 badgeText: nil
             ))]
         case .contributors:
             return [self.recentListSubmenuItem(RecentListConfig(
-                title: "Contributors",
+                title: AppLocalizer().string("Contributors"),
                 systemImage: "person.2",
                 fullName: repo.title,
                 kind: .contributors,
-                openTitle: "Open Contributors",
+                openTitle: AppLocalizer().string("Open Contributors"),
                 openAction: #selector(self.target.openContributors),
                 badgeText: nil
             ))]
@@ -271,13 +273,13 @@ struct RepoSubmenuBuilder {
             let commitRemainder = Array(commits.dropFirst(commitPreview.count))
             var items: [NSMenuItem] = []
             items.append(self.menuBuilder.actionItem(
-                title: "Open Commits",
+                title: AppLocalizer().string("Open Commits"),
                 action: #selector(self.target.openCommits),
                 represented: repo.title,
                 systemImage: "arrow.turn.down.right"
             ))
             if commitPreview.isEmpty {
-                let message = commitCount == 0 ? "No commits" : "Loading…"
+                let message = commitCount == 0 ? AppLocalizer().string("No commits") : AppLocalizer().string("Loading…")
                 items.append(self.menuBuilder.infoItem(message))
             } else {
                 commitPreview.forEach { items.append(self.menuBuilder.commitMenuItem(for: $0)) }
@@ -296,7 +298,7 @@ struct RepoSubmenuBuilder {
             var items: [NSMenuItem] = []
             if hasActivityLink {
                 items.append(self.menuBuilder.actionItem(
-                    title: "Open Activity",
+                    title: AppLocalizer().string("Open Activity"),
                     action: #selector(self.target.openActivity),
                     represented: repo.title,
                     systemImage: "clock.arrow.circlepath"
@@ -312,21 +314,21 @@ struct RepoSubmenuBuilder {
         case .pinToggle:
             if isPinned {
                 return [self.menuBuilder.actionItem(
-                    title: "Unpin",
+                    title: AppLocalizer().string("Unpin"),
                     action: #selector(self.target.unpinRepo),
                     represented: repo.title,
                     systemImage: "pin.slash"
                 )]
             }
             return [self.menuBuilder.actionItem(
-                title: "Pin",
+                title: AppLocalizer().string("Pin"),
                 action: #selector(self.target.pinRepo),
                 represented: repo.title,
                 systemImage: "pin"
             )]
         case .hideRepo:
             return [self.menuBuilder.actionItem(
-                title: "Hide",
+                title: AppLocalizer().string("Hide"),
                 action: #selector(self.target.hideRepo),
                 represented: repo.title,
                 systemImage: "eye.slash"
@@ -344,14 +346,14 @@ struct RepoSubmenuBuilder {
         submenu.delegate = self.target
         self.target.registerCombinedBranchMenu(submenu, repoPath: local.path, fullName: fullName, localStatus: local)
         submenu.addItem(self.menuBuilder.actionItem(
-            title: "Create Branch…",
+            title: AppLocalizer().string("Create Branch…"),
             action: #selector(self.target.createLocalBranch),
             represented: local.path,
             systemImage: "plus"
         ))
         submenu.addItem(.separator())
         submenu.addItem(self.menuBuilder.actionItem(
-            title: "Open Branches",
+            title: AppLocalizer().string("Open Branches"),
             action: #selector(self.target.openBranches),
             represented: fullName,
             systemImage: "point.topleft.down.curvedto.point.bottomright.up"
@@ -360,7 +362,7 @@ struct RepoSubmenuBuilder {
         submenu.addItem(self.loadingItem())
 
         let row = RecentListSubmenuRowView(
-            title: "Branches",
+            title: AppLocalizer().string("Branches"),
             systemImage: "point.topleft.down.curvedto.point.bottomright.up",
             badgeText: badgeText
         )
@@ -373,7 +375,7 @@ struct RepoSubmenuBuilder {
         submenu.delegate = self.target
         self.target.registerLocalWorktreeMenu(submenu, repoPath: local.path, fullName: fullName)
         submenu.addItem(self.menuBuilder.actionItem(
-            title: "Create Worktree…",
+            title: AppLocalizer().string("Create Worktree…"),
             action: #selector(self.target.createLocalWorktree),
             represented: local.path,
             systemImage: "plus"
@@ -382,7 +384,7 @@ struct RepoSubmenuBuilder {
         submenu.addItem(self.loadingItem())
 
         let row = RecentListSubmenuRowView(
-            title: "Switch Worktree",
+            title: AppLocalizer().string("Switch Worktree"),
             systemImage: "square.stack.3d.down.right",
             badgeText: nil,
             detailText: local.worktreeName
@@ -399,10 +401,10 @@ struct RepoSubmenuBuilder {
         submenu.autoenablesItems = false
         submenu.delegate = self.target
         self.target.registerChangelogMenu(submenu, fullName: fullName, localStatus: localStatus)
-        submenu.addItem(self.menuBuilder.infoItem("Loading…"))
+        submenu.addItem(self.menuBuilder.infoItem(AppLocalizer().string("Loading…")))
 
         let headline = self.target.cachedChangelogHeadline(fullName: fullName)
-        let title = headline == nil ? (presentation?.title ?? "Changelog") : "Changelog"
+        let title = headline == nil ? (presentation?.title ?? AppLocalizer().string("Changelog")) : AppLocalizer().string("Changelog")
         let badgeText = headline ?? presentation?.badgeText
         let detailText = headline == nil ? presentation?.detailText : nil
         let row = RecentListSubmenuRowView(

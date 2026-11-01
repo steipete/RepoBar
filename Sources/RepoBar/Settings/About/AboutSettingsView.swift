@@ -76,7 +76,7 @@ struct AboutSettingsView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }
-                Text("Menubar glance at GitHub repos: CI, issues/PRs, releases, traffic, and activity.")
+                Text(AppLocalizer().string("Menubar glance at GitHub repos: CI, issues/PRs, releases, traffic, and activity."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -84,9 +84,9 @@ struct AboutSettingsView: View {
 
             VStack(spacing: 6) {
                 AboutLinkRow(icon: "chevron.left.slash.chevron.right", title: "GitHub", url: "https://github.com/steipete/RepoBar")
-                AboutLinkRow(icon: "globe", title: "Website", url: "https://repobar.app")
-                AboutLinkRow(icon: "ant", title: "Issue Tracker", url: "https://github.com/steipete/RepoBar/issues")
-                AboutLinkRow(icon: "envelope", title: "Email", url: "mailto:peter@steipete.me")
+                AboutLinkRow(icon: "globe", title: AppLocalizer().string("Website"), url: "https://repobar.app")
+                AboutLinkRow(icon: "ant", title: AppLocalizer().string("Issue Tracker"), url: "https://github.com/steipete/RepoBar/issues")
+                AboutLinkRow(icon: "envelope", title: AppLocalizer().string("Email"), url: "mailto:peter@steipete.me")
             }
             .frame(maxWidth: .infinity)
             .multilineTextAlignment(.center)
@@ -96,19 +96,19 @@ struct AboutSettingsView: View {
                 Divider()
                     .padding(.vertical, 6)
                 VStack(spacing: 10) {
-                    Toggle("Check for updates automatically", isOn: self.$autoUpdateEnabled)
+                    Toggle(AppLocalizer().string("Check for updates automatically"), isOn: self.$autoUpdateEnabled)
                         .toggleStyle(.checkbox)
                         .frame(maxWidth: .infinity, alignment: .center)
-                    Button("Check for Updates…") {
+                    Button(AppLocalizer().string("Check for Updates…")) {
                         SparkleController.shared.checkForUpdates()
                     }
                 }
             } else {
-                Text("Updates unavailable in this build.")
+                Text(AppLocalizer().string("Updates unavailable in this build."))
                     .foregroundStyle(.secondary)
                     .padding(.top, 4)
             }
-            Button("Copy Update Diagnostics") {
+            Button(AppLocalizer().string("Copy Update Diagnostics")) {
                 self.copyUpdateDiagnostics()
             }
 
