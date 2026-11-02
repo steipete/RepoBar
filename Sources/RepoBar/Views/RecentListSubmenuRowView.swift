@@ -57,7 +57,7 @@ struct RecentListSubmenuRowView: View {
             Spacer(minLength: 8)
 
             if let detailText, detailText.isEmpty == false {
-                Text(AppLocalizer().string(detailText))
+                Text(detailText)
                     .font(.caption2)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)

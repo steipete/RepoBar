@@ -38,7 +38,7 @@ struct LocalWorktreeMenuRowView: View {
             }
 
             if let detail = self.model.detail, detail.isEmpty == false {
-                Text(AppLocalizer().string(detail))
+                Text(detail)
                     .font(.caption2)
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)
