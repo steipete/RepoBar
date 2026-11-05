@@ -67,6 +67,52 @@ struct PullRequestAISummarizerTests {
     }
 
     @Test
+    func `AI summary skips reasoning items before the message`() async throws {
+        let summary = try await Self.testSummary(responseBody: #"""
+        {"output":[
+          {"type":"reasoning","content":[{"type":"output_text","text":"Thinking about the request."}]},
+          {"type":"message","content":[{"type":"output_text","text":"RepoBar AI summaries are ready."}]}
+        ]}
+        """#)
+
+        #expect(summary == "RepoBar AI summaries are ready.")
+    }
+
+    @Test
+    func `AI summary joins message text blocks in order`() async throws {
+        let summary = try await Self.testSummary(responseBody: #"""
+        {"output":[{"type":"message","content":[
+          {"type":"output_text","text":"First part."},
+          {"type":"refusal","refusal":"Ignored."},
+          {"type":"output_text","text":"Second part."}
+        ]}]}
+        """#)
+
+        #expect(summary == "First part. Second part.")
+    }
+
+    @Test
+    func `AI summary ignores whitespace output text convenience field`() async throws {
+        let summary = try await Self.testSummary(responseBody: #"""
+        {"output_text":"  ","output":[{"type":"message","content":[{"type":"output_text","text":"Message text."}]}]}
+        """#)
+
+        #expect(summary == "Message text.")
+    }
+
+    @Test
+    func `AI summary fails when only reasoning is returned`() async throws {
+        do {
+            _ = try await Self.testSummary(responseBody: #"""
+            {"output":[{"type":"reasoning","content":[{"type":"output_text","text":"Only thinking."}]},{"type":"message"}]}
+            """#)
+            Issue.record("Expected a missing summary error")
+        } catch {
+            #expect(error.localizedDescription == "The model did not return a summary.")
+        }
+    }
+
+    @Test
     func `legacy enabled AI summary settings decode without scope`() throws {
         let data = try JSONEncoder().encode(LegacyAISummarySettings(enabled: true, model: "chat-latest"))
 
@@ -101,6 +147,19 @@ struct PullRequestAISummarizerTests {
         let summary = try #require(PullRequestAISummarizer.clean(" First line.\n\n Second line. "))
 
         #expect(summary == "First line. Second line.")
+    }
+
+    private static func testSummary(responseBody: String) async throws -> String {
+        let summarizer = PullRequestAISummarizer { request in
+            let response = try #require(HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: nil
+            ))
+            return (Data(responseBody.utf8), response)
+        }
+        return try await summarizer.test(settings: AISummarySettings(), apiKeyOverride: "test-key")
     }
 }
 
