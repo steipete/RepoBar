@@ -64,6 +64,19 @@ final class AppState {
             self.session.settings.authMethod = inferredAuthMethod
             self.settingsStore.save(self.session.settings)
         }
+        self.installLegacyRefreshHost()
+    }
+
+    private func installLegacyRefreshHost() {
+        self.auth.setRefreshHostProvider { [weak self] in
+            guard let self else { return RepoBarAuthDefaults.githubHost }
+
+            return OAuthRefreshHost.resolved(
+                enterpriseHost: self.session.settings.enterpriseHost,
+                accountHost: self.session.settings.resolvedActiveAccount()?.host,
+                configuredHost: self.session.settings.githubHost
+            )
+        }
     }
 
     func start() {
