@@ -6,8 +6,8 @@ import RepoBarCore
 @Observable
 final class AppState {
     var session = Session()
-    let auth = OAuthCoordinator()
-    let patAuth = PATAuthenticator()
+    let auth: OAuthCoordinator
+    let patAuth: PATAuthenticator
     let legacyGitHub: GitHubClient
     var github: GitHubClient
     let accountManager: AccountManager
@@ -42,11 +42,15 @@ final class AppState {
 
     init(
         settingsStore: SettingsStore = SettingsStore(),
-        accountManager: AccountManager? = nil
+        accountManager: AccountManager? = nil,
+        auth: OAuthCoordinator = OAuthCoordinator(),
+        patAuth: PATAuthenticator = PATAuthenticator()
     ) {
         let legacyGitHub = GitHubClient()
         self.legacyGitHub = legacyGitHub
         self.github = legacyGitHub
+        self.auth = auth
+        self.patAuth = patAuth
         self.settingsStore = settingsStore
         self.accountManager = accountManager ?? AccountManager()
         self.session.settings = self.settingsStore.load()
@@ -156,15 +160,29 @@ final class AppState {
         }
     }
 
-    private func refreshStoredTokens(lifecycleID: UUID) async -> TimeInterval? {
-        guard self.isCurrentLifecycle(lifecycleID) else { return nil }
-
+    func refreshStoredTokensNow() async {
+        // The legacy item mirrors the account refresh token. GitHub retires
+        // that token on first use, so a second refresh of the same value fails.
+        if self.hasOAuthAccountRecord() {
+            await self.accountManager.refreshAllIfNeeded()
+            return
+        }
         if self.session.settings.authMethod == .oauth, self.auth.loadTokens() != nil {
             _ = try? await self.auth.refreshIfNeeded()
         }
-        // Fan out to every account-scoped OAuth refresher. PAT-only
-        // accounts are no-ops and OAuth accounts refresh independently.
-        await self.accountManager.refreshAllIfNeeded()
+    }
+
+    private func hasOAuthAccountRecord() -> Bool {
+        if self.accountManager.accounts.contains(where: { $0.authMethod == .oauth }) {
+            return true
+        }
+        return self.session.settings.accounts.contains(where: { $0.authMethod == .oauth })
+    }
+
+    private func refreshStoredTokens(lifecycleID: UUID) async -> TimeInterval? {
+        guard self.isCurrentLifecycle(lifecycleID) else { return nil }
+
+        await self.refreshStoredTokensNow()
         return self.isCurrentLifecycle(lifecycleID) ? self.tokenRefreshInterval : nil
     }
 

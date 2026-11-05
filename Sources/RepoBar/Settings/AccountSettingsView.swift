@@ -526,8 +526,21 @@ struct AccountSettingsView: View {
         let started = Date()
         await self.logAuth("Auth: token refresh started")
         do {
+            let useAccountRefresh = self.appState.session.settings.accounts.contains { $0.authMethod == .oauth }
+            let accountID = self.appState.session.settings.resolvedActiveAccount().flatMap { account in
+                account.authMethod == .oauth ? account.id : nil
+            }
+            if useAccountRefresh, accountID == nil {
+                throw URLError(.userAuthenticationRequired)
+            }
             let refreshed = try await self.withTimeout(seconds: self.tokenRefreshTimeout) {
-                try await self.appState.auth.refreshIfNeeded(force: true)
+                if let accountID {
+                    return try await self.appState.accountManager.refreshIfNeeded(
+                        accountID: accountID,
+                        force: true
+                    )
+                }
+                return try await self.appState.auth.refreshIfNeeded(force: true)
             }
             guard refreshed != nil else {
                 throw URLError(.userAuthenticationRequired)
