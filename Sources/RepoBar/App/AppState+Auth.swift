@@ -16,7 +16,10 @@ extension AppState {
                 clientID: self.defaultClientID,
                 clientSecret: self.defaultClientSecret,
                 host: self.defaultGitHubHost,
-                loopbackPort: self.defaultLoopbackPort
+                loopbackPort: self.defaultLoopbackPort,
+                devicePrompt: { code, url in
+                    self.session.lastError = "Enter \(code) at \(url.absoluteString)"
+                }
             )
             self.session.hasStoredTokens = true
             if let user = await self.currentUserFromLegacyCredentials(host: self.defaultGitHubHost) {

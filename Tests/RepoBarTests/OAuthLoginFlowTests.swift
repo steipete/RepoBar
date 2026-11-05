@@ -233,6 +233,82 @@ struct OAuthLoginFlowTests {
         let cleaned = try OAuthLoginFlow.normalizeHost(#require(URL(string: "https://github.com/path?q=1#frag")))
         #expect(cleaned.absoluteString == "https://github.com")
     }
+
+    @Test
+    @MainActor
+    func `empty client secret uses the device flow and stores no secret`() async throws {
+        let service = "com.steipete.repobar.auth.tests.\(UUID().uuidString)"
+        let store = TokenStore(service: service)
+        defer { store.clear() }
+
+        let session = URLSession(configuration: Self.sessionConfiguration())
+        let handlerID = UUID().uuidString
+        let prompted = PromptBox()
+        Self.MockURLProtocol.register(handlerID: handlerID) { request in
+            let url = try #require(request.url?.absoluteString)
+            let body = try #require(Self.bodyString(from: request))
+            #expect(body.contains("client_secret") == false)
+            if url.contains("/login/device/code") {
+                #expect(body.contains("client_id=cid"))
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                let data = Data("""
+                {"device_code":"device-code","user_code":"WDJB-MJHT","verification_uri":"https://github.com/login/device","expires_in":900,"interval":0}
+                """.utf8)
+                return (data, response)
+            }
+            #expect(url.contains("/login/oauth/access_token"))
+            #expect(body.contains("device_code=device-code"))
+            #expect(body.contains("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Adevice_code"))
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let data = Data("""
+            {"access_token":"tok","token_type":"bearer","expires_in":28800,"refresh_token":"ref"}
+            """.utf8)
+            return (data, response)
+        }
+        defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
+
+        let server = try FakeLoopbackServer(
+            redirectURL: #require(URL(string: "http://127.0.0.1:9/callback")),
+            result: (code: "unused", state: "unused")
+        )
+        let host = try #require(URL(string: "https://github.com"))
+        let flow = OAuthLoginFlow(
+            tokenStore: store,
+            openURL: { url in
+                #expect(url.absoluteString == "https://github.com/login/device")
+            },
+            dataProvider: { request in
+                let (tagged, _) = Self.taggedRequest(request, handlerID: handlerID)
+                return try await session.data(for: tagged)
+            },
+            makeLoopbackServer: { _ in
+                Issue.record("device sign-in must not open the loopback server")
+                return server
+            },
+            stateProvider: { "unused" },
+            sleep: { _ in }
+        )
+
+        let tokens = try await flow.login(
+            clientID: "cid",
+            clientSecret: "",
+            host: host,
+            loopbackPort: 53682,
+            timeout: 5,
+            devicePrompt: { code, url in
+                prompted.value = "\(code) \(url.absoluteString)"
+            }
+        )
+        #expect(tokens.accessToken == "tok")
+        #expect(prompted.value == "WDJB-MJHT https://github.com/login/device")
+        #expect(try store.load()?.accessToken == "tok")
+        #expect(try store.loadClientCredentials() == nil)
+        #expect(server.stopCallCount == 0)
+    }
+}
+
+private final class PromptBox: @unchecked Sendable {
+    var value = ""
 }
 
 private extension OAuthLoginFlowTests {

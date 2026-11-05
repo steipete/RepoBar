@@ -330,6 +330,37 @@ struct OAuthTokenRefresherTests {
     }
 
     @Test
+    func `refresh omits an empty client secret`() async throws {
+        let service = "com.steipete.repobar.auth.tests.\(UUID().uuidString)"
+        let store = TokenStore(service: service)
+        defer { store.clear() }
+
+        try store.save(tokens: OAuthTokens(accessToken: "old", refreshToken: "r1", expiresAt: .distantPast))
+        let session = URLSession(configuration: Self.sessionConfiguration())
+        let handlerID = UUID().uuidString
+        Self.MockURLProtocol.register(handlerID: handlerID) { request in
+            let body = try #require(Self.bodyString(from: request))
+            #expect(body.contains("client_id=\(RepoBarAuthDefaults.clientID)"))
+            #expect(body.contains("client_secret") == false)
+            #expect(body.contains("refresh_token=r1"))
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let data = Data("""
+            {"access_token":"new","token_type":"bearer","scope":"","expires_in":3600,"refresh_token":"r2"}
+            """.utf8)
+            return (data, response)
+        }
+        defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
+
+        let refresher = OAuthTokenRefresher(tokenStore: store) { request in
+            let (tagged, _) = Self.taggedRequest(request, handlerID: handlerID)
+            return try await session.data(for: tagged)
+        }
+        let refreshed = try await refresher.refreshIfNeeded(host: RepoBarAuthDefaults.githubHost)
+        #expect(refreshed?.accessToken == "new")
+        #expect(try store.load()?.refreshToken == "r2")
+    }
+
+    @Test
     func `account refresh does not inherit legacy client credentials`() async throws {
         let service = "com.steipete.repobar.auth.tests.\(UUID().uuidString)"
         let accountID = "github.com#alice"

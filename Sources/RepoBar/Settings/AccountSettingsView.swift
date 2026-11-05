@@ -3,6 +3,7 @@ import RepoBarCore
 import SwiftUI
 
 struct AccountSettingsView: View {
+    // swiftformat:disable:next privateStateVariables
     @Bindable var session: Session
     let appState: AppState
     @State private var clientID = "Iv23liGm2arUyotWSjwJ"
@@ -411,7 +412,10 @@ struct AccountSettingsView: View {
                     clientSecret: effectiveClientSecret,
                     host: self.session.settings.enterpriseHost ?? self.session.settings.githubHost,
                     loopbackPort: self.session.settings.loopbackPort,
-                    scope: usingEnterprise ? "repo read:org" : nil
+                    scope: usingEnterprise ? "repo read:org" : nil,
+                    devicePrompt: { code, url in
+                        self.session.lastError = "Enter \(code) at \(url.absoluteString)"
+                    }
                 )
                 self.session.settings.authMethod = .oauth
                 self.appState.persistSettings()
@@ -473,8 +477,7 @@ struct AccountSettingsView: View {
     }
 
     private func normalizedEnterpriseHost() -> URL? {
-        guard !self.enterpriseHost.isEmpty else { return nil }
-        guard var components = URLComponents(string: enterpriseHost) else { return nil }
+        guard !self.enterpriseHost.isEmpty, var components = URLComponents(string: enterpriseHost) else { return nil }
 
         if components.scheme == nil {
             components.scheme = "https"
