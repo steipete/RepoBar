@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Refresh Swift package and command-line tooling dependencies while preserving the macOS 15, Swift 6.2, and Node.js 22.13 minimums.
+
+- Build AI summaries only from Responses message text, keeping all answer blocks and excluding reasoning output (thanks @yashiels). (#156, #158)
+
 ## 0.10.3 - 2026-10-20
 
 **Highlights:** Updated image handling fixes cached-image rendering and Retina image processing while preserving macOS 15 support.

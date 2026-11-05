@@ -31,8 +31,8 @@
   "devDependencies": {
     "chalk": "^6.0.1",
     "commander": "^15.0.0",
-    "dotenv-cli": "^11.0.0",
-    "ora": "^9.4.1",
+    "dotenv-cli": "^11.1.0",
+    "ora": "^10.0.0",
     "tsx": "^4.23.15",
     "zod": "^4.6.7"
   }
