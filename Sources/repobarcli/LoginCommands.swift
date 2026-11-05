@@ -89,15 +89,13 @@ struct LoginCommand: CommanderRunnableCommand {
         // multi-account refresh continues to work after the legacy "default"
         // entries are cleared on a future migration.
         try TokenStore.shared.save(tokens: tokens, accountID: account.id)
-        if !resolvedClientSecret.isEmpty {
-            try TokenStore.shared.save(
-                clientCredentials: OAuthClientCredentials(
-                    clientID: resolvedClientID,
-                    clientSecret: resolvedClientSecret
-                ),
-                accountID: account.id
-            )
-        }
+        try TokenStore.shared.save(
+            clientCredentials: OAuthClientCredentials(
+                clientID: resolvedClientID,
+                clientSecret: resolvedClientSecret
+            ),
+            accountID: account.id
+        )
 
         settings.loopbackPort = resolvedLoopbackPort
         settings.githubHost = RepoBarAuthDefaults.githubHost

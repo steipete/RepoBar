@@ -236,7 +236,7 @@ struct OAuthLoginFlowTests {
 
     @Test
     @MainActor
-    func `empty client secret uses the device flow and stores no secret`() async throws {
+    func `empty client secret uses the device flow and stores that client id`() async throws {
         let service = "com.steipete.repobar.auth.tests.\(UUID().uuidString)"
         let store = TokenStore(service: service)
         defer { store.clear() }
@@ -302,8 +302,75 @@ struct OAuthLoginFlowTests {
         #expect(tokens.accessToken == "tok")
         #expect(prompted.value == "WDJB-MJHT https://github.com/login/device")
         #expect(try store.load()?.accessToken == "tok")
-        #expect(try store.loadClientCredentials() == nil)
+        #expect(try store.loadClientCredentials()?.clientID == "cid")
+        #expect(try store.loadClientCredentials()?.clientSecret.isEmpty == true)
         #expect(server.stopCallCount == 0)
+    }
+
+    @Test
+    @MainActor
+    func `device login replaces stale legacy credentials and keeps other accounts`() async throws {
+        let service = "com.steipete.repobar.auth.tests.\(UUID().uuidString)"
+        let store = TokenStore(service: service)
+        let otherAccount = "ghe.example#alice"
+        defer {
+            store.clear()
+            store.clear(accountID: otherAccount)
+        }
+        try store.save(clientCredentials: OAuthClientCredentials(clientID: "enterprise", clientSecret: "enterprise-secret"))
+        try store.save(
+            clientCredentials: OAuthClientCredentials(clientID: "other", clientSecret: "other-secret"),
+            accountID: otherAccount
+        )
+
+        let session = URLSession(configuration: Self.sessionConfiguration())
+        let handlerID = UUID().uuidString
+        Self.MockURLProtocol.register(handlerID: handlerID) { request in
+            let url = try #require(request.url?.absoluteString)
+            if url.contains("/login/device/code") {
+                let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                let data = Data("""
+                {"device_code":"device-code","user_code":"WDJB-MJHT","verification_uri":"https://github.com/login/device","expires_in":900,"interval":0}
+                """.utf8)
+                return (data, response)
+            }
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+            let data = Data("""
+            {"access_token":"tok","token_type":"bearer","expires_in":28800,"refresh_token":"ref"}
+            """.utf8)
+            return (data, response)
+        }
+        defer { Self.MockURLProtocol.unregister(handlerID: handlerID) }
+
+        let unusedURL = try #require(URL(string: "http://127.0.0.1:9/callback"))
+        let flow = OAuthLoginFlow(
+            tokenStore: store,
+            openURL: { _ in },
+            dataProvider: { request in
+                let (tagged, _) = Self.taggedRequest(request, handlerID: handlerID)
+                return try await session.data(for: tagged)
+            },
+            makeLoopbackServer: { _ in
+                Issue.record("device sign-in must not open the loopback server")
+                return FakeLoopbackServer(
+                    redirectURL: unusedURL,
+                    result: (code: "unused", state: "unused")
+                )
+            },
+            stateProvider: { "unused" },
+            sleep: { _ in }
+        )
+        _ = try await flow.login(
+            clientID: "cid",
+            clientSecret: " ",
+            host: #require(URL(string: "https://github.com")),
+            loopbackPort: 53682,
+            timeout: 5
+        )
+        #expect(try store.loadClientCredentials()?.clientID == "cid")
+        #expect(try store.loadClientCredentials()?.clientSecret.isEmpty == true)
+        #expect(try store.loadClientCredentials(accountID: otherAccount)?.clientID == "other")
+        #expect(try store.loadClientCredentials(accountID: otherAccount)?.clientSecret == "other-secret")
     }
 }
 

@@ -3,6 +3,8 @@ import RepoBarCore
 import SwiftUI
 
 struct MenuLoggedOutView: View {
+    var detail: String?
+
     var body: some View {
         VStack(spacing: 8) {
             Image(systemName: "person.crop.circle.badge.exclam")
@@ -13,6 +15,12 @@ struct MenuLoggedOutView: View {
             Text("Connect your GitHub account to load pins and activity.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            if let detail, detail.isEmpty == false {
+                Text(detail)
+                    .font(.caption.monospaced())
+                    .multilineTextAlignment(.center)
+                    .textSelection(.enabled)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 140)
     }

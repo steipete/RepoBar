@@ -108,7 +108,8 @@ final class StatusBarMenuBuilder {
         case .loggedOutPrompt:
             switch session.account {
             case .loggedOut, .loggingIn:
-                let loggedOut = MenuLoggedOutView()
+                let detail = session.account == .loggingIn ? session.lastError : nil
+                let loggedOut = MenuLoggedOutView(detail: detail)
                     .padding(.horizontal, MenuStyle.sectionHorizontalPadding)
                     .padding(.vertical, MenuStyle.sectionVerticalPadding)
                 return [self.viewItem(for: loggedOut, enabled: false)]
@@ -120,7 +121,8 @@ final class StatusBarMenuBuilder {
             case .loggedOut:
                 return [self.actionItem(title: AppLocalizer().string("Sign in to GitHub"), action: #selector(self.target.signIn))]
             case .loggingIn:
-                let signInItem = self.actionItem(title: AppLocalizer().string("Signing in…"), action: #selector(self.target.signIn))
+                let title = session.lastError ?? AppLocalizer().string("Signing in…")
+                let signInItem = self.actionItem(title: title, action: #selector(self.target.signIn))
                 signInItem.isEnabled = false
                 return [signInItem]
             case .loggedIn:

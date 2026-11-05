@@ -220,6 +220,9 @@ public struct OAuthLoginFlow {
                 expiresAt: expiresAt
             )
             try self.tokenStore.save(tokens: tokens)
+            try self.tokenStore.save(
+                clientCredentials: OAuthClientCredentials(clientID: clientID, clientSecret: "")
+            )
             return tokens
         }
         throw GitHubAPIError.badStatus(code: 0, message: "GitHub device sign-in timed out.")
