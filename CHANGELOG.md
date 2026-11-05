@@ -2,9 +2,12 @@
 
 ## Unreleased
 
-- Refresh Swift package and command-line tooling dependencies while preserving the macOS 15, Swift 6.2, and Node.js 22.13 minimums.
+## 0.10.4 - 2026-11-05
+
+**Highlights:** AI summaries show the complete answer without including reasoning output.
 
 - Build AI summaries only from Responses message text, keeping all answer blocks and excluding reasoning output (thanks @yashiels). (#156, #158)
+- Refresh Swift package and command-line tooling dependencies while preserving the macOS 15, Swift 6.2, and Node.js 22.13 minimums.
 
 ## 0.10.3 - 2026-10-20
 
