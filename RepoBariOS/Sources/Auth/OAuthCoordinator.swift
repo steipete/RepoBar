@@ -9,6 +9,7 @@ final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPr
     private let tokenRefresher: OAuthTokenRefresher
     private var authSession: ASWebAuthenticationSession?
     private var lastHost: URL = RepoBarAuthDefaults.githubHost
+    private var refreshHostProvider: (@MainActor () -> URL)?
     private var cachedTokens: OAuthTokens?
     private var hasLoadedTokens = false
     private static let callbackHost = "repobar.app"
@@ -99,7 +100,13 @@ final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPr
         return tokens
     }
 
+    func setRefreshHostProvider(_ provider: @escaping @MainActor () -> URL) {
+        self.refreshHostProvider = provider
+        self.applyStoredRefreshHost()
+    }
+
     func refreshIfNeeded() async throws -> OAuthTokens? {
+        self.applyStoredRefreshHost()
         if let tokens = self.cachedTokens, tokens.expiresAt.map({ $0 > Date().addingTimeInterval(60) }) != false {
             return tokens
         }
@@ -109,6 +116,14 @@ final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPr
             self.hasLoadedTokens = true
         }
         return refreshed
+    }
+
+    private func applyStoredRefreshHost() {
+        guard let refreshHostProvider = self.refreshHostProvider else { return }
+
+        if let normalized = try? OAuthLoginFlow.normalizeHost(refreshHostProvider()) {
+            self.lastHost = normalized
+        }
     }
 
     func presentationAnchor(for _: ASWebAuthenticationSession) -> ASPresentationAnchor {

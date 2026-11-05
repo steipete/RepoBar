@@ -22,6 +22,7 @@ final class AppModel {
 
     init() {
         self.session.settings = self.settingsStore.load()
+        self.installLegacyRefreshHost()
         RepoBarLogging.bootstrapIfNeeded()
         RepoBarLogging.configure(
             verbosity: self.session.settings.loggingVerbosity,
@@ -53,6 +54,18 @@ final class AppModel {
 
     func persistSettings() {
         self.settingsStore.save(self.session.settings)
+    }
+
+    private func installLegacyRefreshHost() {
+        self.auth.setRefreshHostProvider { [weak self] in
+            guard let self else { return RepoBarAuthDefaults.githubHost }
+
+            return OAuthRefreshHost.resolved(
+                enterpriseHost: self.session.settings.enterpriseHost,
+                accountHost: self.session.settings.resolvedActiveAccount()?.host,
+                configuredHost: self.session.settings.githubHost
+            )
+        }
     }
 
     func applyHostSettings() async {
