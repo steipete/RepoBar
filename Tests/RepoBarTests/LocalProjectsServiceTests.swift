@@ -315,8 +315,33 @@ struct LocalProjectsServiceTests {
 
         let worktreeStatus = snapshot.statuses.first(where: { $0.path.lastPathComponent == "repo-worktree" })
         #expect(worktreeStatus != nil)
-        #expect(worktreeStatus?.worktreeName != nil)
+        #expect(worktreeStatus?.worktreeName == "repo-worktree")
         #expect(worktreeStatus?.branch == "feature")
+    }
+
+    @Test
+    func `snapshot keeps the linked worktree name when a parent directory is named worktrees`() async throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let repo = root.appendingPathComponent("worktrees/Repo", isDirectory: true)
+        try FileManager.default.createDirectory(at: repo, withIntermediateDirectories: true)
+        try initializeRepo(at: repo, origin: "git@github.com:foo/repo.git")
+
+        let worktree = root.appendingPathComponent("feature", isDirectory: true)
+        _ = try runGit(["worktree", "add", worktree.path, "-b", "feature"], in: repo)
+
+        let snapshot = await LocalProjectsService().snapshot(
+            rootPath: root.path,
+            maxDepth: 2,
+            autoSyncEnabled: false,
+            concurrencyLimit: 1
+        )
+
+        let worktreeStatus = snapshot.statuses.first(where: { $0.path.lastPathComponent == "feature" })
+        #expect(worktreeStatus?.worktreeName == "feature")
+        let mainStatus = snapshot.statuses.first(where: { $0.path.lastPathComponent == "Repo" })
+        #expect(mainStatus?.worktreeName == nil)
     }
 
     @Test

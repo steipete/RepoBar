@@ -494,15 +494,21 @@
         let gitPath = repoURL.appendingPathComponent(".git")
         var isDirectory: ObjCBool = false
         guard FileManager.default.fileExists(atPath: gitPath.path, isDirectory: &isDirectory),
-              isDirectory.boolValue == false
-        else {
-            return nil
-        }
-        guard let contents = try? String(contentsOf: gitPath, encoding: .utf8) else { return nil }
-        guard let range = contents.range(of: "worktrees/") else { return nil }
+              isDirectory.boolValue == false,
+              let contents = try? String(contentsOf: gitPath, encoding: .utf8) else { return nil }
 
-        let suffix = contents[range.upperBound...]
-        let name = suffix.split(whereSeparator: { $0 == "\n" || $0 == "\r" || $0 == "/" }).first
+        let gitdir = contents
+            .split(whereSeparator: \.isNewline)
+            .lazy
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .first { $0.hasPrefix("gitdir:") }
+            .map { $0.dropFirst("gitdir:".count).trimmingCharacters(in: .whitespaces) }
+        guard let gitdir, gitdir.isEmpty == false else { return nil }
+
+        let marker = ".git/worktrees/"
+        guard let range = gitdir.range(of: marker, options: .backwards) else { return nil }
+
+        let name = gitdir[range.upperBound...].split(separator: "/").first
         return name.map(String.init)
     }
 #endif
