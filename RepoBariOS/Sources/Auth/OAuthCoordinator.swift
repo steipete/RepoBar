@@ -26,10 +26,26 @@ final class OAuthCoordinator: NSObject, ASWebAuthenticationPresentationContextPr
         clientID: String,
         clientSecret: String,
         host: URL,
-        scope: String = "repo read:org"
+        scope: String = "repo read:org",
+        devicePrompt: ((String, URL) -> Void)? = nil
     ) async throws {
         let normalizedHost = try OAuthLoginFlow.normalizeHost(host)
         self.lastHost = normalizedHost
+        if clientSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            let flow = OAuthLoginFlow(tokenStore: self.tokenStore) { url in
+                UIApplication.shared.open(url)
+            }
+            let tokens = try await flow.login(
+                clientID: clientID,
+                clientSecret: "",
+                host: normalizedHost,
+                loopbackPort: RepoBarAuthDefaults.loopbackPort,
+                devicePrompt: devicePrompt
+            )
+            self.cachedTokens = tokens
+            self.hasLoadedTokens = true
+            return
+        }
 
         let authBase = normalizedHost.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         let authEndpoint = URL(string: "\(authBase)/login/oauth/authorize")!

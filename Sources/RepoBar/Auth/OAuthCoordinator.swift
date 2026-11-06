@@ -13,7 +13,14 @@ final class OAuthCoordinator {
     private var cachedTokens: OAuthTokens?
     private var hasLoadedTokens = false
 
-    func login(clientID: String, clientSecret: String, host: URL, loopbackPort: Int, scope: String? = nil) async throws {
+    func login(
+        clientID: String,
+        clientSecret: String,
+        host: URL,
+        loopbackPort: Int,
+        scope: String? = nil,
+        devicePrompt: ((String, URL) -> Void)? = nil
+    ) async throws {
         let normalizedHost = try OAuthLoginFlow.normalizeHost(host)
         self.lastHost = normalizedHost
         let flow = OAuthLoginFlow(tokenStore: self.tokenStore) { url in
@@ -24,7 +31,8 @@ final class OAuthCoordinator {
             clientSecret: clientSecret,
             host: normalizedHost,
             loopbackPort: loopbackPort,
-            scope: scope
+            scope: scope,
+            devicePrompt: devicePrompt
         )
         self.cachedTokens = tokens
         self.hasLoadedTokens = true

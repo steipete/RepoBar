@@ -149,11 +149,11 @@ _Last updated: 2025-11-24_
 1) In GitHub App settings:
    - Callback URL: `http://127.0.0.1:53682/callback`
    - Repo permissions: Metadata (default), Contents: Read, Issues: Read, Pull requests: Read, Actions: Read, Checks: Read, Administration: Read (traffic), Environments: Read (optional).
-   - Expire user tokens: ON. Device Flow: OFF. Events: none. Distribution: Any account.
-   - Save, note Client ID (Iv23liGm2arUyotWSjwJ), Client Secret (9693b9928c9efd224838e096a147822680983e10), App ID (2344358), and private key path.
+   - Expire user tokens: ON. Device Flow: ON, so GitHub.com sign-in can run without a client secret. Events: none. Distribution: Any account.
+   - Save, note Client ID (Iv23liGm2arUyotWSjwJ), Client Secret (not stored in this repository), App ID (2344358), and private key path.
 2) In the app (Settings > Accounts): paste Client ID/Secret; import PEM key; leave GHE URL empty unless needed; confirm loopback port 53682.
 3) Install the App on each org where you need private repos, selecting “All repositories” (or specific ones) so Administration: Read covers traffic endpoints.
-4) First launch: sign in → browser opens → accept → app captures code on localhost → tokens stored via `TokenStore` (Keychain in release, file store in debug).
+4) First launch: sign in. With no client secret, GitHub shows a device code in the menu and at github.com/login/device. With a client secret, the browser returns to the loopback port. Tokens are stored via `TokenStore` (Keychain in release, file store in debug), with the client id that issued them.
 
 ## Implementation Plan
 Done

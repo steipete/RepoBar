@@ -92,7 +92,10 @@ final class AppModel {
             try await self.auth.login(
                 clientID: self.defaultClientID,
                 clientSecret: self.defaultClientSecret,
-                host: self.session.settings.githubHost
+                host: self.session.settings.githubHost,
+                devicePrompt: { code, url in
+                    self.session.lastError = "Enter \(code) at \(url.absoluteString)"
+                }
             )
             if let user = try? await self.github.currentUser() {
                 self.session.account = .loggedIn(user)

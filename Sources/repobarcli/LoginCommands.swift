@@ -60,7 +60,10 @@ struct LoginCommand: CommanderRunnableCommand {
             clientID: resolvedClientID,
             clientSecret: resolvedClientSecret,
             host: normalizedHost,
-            loopbackPort: resolvedLoopbackPort
+            loopbackPort: resolvedLoopbackPort,
+            devicePrompt: { code, url in
+                print("Enter \(code) at \(url.absoluteString)")
+            }
         )
 
         // Identify the signed-in user so we can persist an account record.

@@ -64,12 +64,15 @@ public struct OAuthTokenRefresher: Sendable {
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Accept")
         request.addValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = OAuthFormEncoder.encode([
+        var fields = [
             "client_id": credentials.clientID,
-            "client_secret": credentials.clientSecret,
             "grant_type": "refresh_token",
             "refresh_token": tokens.refreshToken
-        ])
+        ]
+        if !credentials.clientSecret.isEmpty {
+            fields["client_secret"] = credentials.clientSecret
+        }
+        request.httpBody = OAuthFormEncoder.encode(fields)
 
         let (data, responseAny) = try await self.load(request)
         guard let response = responseAny as? HTTPURLResponse else {
