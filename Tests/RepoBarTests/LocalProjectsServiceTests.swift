@@ -345,6 +345,32 @@ struct LocalProjectsServiceTests {
     }
 
     @Test
+    func `snapshot keeps the linked worktree name when the git dir has no dot git suffix`() async throws {
+        let root = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let source = root.appendingPathComponent("source", isDirectory: true)
+        try FileManager.default.createDirectory(at: source, withIntermediateDirectories: true)
+        try initializeRepo(at: source, origin: "git@github.com:foo/repo.git")
+
+        let bare = root.appendingPathComponent("bare", isDirectory: true)
+        _ = try runGit(["clone", "--bare", source.path, bare.path], in: root)
+
+        let worktree = root.appendingPathComponent("feature", isDirectory: true)
+        _ = try runGit(["worktree", "add", worktree.path, "-b", "feature"], in: bare)
+
+        let snapshot = await LocalProjectsService().snapshot(
+            rootPath: root.path,
+            maxDepth: 1,
+            autoSyncEnabled: false,
+            concurrencyLimit: 1
+        )
+
+        let worktreeStatus = snapshot.statuses.first(where: { $0.path.lastPathComponent == "feature" })
+        #expect(worktreeStatus?.worktreeName == "feature")
+    }
+
+    @Test
     func `snapshot limits dirty files`() async throws {
         let root = try makeTempDirectory()
         defer { try? FileManager.default.removeItem(at: root) }

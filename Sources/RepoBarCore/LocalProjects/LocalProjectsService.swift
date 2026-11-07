@@ -505,7 +505,7 @@
             .map { $0.dropFirst("gitdir:".count).trimmingCharacters(in: .whitespaces) }
         guard let gitdir, gitdir.isEmpty == false else { return nil }
 
-        let marker = ".git/worktrees/"
+        let marker = "/worktrees/"
         guard let range = gitdir.range(of: marker, options: .backwards) else { return nil }
 
         let name = gitdir[range.upperBound...].split(separator: "/").first
