@@ -3,6 +3,22 @@
     <channel>
         <title>RepoBar</title>
         <item>
+            <title>0.10.4</title>
+            <pubDate>Thu, 05 Nov 2026 23:48:07 +0000</pubDate>
+            <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
+            <sparkle:version>38</sparkle:version>
+            <sparkle:shortVersionString>0.10.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+            <description>&lt;html&gt;&lt;body&gt;&lt;pre&gt;## 0.10.4 - 2026-11-05
+
+**Highlights:** AI summaries show the complete answer without including reasoning output.
+
+- Build AI summaries only from Responses message text, keeping all answer blocks and excluding reasoning output (thanks @yashiels). (#156, #158)
+- Refresh Swift package and command-line tooling dependencies while preserving the macOS 15, Swift 6.2, and Node.js 22.13 minimums.
+&lt;/pre&gt;&lt;/body&gt;&lt;/html&gt;</description>
+            <enclosure url="https://github.com/steipete/RepoBar/releases/download/v0.10.4/RepoBar-0.10.4.zip" length="26902283" type="application/octet-stream" sparkle:edSignature="A5FPKTx3rUvnhw0axKbcN3pLazvSp/D6Dqxb5r19g/gUWJ5cdALAcyRVkYmVHhf6ljkwmLc4PaYQSJUjQ+KiAw==" />
+        </item>
+        <item>
             <title>0.10.3</title>
             <pubDate>Tue, 20 Oct 2026 23:32:43 +0000</pubDate>
             <link>https://raw.githubusercontent.com/steipete/RepoBar/main/appcast.xml</link>
