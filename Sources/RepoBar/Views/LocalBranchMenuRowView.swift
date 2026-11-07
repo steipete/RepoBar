@@ -30,7 +30,7 @@ struct LocalBranchMenuRowView: View {
                 .lineLimit(1)
 
             if self.model.isDetached {
-                Text("Detached")
+                Text(AppLocalizer().string("Detached"))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 6)
@@ -41,7 +41,7 @@ struct LocalBranchMenuRowView: View {
             Spacer(minLength: 8)
 
             if let dirtySummary = self.model.dirtySummary, !dirtySummary.isEmpty {
-                Text("Dirty \(dirtySummary)")
+                Text("\(AppLocalizer().string("Dirty")) \(dirtySummary)")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)
@@ -58,7 +58,7 @@ struct LocalBranchMenuRowView: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 if let upstream = self.model.upstream {
-                    Text("Tracking \(upstream)")
+                    Text("\(AppLocalizer().string("Tracking")) \(upstream)")
                         .font(.caption2)
                         .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                         .lineLimit(1)
@@ -76,7 +76,7 @@ struct LocalBranchMenuRowView: View {
 
             let syncLabel = self.model.syncLabel
             if syncLabel.isEmpty == false {
-                Text(syncLabel)
+                Text(AppLocalizer().string(syncLabel))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
                     .lineLimit(1)

@@ -112,7 +112,8 @@ extension RecentListMenuCoordinator {
         systemImage: String?,
         isEnabled: Bool
     ) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        let localizedTitle = AppLocalizer().string(title)
+        let item = NSMenuItem(title: localizedTitle, action: action, keyEquivalent: "")
         item.target = self.actionHandler
         item.representedObject = representedObject
         item.isEnabled = isEnabled

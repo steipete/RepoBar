@@ -49,7 +49,7 @@ struct RecentListSubmenuRowView: View {
                     .foregroundStyle(MenuHighlightStyle.secondary(self.isHighlighted))
             }
 
-            Text(self.title)
+            Text(AppLocalizer().string(self.title))
                 .font(.system(size: 14))
                 .foregroundStyle(MenuHighlightStyle.primary(self.isHighlighted))
                 .lineLimit(1)

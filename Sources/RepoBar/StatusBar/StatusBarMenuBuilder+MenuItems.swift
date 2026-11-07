@@ -95,7 +95,8 @@ extension StatusBarMenuBuilder {
     }
 
     func infoItem(_ title: String) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: nil, keyEquivalent: "")
+        let localizedTitle = AppLocalizer().string(title)
+        let item = NSMenuItem(title: localizedTitle, action: nil, keyEquivalent: "")
         item.isEnabled = false
         return item
     }
@@ -323,7 +324,8 @@ extension StatusBarMenuBuilder {
         represented: Any? = nil,
         systemImage: String? = nil
     ) -> NSMenuItem {
-        let item = NSMenuItem(title: title, action: action, keyEquivalent: keyEquivalent)
+        let localizedTitle = AppLocalizer().string(title)
+        let item = NSMenuItem(title: localizedTitle, action: action, keyEquivalent: keyEquivalent)
         item.target = self.target
         if let represented {
             item.representedObject = represented

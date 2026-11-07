@@ -44,84 +44,84 @@ struct GeneralSettingsView: View {
         VStack(spacing: 12) {
             Form {
                 Section {
-                    Toggle("Launch at login", isOn: self.setting(\.launchAtLogin, effects: .launchAtLogin))
+                    Toggle(AppLocalizer().string("Launch at login"), isOn: self.setting(\.launchAtLogin, effects: .launchAtLogin))
                 } footer: {
-                    Text("Automatically opens RepoBar when you start your Mac.")
+                    Text(AppLocalizer().string("Automatically opens RepoBar when you start your Mac."))
                 }
 
                 Section {
-                    Picker("Appearance", selection: self.setting(\.appearance.colorScheme, effects: .appAppearance)) {
+                    Picker(AppLocalizer().string("Appearance"), selection: self.setting(\.appearance.colorScheme, effects: .appAppearance)) {
                         ForEach(AppColorScheme.allCases, id: \.self) { scheme in
-                            Text(scheme.label).tag(scheme)
+                            Text(AppLocalizer().string(scheme.label)).tag(scheme)
                         }
                     }
-                    Toggle("Show contribution header", isOn: self.setting(\.appearance.showContributionHeader))
+                    Toggle(AppLocalizer().string("Show contribution header"), isOn: self.setting(\.appearance.showContributionHeader))
                     Toggle(
-                        "Show REST and GraphQL quotas in menu bar",
+                        AppLocalizer().string("Show REST and GraphQL quotas in menu bar"),
                         isOn: self.setting(\.appearance.showRateLimitMeterInMenuBar, effects: .menuDiagnostics)
                     )
-                    Text("Top row: R = REST core requests left. Bottom row: G = GraphQL points left. These are separate budgets.")
+                    Text(AppLocalizer().string("Top row: R = REST core requests left. Bottom row: G = GraphQL points left. These are separate budgets."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Picker("Activity feed", selection: self.setting(\.appearance.activityScope, effects: .refresh)) {
+                    Picker(AppLocalizer().string("Activity feed"), selection: self.setting(\.appearance.activityScope, effects: .refresh)) {
                         ForEach(GlobalActivityScope.allCases, id: \.self) { scope in
-                            Text(scope.label).tag(scope)
+                            Text(AppLocalizer().string(scope.label)).tag(scope)
                         }
                     }
-                    Picker("Repository heatmap", selection: self.setting(\.heatmap.display)) {
+                    Picker(AppLocalizer().string("Repository heatmap"), selection: self.setting(\.heatmap.display)) {
                         ForEach(HeatmapDisplay.allCases, id: \.self) { display in
-                            Text(display.label).tag(display)
+                            Text(AppLocalizer().string(display.label)).tag(display)
                         }
                     }
-                    Picker("Heatmap window", selection: self.setting(\.heatmap.span, effects: .heatmapRange)) {
+                    Picker(AppLocalizer().string("Heatmap window"), selection: self.setting(\.heatmap.span, effects: .heatmapRange)) {
                         ForEach(HeatmapSpan.allCases, id: \.self) { span in
-                            Text(span.label).tag(span)
+                            Text(AppLocalizer().string(span.label)).tag(span)
                         }
                     }
-                    Picker("Heatmap color", selection: self.setting(\.appearance.accentTone)) {
+                    Picker(AppLocalizer().string("Heatmap color"), selection: self.setting(\.appearance.accentTone)) {
                         ForEach(AccentTone.allCases, id: \.self) { tone in
-                            Text(tone.label).tag(tone)
+                            Text(AppLocalizer().string(tone.label)).tag(tone)
                         }
                     }
                 } header: {
-                    Text("Display")
+                    Text(AppLocalizer().string("Display"))
                 } footer: {
-                    Text("Repository heatmaps show recent commit activity for each repository.")
+                    Text(AppLocalizer().string("Repository heatmaps show recent commit activity for each repository."))
                 }
 
                 Section {
-                    Picker("Repositories shown", selection: self.setting(\.repoList.displayLimit)) {
+                    Picker(AppLocalizer().string("Repositories shown"), selection: self.setting(\.repoList.displayLimit)) {
                         ForEach([3, 6, 9, 12], id: \.self) { Text("\($0)").tag($0) }
                     }
-                    Picker("Menu sort", selection: self.setting(\.repoList.menuSortKey)) {
+                    Picker(AppLocalizer().string("Menu sort"), selection: self.setting(\.repoList.menuSortKey)) {
                         ForEach(RepositorySortKey.settingsCases, id: \.self) { sortKey in
-                            Text(sortKey.settingsLabel).tag(sortKey)
+                            Text(AppLocalizer().string(sortKey.settingsLabel)).tag(sortKey)
                         }
                     }
                     Toggle(
-                        "Include forked repositories",
+                        AppLocalizer().string("Include forked repositories"),
                         isOn: self.setting(\.repoList.showForks, effects: .cancelInFlightRefresh)
                     )
                     Toggle(
-                        "Include archived repositories",
+                        AppLocalizer().string("Include archived repositories"),
                         isOn: self.setting(\.repoList.showArchived, effects: .cancelInFlightRefresh)
                     )
-                    Toggle("Show only my repositories", isOn: Binding(
+                    Toggle(AppLocalizer().string("Show only my repositories"), isOn: Binding(
                         get: { self.showOnlyMyRepos },
                         set: { self.toggleShowOnlyMyRepos($0) }
                     ))
                     .disabled(self.normalizedCurrentUsername == nil)
                 } header: {
-                    Text("Repositories")
+                    Text(AppLocalizer().string("Repositories"))
                 } footer: {
-                    Text("Filters apply to repo lists and search. 'Show only my repositories' hides repos owned by organizations and other users.")
+                    Text(AppLocalizer().string("Filters apply to repo lists and search. 'Show only my repositories' hides repos owned by organizations and other users."))
                 }
             }
             .formStyle(.grouped)
 
             HStack {
                 Spacer()
-                Button("Quit RepoBar") { NSApp.terminate(nil) }
+                Button(AppLocalizer().string("Quit RepoBar")) { NSApp.terminate(nil) }
             }
             .padding(.top, 6)
             .padding(.bottom, 14)
