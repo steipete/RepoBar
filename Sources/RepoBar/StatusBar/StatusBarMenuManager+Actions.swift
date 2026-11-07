@@ -19,6 +19,10 @@ extension StatusBarMenuManager {
         NSApp.terminate(nil)
     }
 
+    @objc func relaunchApp() {
+        AppRelauncher.relaunch()
+    }
+
     @objc func signIn() {
         Task { await self.appState.quickLogin() }
     }

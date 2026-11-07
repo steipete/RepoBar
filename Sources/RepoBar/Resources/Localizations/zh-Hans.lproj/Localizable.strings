@@ -316,3 +316,12 @@
 "Detached" = "头指针分离";
 "Matches" = "匹配项";
 "Open %@ on GitHub" = "在 GitHub 上打开 %@";
+
+/* Saved credentials and app updates */
+"RepoBar was updated while running" = "RepoBar 在运行时已更新";
+"Relaunch to finish updating to %@." = "重新启动以完成更新至 %@。";
+"Relaunch to finish updating." = "重新启动以完成更新。";
+"Can’t read your saved GitHub credentials" = "无法读取已保存的 GitHub 凭据";
+"macOS denied Keychain access. Relaunch RepoBar to restore it." = "macOS 拒绝了钥匙串访问。请重新启动 RepoBar 以恢复访问。";
+"Relaunch RepoBar" = "重新启动 RepoBar";
+"%@ @ %@ uses a personal access token. Update it in Accounts settings." = "%@ @ %@ 使用了个人访问令牌 (PAT)。请在“账户”设置中进行更新。";

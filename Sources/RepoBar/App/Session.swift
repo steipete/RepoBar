@@ -5,6 +5,7 @@ import RepoBarCore
 @Observable
 final class Session {
     var account: AccountState = .loggedOut
+    var bundleReplacement: AppBundleReplacement?
     var hasStoredTokens = false
     var accessibleRepositories: [Repository] = []
     var repositories: [Repository] = []
@@ -41,6 +42,11 @@ final class Session {
     var actionsOrgSnapshots: [ActionsOrgSnapshot] = []
     var actionsPlanTier: GitHubPlanTier = .free
 
+    var effectiveMenuRepoSelection: MenuRepoSelection {
+        // Keep local repos reachable without overwriting the saved choice.
+        self.account.isCredentialsUnavailable ? .local : self.menuRepoSelection
+    }
+
     var rateLimitDisplayState: RateLimitDisplayState {
         RateLimitDisplayState(
             diagnostics: self.rateLimitDiagnostics,
@@ -52,8 +58,16 @@ final class Session {
 
 enum AccountState: Equatable {
     case loggedOut
+    case credentialsUnavailable(UserIdentity?)
     case loggingIn
     case loggedIn(UserIdentity)
+
+    var isCredentialsUnavailable: Bool {
+        if case .credentialsUnavailable = self {
+            return true
+        }
+        return false
+    }
 
     var isLoggedIn: Bool {
         if case .loggedIn = self {

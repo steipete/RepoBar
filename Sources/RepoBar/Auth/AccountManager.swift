@@ -12,7 +12,7 @@ final class AccountManager {
     private(set) var accounts: [Account] = []
     private(set) var activeAccountID: String?
     private var clients: [String: GitHubClient] = [:]
-    private let tokenStore: TokenStore
+    let tokenStore: TokenStore
     private let oauthRefresher: OAuthTokenRefresher
     private let signposter = OSSignposter(subsystem: "com.steipete.repobar", category: "account-manager")
 
@@ -55,14 +55,30 @@ final class AccountManager {
         return self.accounts.first(where: { $0.id == activeAccountID })
     }
 
-    func hasStoredCredentials(accountID: String) -> Bool {
-        guard let account = self.accounts.first(where: { $0.id == accountID }) else { return false }
+    func credentialState(accountID: String) -> StoredCredentialState {
+        do {
+            switch self.accounts.first(where: { $0.id == accountID })?.authMethod {
+            case .oauth:
+                return try self.tokenStore.loadTokens(accountID: accountID) == nil ? .missing : .present
+            case .pat:
+                return try self.tokenStore.loadPAT(accountID: accountID) == nil ? .missing : .present
+            case nil:
+                let oauth = try self.tokenStore.loadTokens(accountID: accountID)
+                let pat = try self.tokenStore.loadPAT(accountID: accountID)
+                return oauth != nil || pat != nil ? .present : .missing
+            }
+        } catch {
+            return .unavailable
+        }
+    }
 
-        switch account.authMethod {
-        case .oauth:
-            return (try? self.tokenStore.loadTokens(accountID: accountID)) != nil
-        case .pat:
-            return (try? self.tokenStore.loadPAT(accountID: accountID)) != nil
+    func legacyCredentialState() -> StoredCredentialState {
+        do {
+            let oauth = try self.tokenStore.load()
+            let pat = try self.tokenStore.loadPAT()
+            return oauth != nil || pat != nil ? .present : .missing
+        } catch {
+            return .unavailable
         }
     }
 

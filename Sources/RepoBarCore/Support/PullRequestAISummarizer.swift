@@ -166,13 +166,16 @@ private struct OpenAIResponseEnvelope: Decodable {
     let output: [OutputItem]?
 
     var text: String? {
-        if let outputText, outputText.isEmpty == false {
+        if let outputText, outputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false {
             return outputText
         }
-        return self.output?
+        let messageText = (self.output ?? [])
+            .filter(\.isAssistantMessage)
             .flatMap(\.content)
+            .filter(\.isOutputText)
             .compactMap(\.text)
-            .first { $0.isEmpty == false }
+            .joined(separator: "\n")
+        return messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : messageText
     }
 
     enum CodingKeys: String, CodingKey {
@@ -181,20 +184,32 @@ private struct OpenAIResponseEnvelope: Decodable {
     }
 
     struct OutputItem: Decodable {
+        let type: String?
         let content: [ContentItem]
+
+        var isAssistantMessage: Bool {
+            self.type == nil || self.type == "message"
+        }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
+            self.type = try container.decodeIfPresent(String.self, forKey: .type)
             self.content = try container.decodeIfPresent([ContentItem].self, forKey: .content) ?? []
         }
 
         enum CodingKeys: String, CodingKey {
+            case type
             case content
         }
     }
 
     struct ContentItem: Decodable {
+        let type: String?
         let text: String?
+
+        var isOutputText: Bool {
+            self.type == nil || self.type == "output_text"
+        }
     }
 }
 
