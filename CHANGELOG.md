@@ -2,14 +2,14 @@
 
 ## Unreleased
 
+- Show a Relaunch prompt instead of a signed-out state or Sign in when Keychain access fails (for example after an update replaces the running app), preserve loaded data and the saved repository filter while keeping local repositories reachable, and prevent menu sign-in from replacing a personal-access-token account with OAuth.
+
 ## 0.10.4 - 2026-11-05
 
 **Highlights:** AI summaries show the complete answer without including reasoning output.
 
 - Build AI summaries only from Responses message text, keeping all answer blocks and excluding reasoning output (thanks @yashiels). (#156, #158)
 - Refresh Swift package and command-line tooling dependencies while preserving the macOS 15, Swift 6.2, and Node.js 22.13 minimums.
-
-- Show a Relaunch prompt instead of a signed-out state or Sign in when Keychain access fails (for example after an update replaces the running app), preserve loaded data and the saved repository filter while keeping local repositories reachable, and prevent menu sign-in from replacing a personal-access-token account with OAuth.
 
 ## 0.10.3 - 2026-10-20
 
