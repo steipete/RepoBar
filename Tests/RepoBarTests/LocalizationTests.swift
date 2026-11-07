@@ -31,13 +31,37 @@ struct LocalizationTests {
         #expect(AppLocalizer(preferredLanguages: []).string("General") == "General")
     }
 
-    @Test func `unknown text is literal`() {
+    @Test @MainActor func `branch and worktree identifiers remain literal even on catalog collisions`() {
         let localizer = AppLocalizer(preferredLanguages: ["tr"])
         #expect(localizer.string("Invalid backup 100% %@") == "Invalid backup 100% %@")
         #expect(localizer.string("example-org/demo#42") == "example-org/demo#42")
         let chineseLocalizer = AppLocalizer(preferredLanguages: ["zh-Hans"])
         #expect(chineseLocalizer.string("feature/branch-name") == "feature/branch-name")
         #expect(chineseLocalizer.string("worktree-name") == "worktree-name")
+
+        // "Work" collides with catalog keys ("工作" in zh-Hans, "İş" in tr), but must remain literal in row views
+        let model = LocalRefMenuRowViewModel(
+            kind: .worktree,
+            title: "/tmp/worktree",
+            detail: "Work",
+            isCurrent: true,
+            isDetached: false,
+            upstream: nil,
+            aheadCount: nil,
+            behindCount: nil,
+            lastCommitDate: nil,
+            lastCommitAuthor: nil,
+            dirtySummary: nil
+        )
+        let worktreeRow = LocalWorktreeMenuRowView(model: model)
+        #expect(worktreeRow.model.detail == "Work")
+
+        let recentRow = RecentListSubmenuRowView(
+            title: "Repo",
+            systemImage: "folder",
+            detailText: "Work"
+        )
+        #expect(recentRow.detailText == "Work")
     }
 
     @Test func `catalogs have matching keys and translate display settings`() throws {

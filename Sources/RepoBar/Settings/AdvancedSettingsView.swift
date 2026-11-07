@@ -283,7 +283,7 @@ struct AdvancedSettingsView: View {
                     }
                 }
 
-                Text(AppLocalizer().string("Install `repobar` into /usr/local/bin and /opt/homebrew/bin."))
+                Text("Install `repobar` into /usr/local/bin and /opt/homebrew/bin.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
