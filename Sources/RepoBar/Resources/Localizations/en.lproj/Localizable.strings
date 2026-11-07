@@ -199,3 +199,12 @@
 "Repo heatmap submenu" = "Repo heatmap submenu";
 "Commit list preview" = "Commit list preview";
 "Activity feed preview" = "Activity feed preview";
+
+/* Saved credentials and app updates */
+"RepoBar was updated while running" = "RepoBar was updated while running";
+"Relaunch to finish updating to %@." = "Relaunch to finish updating to %@.";
+"Relaunch to finish updating." = "Relaunch to finish updating.";
+"Can’t read your saved GitHub credentials" = "Can’t read your saved GitHub credentials";
+"macOS denied Keychain access. Relaunch RepoBar to restore it." = "macOS denied Keychain access. Relaunch RepoBar to restore it.";
+"Relaunch RepoBar" = "Relaunch RepoBar";
+"%@ @ %@ uses a personal access token. Update it in Accounts settings." = "%@ @ %@ uses a personal access token. Update it in Accounts settings.";

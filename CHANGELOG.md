@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show a Relaunch prompt instead of a signed-out state or Sign in when Keychain access fails (for example after an update replaces the running app), preserve loaded data and the saved repository filter while keeping local repositories reachable, and prevent menu sign-in from replacing a personal-access-token account with OAuth.
+
 ## 0.10.4 - 2026-11-05
 
 **Highlights:** AI summaries show the complete answer without including reasoning output.

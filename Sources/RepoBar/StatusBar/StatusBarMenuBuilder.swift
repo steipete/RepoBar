@@ -33,8 +33,9 @@ final class StatusBarMenuBuilder {
         let settings = session.settings
         let repos = self.orderedViewModels(now: now)
         let signature = MenuBuildSignature(
+            attention: AccountAttention.resolve(account: session.account, bundleReplacement: session.bundleReplacement),
             account: AccountSignature(session.account),
-            settings: MenuSettingsSignature(settings: settings, selection: session.menuRepoSelection),
+            settings: MenuSettingsSignature(settings: settings, selection: session.effectiveMenuRepoSelection),
             isLightAppearance: self.isLightAppearance,
             hasLoadedRepositories: session.hasLoadedRepositories,
             rateLimitReset: session.rateLimitReset,
@@ -106,24 +107,32 @@ final class StatusBarMenuBuilder {
     ) -> [NSMenuItem] {
         switch itemID {
         case .loggedOutPrompt:
-            switch session.account {
-            case .loggedOut, .loggingIn:
+            let attention = AccountAttention.resolve(account: session.account, bundleReplacement: session.bundleReplacement)
+            switch attention {
+            case .relaunchAfterUpdate, .credentialsUnavailable:
+                let banner = MenuAccountAttentionView(attention: attention)
+                    .padding(.horizontal, MenuStyle.sectionHorizontalPadding)
+                    .padding(.vertical, MenuStyle.sectionVerticalPadding)
+                return [self.viewItem(for: banner, enabled: false)]
+            case .signIn, .signingIn:
                 let loggedOut = MenuLoggedOutView()
                     .padding(.horizontal, MenuStyle.sectionHorizontalPadding)
                     .padding(.vertical, MenuStyle.sectionVerticalPadding)
                 return [self.viewItem(for: loggedOut, enabled: false)]
-            case .loggedIn:
+            case .none:
                 return []
             }
         case .signInAction:
-            switch session.account {
-            case .loggedOut:
+            switch AccountAttention.resolve(account: session.account, bundleReplacement: session.bundleReplacement) {
+            case .relaunchAfterUpdate, .credentialsUnavailable:
+                return [self.actionItem(title: AppLocalizer().string("Relaunch RepoBar"), action: #selector(self.target.relaunchApp))]
+            case .signIn:
                 return [self.actionItem(title: AppLocalizer().string("Sign in to GitHub"), action: #selector(self.target.signIn))]
-            case .loggingIn:
+            case .signingIn:
                 let signInItem = self.actionItem(title: AppLocalizer().string("Signing in…"), action: #selector(self.target.signIn))
                 signInItem.isEnabled = false
                 return [signInItem]
-            case .loggedIn:
+            case .none:
                 return []
             }
         case .contributionHeader:
@@ -184,7 +193,7 @@ final class StatusBarMenuBuilder {
             return [self.viewItem(for: filters, enabled: true)]
         case .repoList:
             let isLoggedIn = session.account.isLoggedIn
-            let isLocalScope = session.menuRepoSelection.isLocalScope
+            let isLocalScope = session.effectiveMenuRepoSelection.isLocalScope
             let uniqueRepos = self.uniqueDisplayModels(repos)
             // Allow repo list for logged in users, or for local scope when logged out
             guard isLoggedIn || isLocalScope else { return [] }
@@ -314,7 +323,7 @@ final class StatusBarMenuBuilder {
 
     private func orderedViewModels(now: Date) -> [RepositoryDisplayModel] {
         let session = self.appState.session
-        let selection = session.menuRepoSelection
+        let selection = session.effectiveMenuRepoSelection
         let settings = session.settings
 
         if selection.isLocalScope {
@@ -379,9 +388,9 @@ final class StatusBarMenuBuilder {
 
     private func emptyStateMessage(for session: Session) -> (String, String) {
         let hasPinned = !session.settings.repoList.pinnedRepositories.isEmpty
-        let isPinnedScope = session.menuRepoSelection.isPinnedScope
-        let isLocalScope = session.menuRepoSelection.isLocalScope
-        let hasFilter = session.menuRepoSelection.onlyWith.isActive
+        let isPinnedScope = session.effectiveMenuRepoSelection.isPinnedScope
+        let isLocalScope = session.effectiveMenuRepoSelection.isLocalScope
+        let hasFilter = session.effectiveMenuRepoSelection.onlyWith.isActive
         if isLocalScope {
             return ("No local repositories", "Clone a repository or set your projects folder in Settings.")
         }

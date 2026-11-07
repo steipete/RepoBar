@@ -4,6 +4,19 @@ import RepoBarCore
 extension AppState {
     /// Starts the OAuth flow using the default GitHub App credentials, invoked from the logged-out prompt.
     func quickLogin() async {
+        if case let .openAccountSettings(account) = QuickLoginDecision.resolve(
+            accounts: self.session.settings.accounts,
+            host: self.defaultGitHubHost
+        ) {
+            self.session.settingsSelectedTab = .accounts
+            self.session.lastError = String(
+                format: AppLocalizer().string("%@ @ %@ uses a personal access token. Update it in Accounts settings."),
+                account.username,
+                account.host.host ?? account.host.absoluteString
+            )
+            SettingsOpener.shared.open()
+            return
+        }
         self.session.account = .loggingIn
         self.session.settings.loopbackPort = self.defaultLoopbackPort
         self.session.settings.githubHost = self.defaultGitHubHost

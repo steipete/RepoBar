@@ -14,21 +14,34 @@ extension AppState {
         }
         await manager.bootstrap(from: self.session.settings)
         await self.syncPrimaryGitHubClientToActiveAccount()
-        if let active = manager.activeAccount(), manager.hasStoredCredentials(accountID: active.id) {
-            self.session.account = .loggedIn(UserIdentity(username: active.username, host: active.host))
+        let active = manager.activeAccount()
+        let state = active.map { manager.credentialState(accountID: $0.id) } ?? manager.legacyCredentialState()
+        switch state {
+        case .present:
+            if let active {
+                self.session.account = .loggedIn(UserIdentity(username: active.username, host: active.host))
+            }
             self.session.hasStoredTokens = true
-        } else {
+        case .missing:
             self.session.account = .loggedOut
             self.session.hasStoredTokens = false
+        case .unavailable:
+            self.session.account = .credentialsUnavailable(active.map { UserIdentity(username: $0.username, host: $0.host) })
         }
     }
 
     /// Attempts to discover an existing single-account login and convert it into a
     /// multi-account `Account` record. Returns `nil` when no credentials exist.
     private func migrateLegacyAccountIfNeeded() async -> Account? {
-        let tokenStore = TokenStore.shared
-        let oauthTokens = try? tokenStore.load()
-        let legacyPAT = try? tokenStore.loadPAT()
+        let tokenStore = self.accountManager.tokenStore
+        let oauthTokens: OAuthTokens?
+        let legacyPAT: String?
+        do {
+            oauthTokens = try tokenStore.load()
+            legacyPAT = try tokenStore.loadPAT()
+        } catch {
+            return nil
+        }
         let legacyCreds = try? tokenStore.loadClientCredentials()
         guard oauthTokens != nil || legacyPAT != nil else { return nil }
 
@@ -96,8 +109,8 @@ extension AppState {
     func currentUserFromLegacyCredentials(host: URL) async -> UserIdentity? {
         await self.probeLegacyIdentity(
             host: host,
-            oauthTokens: try? TokenStore.shared.load(),
-            pat: try? TokenStore.shared.loadPAT()
+            oauthTokens: try? self.accountManager.tokenStore.load(),
+            pat: try? self.accountManager.tokenStore.loadPAT()
         )
     }
 

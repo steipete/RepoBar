@@ -14,6 +14,14 @@ struct LocalizationTests {
         #expect(localizer.string("Pinned") == "Sabitlenmiş")
     }
 
+    @Test func `credential attention strings are localized`() {
+        let localizer = AppLocalizer(preferredLanguages: ["tr"])
+        #expect(localizer.string("Relaunch RepoBar") == "RepoBar’ı Yeniden Başlat")
+        #expect(localizer.string("Can’t read your saved GitHub credentials") == "Kayıtlı GitHub kimlik bilgileriniz okunamıyor")
+        #expect(String(format: localizer.string("Relaunch to finish updating to %@."), "1.2")
+            == "1.2 sürümüne güncellemeyi tamamlamak için yeniden başlatın.")
+    }
+
     @Test func `language priority and fallback`() {
         #expect(AppLocalizer(preferredLanguages: ["en-US", "tr"]).string("General") == "General")
         #expect(AppLocalizer(preferredLanguages: ["fr", "tr"]).string("General") == "Genel")

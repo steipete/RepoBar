@@ -7,7 +7,7 @@ final class SettingsOpener {
 
     private init() {}
 
-    func configure(open: @escaping () -> Void) {
+    func configure(open: (() -> Void)?) {
         self.openHandler = open
     }
 
