@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LocalWorktreeMenuRowView: View {
     let model: LocalRefMenuRowViewModel
+    let onSelect: () -> Void
 
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
@@ -13,6 +14,8 @@ struct LocalWorktreeMenuRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
+        .contentShape(Rectangle())
+        .onTapGesture { self.onSelect() }
     }
 
     private var headerRow: some View {

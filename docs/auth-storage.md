@@ -97,6 +97,8 @@ The legacy `save(tokens:)`, `load()`, `save(clientCredentials:)`, `loadClientCre
 
 Phase 2+ wires the account-scoped keys to the rest of the app:
 
+Automatic and manual OAuth refreshes use account-scoped tokens when an OAuth account exists. The legacy mirror is not refreshed separately because GitHub refresh tokens are single-use. Account-less installations still refresh the legacy token, using the saved enterprise host after relaunch; iOS also restores that host before refreshing.
+
 - `AccountManager` (`Sources/RepoBar/Auth/AccountManager.swift`) owns one `GitHubClient` per `Account` and runs an `AccountScopedOAuthRefresher` that reads and writes tokens via `loadTokens(accountID:)` / `save(tokens:accountID:)`.
 - On launch, `AppState.bootstrapAccounts()` calls `migrateLegacyAccountIfNeeded()` which probes `GET /user` with whichever credential currently lives under the legacy fixed keys, derives a stable `Account` (`<host>#<username>`), and copies the existing OAuth tokens / client credentials / PAT under the new account-scoped keys. The legacy entries are left in place so that downgrading to a previous build still finds them.
 - After successful `repobar login` or `repobar import-gh-token`, both commands probe `GET /user`, derive an `Account`, persist tokens under `<accountID>:default` / `<accountID>:client` / `<accountID>:pat`, and append the account to `UserSettings.accounts`. The legacy fast-path entries are also written so that callers that still read `TokenStore.shared.load()` keep working.

@@ -9,13 +9,14 @@ final class OAuthCoordinator {
     private let tokenStore: TokenStore
     private let tokenRefresher: OAuthTokenRefresher
 
-    init(tokenStore: TokenStore = .shared) {
+    init(tokenStore: TokenStore = .shared, tokenRefresher: OAuthTokenRefresher? = nil) {
         self.tokenStore = tokenStore
-        self.tokenRefresher = OAuthTokenRefresher(tokenStore: tokenStore)
+        self.tokenRefresher = tokenRefresher ?? OAuthTokenRefresher(tokenStore: tokenStore)
     }
 
     private let signposter = OSSignposter(subsystem: "com.steipete.repobar", category: "oauth")
     private var lastHost: URL = .init(string: "https://github.com")!
+    private var refreshHostProvider: (@MainActor () -> URL)?
     private var cachedTokens: OAuthTokens?
     private var hasLoadedTokens = false
 
@@ -35,6 +36,18 @@ final class OAuthCoordinator {
         self.cachedTokens = tokens
         self.hasLoadedTokens = true
         await DiagnosticsLogger.shared.message("Login succeeded; tokens stored.")
+    }
+
+    func setRefreshHostProvider(_ provider: @escaping @MainActor () -> URL) {
+        self.refreshHostProvider = provider
+        self.applyStoredRefreshHost()
+    }
+
+    private func applyStoredRefreshHost() {
+        guard let refreshHostProvider = self.refreshHostProvider,
+              let host = try? OAuthLoginFlow.normalizeHost(refreshHostProvider()) else { return }
+
+        self.lastHost = host
     }
 
     func logout() async {
@@ -58,6 +71,7 @@ final class OAuthCoordinator {
     }
 
     func refreshIfNeeded(force: Bool = false) async throws -> OAuthTokens? {
+        self.applyStoredRefreshHost()
         let signpost = self.signposter.beginInterval("refreshIfNeeded")
         defer { self.signposter.endInterval("refreshIfNeeded", signpost) }
 
