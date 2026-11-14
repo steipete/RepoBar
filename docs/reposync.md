@@ -33,6 +33,8 @@ Goal: map a local “project folder” (e.g. `~/Projects`) to GitHub repos shown
 
 Worktree listings preserve complete paths, including spaces, Unicode, and line breaks, and complete nested branch names when resolving status and commit metadata.
 
+Click a local branch in **Branches** to switch the checkout, or a row in **Worktrees** to select that worktree. Successful actions refresh local project status; failures display Git's error. Linked worktree labels come from their Git metadata, including when a parent folder is named `worktrees` or the repository uses a bare Git directory.
+
 ### Notifications
 - Fire a local notification on **successful sync** (auto or manual).
 - No notification on failure.

@@ -3,6 +3,10 @@
 ## Unreleased
 
 - Show a Relaunch prompt instead of a signed-out state or Sign in when Keychain access fails (for example after an update replaces the running app), preserve loaded data and the saved repository filter while keeping local repositories reachable, and prevent menu sign-in from replacing a personal-access-token account with OAuth.
+- Switch local branches and worktrees when their menu rows are clicked (thanks @officialasishkumar and @JakobFelixJulius). (#166, #167)
+- Refresh account-scoped OAuth tokens only once and restore the saved enterprise refresh host after relaunch on macOS and iOS (thanks @SebTardif). (#162, #163)
+- Show the correct linked worktree name when a parent directory is named `worktrees` or the Git directory is bare (thanks @SebTardif). (#165)
+- Update GraphQL, Commander tooling, and pnpm within the release cooldown while preserving the Node.js 22.13 minimum.
 
 ## 0.10.4 - 2026-11-05
 

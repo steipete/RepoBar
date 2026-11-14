@@ -2,7 +2,7 @@
   "name": "repobar",
   "version": "0.10.4",
   "private": true,
-  "packageManager": "pnpm@11.28.10",
+  "packageManager": "pnpm@11.28.11",
   "engines": {
     "node": ">=22.13.0"
   },
@@ -26,11 +26,11 @@
     "test:tooling": "node --import tsx --test Scripts/github-cli.test.ts Scripts/package-app.test.mjs"
   },
   "dependencies": {
-    "graphql": "^17.0.2"
+    "graphql": "^17.1.0"
   },
   "devDependencies": {
     "chalk": "^6.0.1",
-    "commander": "^15.0.0",
+    "commander": "^15.1.0",
     "dotenv-cli": "^11.1.0",
     "ora": "^10.0.0",
     "tsx": "^4.23.15",

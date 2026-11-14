@@ -2,6 +2,7 @@ import SwiftUI
 
 struct LocalBranchMenuRowView: View {
     let model: LocalRefMenuRowViewModel
+    let onSelect: () -> Void
 
     @Environment(\.menuItemHighlighted) private var isHighlighted
 
@@ -13,6 +14,8 @@ struct LocalBranchMenuRowView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { self.onSelect() }
     }
 
     private var headerRow: some View {

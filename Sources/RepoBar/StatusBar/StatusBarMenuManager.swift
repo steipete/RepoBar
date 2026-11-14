@@ -406,6 +406,18 @@ final class StatusBarMenuManager: NSObject, NSMenuDelegate {
             self.localGitMenuCoordinator.isWorktreeMenuItemForTesting(item)
         }
 
+        func makeLocalBranchMenuItemForTesting(
+            _ model: LocalRefMenuRowViewModel,
+            repoPath: URL,
+            fullName: String
+        ) -> NSMenuItem {
+            self.localGitMenuCoordinator.makeLocalBranchMenuItemForTesting(model, repoPath: repoPath, fullName: fullName)
+        }
+
+        func localBranchNameForTesting(_ item: NSMenuItem) -> String? {
+            self.localGitMenuCoordinator.localBranchNameForTesting(item)
+        }
+
         func isRecentListMenu(_ menu: NSMenu) -> Bool {
             self.recentListCoordinator.containsMenuForTesting(menu)
         }

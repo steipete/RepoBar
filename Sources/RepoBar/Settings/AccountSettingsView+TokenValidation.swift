@@ -43,7 +43,7 @@ extension AccountSettingsView {
         await self.logAuth("Auth: token refresh started")
         do {
             let refreshed = try await self.withTimeout(seconds: self.tokenRefreshTimeout) {
-                try await self.appState.auth.refreshIfNeeded(force: true)
+                try await self.appState.refreshActiveOAuthToken(force: true)
             }
             guard refreshed != nil else {
                 throw URLError(.userAuthenticationRequired)

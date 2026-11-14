@@ -6,8 +6,8 @@ import RepoBarCore
 @Observable
 final class AppState {
     var session = Session()
-    let auth = OAuthCoordinator()
-    let patAuth = PATAuthenticator()
+    let auth: OAuthCoordinator
+    let patAuth: PATAuthenticator
     let legacyGitHub: GitHubClient
     var github: GitHubClient
     let bundleReplacementDetector = AppBundleReplacementDetector()
@@ -43,11 +43,15 @@ final class AppState {
 
     init(
         settingsStore: SettingsStore = SettingsStore(),
-        accountManager: AccountManager? = nil
+        accountManager: AccountManager? = nil,
+        auth: OAuthCoordinator = OAuthCoordinator(),
+        patAuth: PATAuthenticator = PATAuthenticator()
     ) {
         let legacyGitHub = GitHubClient()
         self.legacyGitHub = legacyGitHub
         self.github = legacyGitHub
+        self.auth = auth
+        self.patAuth = patAuth
         self.settingsStore = settingsStore
         self.accountManager = accountManager ?? AccountManager()
         self.session.settings = self.settingsStore.load()
@@ -70,6 +74,15 @@ final class AppState {
             }
         } catch {
             // An unreadable store says nothing about the saved authentication method.
+        }
+        self.auth.setRefreshHostProvider { [weak self] in
+            guard let self else { return RepoBarAuthDefaults.githubHost }
+
+            return OAuthRefreshHost.resolved(
+                enterpriseHost: self.session.settings.enterpriseHost,
+                accountHost: self.session.settings.resolvedActiveAccount()?.host,
+                configuredHost: self.session.settings.githubHost
+            )
         }
     }
 
@@ -166,13 +179,35 @@ final class AppState {
     private func refreshStoredTokens(lifecycleID: UUID) async -> TimeInterval? {
         guard self.isCurrentLifecycle(lifecycleID) else { return nil }
 
+        await self.refreshStoredTokensNow()
+        return self.isCurrentLifecycle(lifecycleID) ? self.tokenRefreshInterval : nil
+    }
+
+    func refreshStoredTokensNow() async {
+        // The legacy item mirrors a single-use account refresh token.
+        // Only its account owner may rotate it.
+        if self.hasOAuthAccountRecord {
+            await self.accountManager.refreshAllIfNeeded()
+            return
+        }
         if self.session.settings.authMethod == .oauth, self.auth.loadTokens() != nil {
             _ = try? await self.auth.refreshIfNeeded()
         }
-        // Fan out to every account-scoped OAuth refresher. PAT-only
-        // accounts are no-ops and OAuth accounts refresh independently.
-        await self.accountManager.refreshAllIfNeeded()
-        return self.isCurrentLifecycle(lifecycleID) ? self.tokenRefreshInterval : nil
+    }
+
+    private var hasOAuthAccountRecord: Bool {
+        self.accountManager.accounts.contains { $0.authMethod == .oauth }
+            || self.session.settings.accounts.contains { $0.authMethod == .oauth }
+    }
+
+    func refreshActiveOAuthToken(force: Bool = false) async throws -> OAuthTokens? {
+        if self.hasOAuthAccountRecord {
+            guard let account = self.session.settings.resolvedActiveAccount() ?? self.accountManager.activeAccount(),
+                  account.authMethod == .oauth else { return nil }
+
+            return try await self.accountManager.refreshIfNeeded(accountID: account.id, force: force)
+        }
+        return try await self.auth.refreshIfNeeded(force: force)
     }
 
     private func isCurrentLifecycle(_ lifecycleID: UUID) -> Bool {

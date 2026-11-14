@@ -476,11 +476,13 @@ final class LocalGitMenuCoordinator {
         path: URL,
         fullName: String
     ) -> NSMenuItem {
-        let row = LocalWorktreeMenuRowView(model: model)
+        let activation = MenuItemActivation()
+        let row = LocalWorktreeMenuRowView(model: model) { activation.perform() }
         let item = self.menuItemFactory.makeItem(for: row, enabled: true, highlightable: true)
         item.target = self.actionHandler
         item.action = #selector(StatusBarMenuManager.switchLocalWorktree(_:))
         item.representedObject = LocalWorktreeAction(path: path, fullName: fullName)
+        activation.item = item
         return item
     }
 
@@ -490,7 +492,8 @@ final class LocalGitMenuCoordinator {
         fullName: String,
         isCurrent: Bool
     ) -> NSMenuItem {
-        let row = LocalBranchMenuRowView(model: model)
+        let activation = MenuItemActivation()
+        let row = LocalBranchMenuRowView(model: model) { activation.perform() }
         let item = self.menuItemFactory.makeItem(for: row, enabled: true, highlightable: true)
         item.target = self.actionHandler
         item.action = #selector(StatusBarMenuManager.switchLocalBranch(_:))
@@ -500,6 +503,7 @@ final class LocalGitMenuCoordinator {
             fullName: fullName
         )
         item.state = isCurrent ? .on : .off
+        activation.item = item
         return item
     }
 
@@ -713,6 +717,18 @@ private struct LocalWorktreeAction {
 
         func isWorktreeMenuItemForTesting(_ item: NSMenuItem) -> Bool {
             item.representedObject is LocalWorktreeAction
+        }
+
+        func makeLocalBranchMenuItemForTesting(
+            _ model: LocalRefMenuRowViewModel,
+            repoPath: URL,
+            fullName: String
+        ) -> NSMenuItem {
+            self.makeLocalBranchMenuItem(model, repoPath: repoPath, fullName: fullName, isCurrent: model.isCurrent)
+        }
+
+        func localBranchNameForTesting(_ item: NSMenuItem) -> String? {
+            (item.representedObject as? LocalBranchAction)?.branch
         }
     }
 #endif
