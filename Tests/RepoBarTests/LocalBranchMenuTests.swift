@@ -55,17 +55,21 @@ struct LocalBranchMenuTests {
 
         let deadline = Date().addingTimeInterval(10)
         var head = try Self.currentBranch(in: root)
-        while head != "feature", Date() < deadline {
+        while head != "feature" || appState.session.localDiscoveredRepoCount != 0, Date() < deadline {
             try await Task.sleep(for: .milliseconds(50))
             head = try Self.currentBranch(in: root)
         }
         #expect(head == "feature")
+        #expect(appState.session.localDiscoveredRepoCount == 0)
     }
 
     private static func makeIsolatedAppState() throws -> (AppState, () -> Void) {
         let suiteName = "com.steipete.repobar.local-branch-menu-tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         let appState = AppState(settingsStore: SettingsStore(defaults: defaults))
+        appState.session.settings.localProjects.rootPath = nil
+        appState.session.settings.localProjects.autoSyncEnabled = false
+        appState.session.localDiscoveredRepoCount = 99
         return (appState, { defaults.removePersistentDomain(forName: suiteName) })
     }
 
