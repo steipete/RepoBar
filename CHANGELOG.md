@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.10.5 - 2026-11-15
+
+**Highlights:** Recover from Keychain access failures with a Relaunch prompt, switch local branches and worktrees from their menu rows, and refresh OAuth sessions reliably.
+
 - Show a Relaunch prompt instead of a signed-out state or Sign in when Keychain access fails (for example after an update replaces the running app), preserve loaded data and the saved repository filter while keeping local repositories reachable, and prevent menu sign-in from replacing a personal-access-token account with OAuth.
 - Switch local branches and worktrees when their menu rows are clicked (thanks @officialasishkumar and @JakobFelixJulius). (#166, #167)
 - Refresh account-scoped OAuth tokens only once and restore the saved enterprise refresh host after relaunch on macOS and iOS (thanks @SebTardif). (#162, #163)
