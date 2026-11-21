@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Refresh Kingfisher, SwiftLog, Swiftdansi, ANSI tooling, and pnpm after the dependency cooldown while preserving the Swift 6.2 and Node.js 22.13 minimums.
+
 ## 0.10.5 - 2026-11-15
 
 **Highlights:** Recover from Keychain access failures with a Relaunch prompt, switch local branches and worktrees from their menu rows, and refresh OAuth sessions reliably.

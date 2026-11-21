@@ -33,8 +33,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/onevcat/Kingfisher",
       "state" : {
-        "revision" : "80e7d020ea0a76b65431ebba839046cea2e7ea8e",
-        "version" : "8.15.0"
+        "revision" : "21caad71af5d1cb34ab174786e75c864fd2417bd",
+        "version" : "8.16.0"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-log",
       "state" : {
-        "revision" : "e3da04078777e6a1b72ce19981fbd6539b0847d8",
-        "version" : "1.17.0"
+        "revision" : "c7413d967b97aae67c46452bf7645bdb7b200e8e",
+        "version" : "1.17.2"
       }
     },
     {
@@ -114,8 +114,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/steipete/Swiftdansi",
       "state" : {
-        "revision" : "0cc118c589816ca66554c2c52a36b1d0e65d379a",
-        "version" : "0.3.1"
+        "revision" : "1ca1f6b367c5350f66713c6235f9207ff7e829c1",
+        "version" : "0.3.2"
       }
     }
   ],

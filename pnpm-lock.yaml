@@ -189,8 +189,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  ansi-regex@6.5.0:
-    resolution: {integrity: sha512-zhvbbbdt1kbw7EJ9OQoxmQcuaNR9P5kTj7e/YdmOSU10aHWbycofJxA6jKfoEy3vlLdctOF9ZHaxLtmSm998wQ==}
+  ansi-regex@6.6.0:
+    resolution: {integrity: sha512-XZ5apbzreCbXSKwPjJstu8R0zOi247w3XYwWxtwBXgpZrCyc1Ka7p9/xY0A9/diMewmHbEKz+FIraWaEWjlN5g==}
     engines: {node: '>=12'}
 
   chalk@6.0.1:
@@ -406,7 +406,7 @@ snapshots:
   '@esbuild/win32-x64@0.28.2':
     optional: true
 
-  ansi-regex@6.5.0: {}
+  ansi-regex@6.6.0: {}
 
   chalk@6.0.1: {}
 
@@ -529,7 +529,7 @@ snapshots:
 
   strip-ansi@7.2.0:
     dependencies:
-      ansi-regex: 6.5.0
+      ansi-regex: 6.6.0
 
   tsx@4.23.15:
     dependencies:
